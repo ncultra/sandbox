@@ -24,7 +24,7 @@ int main(int c, char **argv)
 	printf ("writing to patch sandbox...\n\n");
 	
 	char *patch = (char *)&patch_sandbox_start + 0x0d;
-	
+	memset(patch, '1', 64);
 	
 	printf ("write completed, calling into the patch sandbox\n\n");
 		
