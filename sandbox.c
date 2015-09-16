@@ -10,7 +10,7 @@ extern long long patch_sandbox_start, patch_sandbox_end;
 int main(int c, char **argv)
 {
 	
-	int status = 0;
+
 	void(*call_patch_sandbox)(void) = (void *)&patch_sandbox_start;
 
 	printf ("\nmaking the patch sandbox writeable\n\n");
