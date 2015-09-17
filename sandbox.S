@@ -2,14 +2,17 @@
 .global patch_sandbox_start
 .global patch_sandbox_end
 
-.text 1
+.text 
 	
-.align 0x1000
+	.align 0x1000	       # align on page boundary
 
-patch_sandbox_start:	
-	retq				;
-	.rept 64			;
-	nopl   0x0(%rax,%rax,1)		;
-	.endr				;
-patch_sandbox_end:	
+patch_sandbox_start:
+
+	jmp patch_sandbox_end   # sandbox will fit within one 4k page 
+				# remove the jmp when we can patch the sandbox
+	.fill 0x1000	# 4k sandbox
+patch_sandbox_end:	# for testing only, jump to the end of the sandbox
+	.align 2	
+	retq  		# and return to the caller
+
 
