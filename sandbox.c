@@ -4,7 +4,7 @@
 #include <memory.h>
 #include <sys/mman.h>
 #include <errno.h>
-
+#include "sandbox.h"
 extern long long patch_sandbox_start, patch_sandbox_end;
 
 int main(int c, char **argv)
