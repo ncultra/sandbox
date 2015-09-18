@@ -11,7 +11,8 @@
 //  pages are always 4K for alignment purposes
 #define PLATFORM_PAGE_SIZE 0x1000
 #define PLATFORM_CACHE_LINE_SIZE 0x40
-#define PLATFORM_INSTRUCTION_DIVISOR 2 /* instructions must begin on an even address */ 
+#define PLATFORM_INSTRUCTION_DIVISOR 2 /* instructions must begin on an even address */
+#define PLATFORM_MAX_INSTR  0x10
 #else
 #error "platform constant are not defined"
 #endif
@@ -30,6 +31,7 @@ extern long long patch_sandbox_start, patch_sandbox_end;
 
 /* needs to be padded to an order of 2 */
 /* TODO: align members on cache lines */
+#define PATCH_PAD 0
 struct patch {
 	struct patch *next;
 	unsigned int flags;
@@ -38,10 +40,10 @@ struct patch {
 	struct apply {
 		unsigned long long patch_dest; /* absolute addr within the sandbox */ 
 		unsigned long long reloc_dest; /* absolutre addr of the relocation */
-		unsigned char reloc_data[64];  /* max single instruction size is 15 */
+		unsigned char reloc_data[PLATFORM_MAX_INSTR]; /* max single instruction size is 15 */
 		unsigned long long patch_buf;  /* address of data to be patched */
 	} apply;
-	unsigned char pad[44];
+	unsigned char pad[(PATCH_PAD)];
 };
 
 
