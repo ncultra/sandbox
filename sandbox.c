@@ -1,16 +1,39 @@
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <setjmp.h>
 #include <memory.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <getopt.h>
+#include <errno.h>
 #include "sandbox.h"
+#include <memory.h>
+
+ 
+
 extern long long patch_sandbox_start, patch_sandbox_end;
 
-int main(int c, char **argv)
-{
-	
+static int test_flag;
 
+
+int main(int argc, char **argv)
+{
+
+	while (1)
+	{
+		// TODO: finish the options
+		int c;
+		static struct option long_options[] = {
+			{"test", no_argument, &test_flag, 1},
+			{0,0,0,0}
+		};
+		int option_index = 0;
+		c = getopt_long(argc, argv, "t", long_options, &option_index);
+		break;
+		
+	}
+	
+	
 	void(*call_patch_sandbox)(void) = (void *)&patch_sandbox_start;
 
 	printf ("\nmaking the patch sandbox writeable\n\n");
