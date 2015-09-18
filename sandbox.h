@@ -22,12 +22,28 @@
 
 extern long long patch_sandbox_start, patch_sandbox_end;
 
-#define PATCH_APPLIED_MASK 0x80  // leftmost bit
-#define PATCH_IN_SANDBOX   0x40  // patch resident in sandbox area
-#define PATCH_IS_DATA      0x20  // patch is modifying data
-#define PATCH_WRITE_ONCE   0x10  // patch can be applied in one copy operation
 
-//struct patch {
-	
-//}
+#define PATCH_APPLIED      0x01  // patch is applied
+#define PATCH_IN_SANDBOX   0x02  // patch resident in sandbox area
+#define PATCH_IS_DATA      0x04  // patch is modifying data
+#define PATCH_WRITE_ONCE   0x08  // patch can be applied in one copy operation
+
+/* needs to be padded to an order of 2 */
+/* TODO: align members on cache lines */
+struct patch {
+	struct patch *next;
+	unsigned int flags;
+	char name[0x40];
+	unsigned char SHA1[20];
+	struct apply {
+		unsigned long long patch_dest; /* absolute addr within the sandbox */ 
+		unsigned long long reloc_dest; /* absolutre addr of the relocation */
+		unsigned char reloc_data[64];  /* max single instruction size is 15 */
+		unsigned long long patch_buf;  /* address of data to be patched */
+	} apply;
+	unsigned char pad[44];
+};
+
+
+
 	
