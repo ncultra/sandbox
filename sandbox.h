@@ -9,9 +9,9 @@
 #define PLATFORM X86_64   // obtain using uname -i in the make file 
 #if PLATFORM==X86_64
 //  pages are always 4K for alignment purposes
-#define PAGE_SIZE 0x1000
-#define CACHE_LINE_SIZE 0x40
-#define INSTRUCTION_OFFSET_DIVISOR 2 
+#define PLATFORM_PAGE_SIZE 0x1000
+#define PLATFORM_CACHE_LINE_SIZE 0x40
+#define PLATFORM_INSTRUCTION_DIVISOR 2 /* instructions must begin on an even address */ 
 #else
 #error "platform constant are not defined"
 #endif
