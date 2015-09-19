@@ -1,19 +1,31 @@
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
-#include <sys/mman.h>
-#include <errno.h>
-#include <getopt.h>
-#include <errno.h>
 #include "sandbox.h"
-#include <memory.h>
-
  
 
 extern long long patch_sandbox_start, patch_sandbox_end;
 
-static int test_flag;
+int test_flag;
+
+
+void usage(void) 
+{
+	printf("\n: sandbox [options]\n");
+	printf("\t --test: call into the sandbox\n");
+	printf("\t --help: display this usage information\n");
+}
+
+
+
+
+void make_sandbox_writeable(void *start, void *end) 
+{
+	
+	if (mprotect(start, end - start, PROT_READ|PROT_EXEC|PROT_WRITE))
+	{
+		DMSG("memprotect failed, %s\n", errno);
+		exit -1;
+	}
+}
+
 
 
 int main(int argc, char **argv)
@@ -21,7 +33,6 @@ int main(int argc, char **argv)
 
 	while (1)
 	{
-		// TODO: finish the options
 		int c;
 		static struct option long_options[] = {
 			{"test", no_argument, &test_flag, 1},
@@ -29,32 +40,45 @@ int main(int argc, char **argv)
 		};
 		int option_index = 0;
 		c = getopt_long(argc, argv, "t", long_options, &option_index);
-		break;
-		
+		if (c == -1)
+		    break;
+
+		switch (c) {
+		case  't':
+			if (strstr(long_options[option_index].name, "test") ) {
+				test_flag = 1;
+			} else {
+				break;
+			}
+		case 'h':
+			if (!strstr(long_options[option_index].name, "help")) {
+				usage();
+				break;	
+			}
+		default:
+			break;	
+		}
+		DMSG("seleted option %s\n", long_options[option_index].name);
 	}
 	
 	
+
 	void(*call_patch_sandbox)(void) = (void *)&patch_sandbox_start;
-
-	printf ("\nmaking the patch sandbox writeable\n\n");
-	if (mprotect((void *)&patch_sandbox_start, &patch_sandbox_end - &patch_sandbox_start, PROT_READ|PROT_EXEC|PROT_WRITE))
-	{
-		printf ("memprotect failed, %s\n", errno);
-		exit -1;
+	make_sandbox_writeable(&patch_sandbox_start, &patch_sandbox_end);
+	
+	if (test_flag) {
 		
+		DMSG("writing to patch sandbox...\n\n");
+	
+		char *patch = (char *)&patch_sandbox_start + 0x0d;
+		memset(patch, '1', 64);
+	
+		DMSG("write completed, calling into the patch sandbox\n\n");
+		
+		call_patch_sandbox();
+	
+		DMSG("returned from the patch sandbox\n\n");
 	}
-
-	printf ("writing to patch sandbox...\n\n");
-	
-	char *patch = (char *)&patch_sandbox_start + 0x0d;
-	memset(patch, '1', 64);
-	
-	printf ("write completed, calling into the patch sandbox\n\n");
-		
-	call_patch_sandbox();
-	
-	printf("returned from the patch sandbox\n\n");
-	       
 	       
 	return 0;
 }

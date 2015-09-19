@@ -6,6 +6,17 @@
 * Copyright 2015 Rackspace, Inc.
 ***************************************************************/
 
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <memory.h>
+#include <sys/mman.h>
+#include <errno.h>
+#include <getopt.h>
+#include <memory.h>
+
 #define PLATFORM X86_64   // obtain using uname -i in the make file 
 #if PLATFORM==X86_64
 //  pages are always 4K for alignment purposes
@@ -17,11 +28,28 @@
 #error "platform constant are not defined"
 #endif
 
+// TODO: remove this def after we have a makefile
+#ifndef __DEBUG__
+#define __DEBUG__ 1
+#endif
+
+#ifdef __DEBUG__
+#define DMSG(...) do {				\
+		fprintf(stderr, __VA_ARGS__);	\
+	} while ( 0 ) 	
+#else
+#define DMSG(...) do { } while( 0 )
+#endif
+	
+
 #ifndef SANDBOX_ALLOC_SIZE
 #define SANDBOX_ALLOC_SIZE 0x400
 #endif
 
+extern void make_sandbox_writeable(void *start, void *end) ;
+
 extern long long patch_sandbox_start, patch_sandbox_end;
+extern int test_flag;
 
 
 #define PATCH_APPLIED      0x01  // patch is applied
