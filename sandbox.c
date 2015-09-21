@@ -3,13 +3,12 @@
 static int test_flag;
 
 
-long long patch_sandbox_start, patch_sandbox_end;
-
-void usage(void) 
+int usage(void) 
 {
 	printf("\n: sandbox [options]\n");
 	printf("\t --test: call into the sandbox\n");
 	printf("\t --help: display this usage information\n");
+	return 0;
 }
 
 
@@ -53,6 +52,8 @@ int main(int argc, char **argv)
 	make_sandbox_writeable((void *)&patch_sandbox_start, (void *)&patch_sandbox_end);
 	
 	if (test_flag) {
+		DMSG("Sandbox is %ul bytes\n", &patch_sandbox_end - &patch_sandbox_start);
+		
 		
 		DMSG("writing to patch sandbox...\n\n");
 	
