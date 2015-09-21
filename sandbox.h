@@ -6,16 +6,14 @@
 * Copyright 2015 Rackspace, Inc.
 ***************************************************************/
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <memory.h>
+#include <memory.h> 
 #include <sys/mman.h>
 #include <errno.h>
 #include <getopt.h>
-#include <memory.h>
+#include <errno.h>
 
 #define PLATFORM X86_64   // obtain using uname -i in the make file 
 #if PLATFORM==X86_64
@@ -46,10 +44,8 @@
 #define SANDBOX_ALLOC_SIZE 0x400
 #endif
 
-extern void make_sandbox_writeable(void *start, void *end) ;
-
 extern long long patch_sandbox_start, patch_sandbox_end;
-extern int test_flag;
+void make_sandbox_writeable(void *start, void *end) ;
 
 
 #define PATCH_APPLIED      0x01  // patch is applied
@@ -73,7 +69,3 @@ struct patch {
 	} apply;
 	unsigned char pad[(PATCH_PAD)];
 };
-
-
-
-	

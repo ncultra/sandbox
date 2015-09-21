@@ -1,29 +1,15 @@
+
 #include "sandbox.h"
- 
-// TODO - move externs to sandbox.h
-extern long long patch_sandbox_start, patch_sandbox_end;
+static int test_flag;
 
-int test_flag;
 
+long long patch_sandbox_start, patch_sandbox_end;
 
 void usage(void) 
 {
 	printf("\n: sandbox [options]\n");
 	printf("\t --test: call into the sandbox\n");
 	printf("\t --help: display this usage information\n");
-}
-
-
-
-
-void make_sandbox_writeable(void *start, void *end) 
-{
-	
-	if (mprotect(start, end - start, PROT_READ|PROT_EXEC|PROT_WRITE))
-	{
-		DMSG("memprotect failed, %s\n", errno);
-		exit -1;
-	}
 }
 
 
@@ -64,7 +50,7 @@ int main(int argc, char **argv)
 	
 
 	void(*call_patch_sandbox)(void) = (void *)&patch_sandbox_start;
-	make_sandbox_writeable(&patch_sandbox_start, &patch_sandbox_end);
+	make_sandbox_writeable((void *)&patch_sandbox_start, (void *)&patch_sandbox_end);
 	
 	if (test_flag) {
 		
