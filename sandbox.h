@@ -40,9 +40,7 @@
 #endif
 	
 
-#ifndef SANDBOX_ALLOC_SIZE
 #define SANDBOX_ALLOC_SIZE 0x400
-#endif
 
 extern long long patch_sandbox_start, patch_sandbox_end;
 void make_sandbox_writeable(void *start, void *end) ;

@@ -9,8 +9,6 @@ sandbox: sandbox.o sandbox.h libsandbox.a
 libsandbox.a: libsandbox.o
 	ar cr libsandbox.a libsandbox.o
 
-libsandbox.o: libsandbox.c sandbox.S sandbox.decls.h
-	gcc -c -g libsandbox.c sandbox.S
+libsandbox.o: libsandbox.c
+	gcc -c -g libsandbox.c
 
-sandbox.decls.h: sandbox.h
-	$(CPP) -dM sandbox.h | grep -iE 'SANDBOX|PATCH|PLATFORM' | grep -v GNU > sandbox.decls.h
