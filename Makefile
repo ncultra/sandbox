@@ -23,3 +23,9 @@ clean:
 	rm -v $(BUILD_ROOT)/sandbox
 	rm -v $(BUILD_ROOT)/*a
 	rm -v $(BUILD_ROOT)/*o
+
+.PHONY: qemu
+qemu:
+	cp -v  libsandbox.c ~/src/qemu/target-i386/libsandbox.c
+	cp -v  sandbox.h ~/src/qemu/include/qemu/sandbox.h
+# qemu will not build symbolic links
