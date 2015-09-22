@@ -1,14 +1,38 @@
 #include <sys/mman.h>
 #include "sandbox.h"
-asm(".global patch_sandbox_start");
-asm(".global patch_sandbox_end");
-asm(".align 0x1000");
-asm("patch_sandbox_start:");
-asm("jmp patch_sandbox_end");
-asm(".fill 0x400");
-asm(".align 8");
-asm("patch_sandbox_end:");
-asm("retq");
+__asm__(".global patch_sandbox_start");
+__asm__(".global patch_sandbox_end");
+__asm__(".align 0x1000");
+__asm__("patch_sandbox_start:");
+__asm__("jmp patch_sandbox_end");
+__asm__(".fill 0x400");
+__asm__(".align 8");
+__asm__("patch_sandbox_end:");
+__asm__("retq");
+
+struct patch *patch_list = NULL;
+
+struct patch *alloc_patch(char *name, int size)
+{
+	struct patch *new_patch = calloc(1, sizeof(struct patch));
+	if (! new_patch) {
+		return NULL;
+	}
+	
+	new_patch->patch_buf = aligned_alloc(0x400, size);
+	
+	if (new_patch->patch_buf == NULL) {
+		goto exit_patch_buf;
+	}
+	strncpy(&new_patch->name[0], name, 0x40);
+	return new_patch;
+	
+exit_patch_buf:
+	free(new_patch->patch_buf);
+	return NULL;
+}
+
+
 
 void make_sandbox_writeable(void *start, void *end) 
 {

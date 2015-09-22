@@ -38,7 +38,9 @@
 #define SANDBOX_ALLOC_SIZE 0x400
 
 extern uint64_t patch_sandbox_start, patch_sandbox_end;
+
 void make_sandbox_writeable(void *start, void *end) ;
+struct patch *alloc_patch(char *name, int size);
 
 
 #define PATCH_APPLIED      0x01  // patch is applied
@@ -54,11 +56,9 @@ struct patch {
 	unsigned int flags;
 	char name[0x40];
 	uint8_t SHA1[20];
-	struct apply {
-		uintptr_t patch_dest; /* absolute addr within the sandbox */ 
-		uintptr_t reloc_dest; /* absolutre addr of the relocation */
-		uint8_t reloc_data[PLATFORM_MAX_INSTR]; /* max single instruction size is 15 */
-		uintptr_t patch_buf;  /* address of data to be patched */
-	} apply;
+	uintptr_t patch_dest; /* absolute addr within the sandbox */
+	uintptr_t reloc_dest; /* absolutre addr of the relocation */
+	uint8_t reloc_data[PLATFORM_MAX_INSTR]; /* max single instruction size is 15 */
+	uintptr_t *patch_buf;  /* address of data to be patched */
 	uint8_t pad[(PATCH_PAD)];
 };

@@ -1,16 +1,16 @@
 BUILD_ROOT := "/home/mdday/src/sandbox/"
-
+CFLAGS =  -g -Wall -std=c11
 
 
 sandbox: sandbox.o sandbox.h libsandbox.a
-	$(CC) -g -static -c sandbox.c -llibsandbox.a
-	gcc -o sandbox sandbox.o libsandbox.a 
+	$(CC) $(CFLAGS) -static -c sandbox.c -llibsandbox.a
+	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
 libsandbox.a: libsandbox.o
 	ar cr libsandbox.a libsandbox.o
 
 libsandbox.o: libsandbox.c
-	gcc -c -g libsandbox.c
+	$(CC) $(CFLAGS) -c  libsandbox.c
 
 
 ,PHONY: intsall

@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 	make_sandbox_writeable((void *)&patch_sandbox_start, (void *)&patch_sandbox_end);
 	
 	if (test_flag) {
-		DMSG("Sandbox is %ul bytes\n", &patch_sandbox_end - &patch_sandbox_start);
+		DMSG("Sandbox is %ld bytes\n", &patch_sandbox_end - &patch_sandbox_start);
 		
 		
 		DMSG("writing to patch sandbox...\n\n");
