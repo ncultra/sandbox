@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <memory.h> 
 #include <sys/mman.h>
@@ -15,16 +16,10 @@
 #include <getopt.h>
 #include <errno.h>
 
-#define PLATFORM X86_64   // obtain using uname -i in the make file 
-#if PLATFORM==X86_64
-//  pages are always 4K for alignment purposes
 #define PLATFORM_PAGE_SIZE 0x1000
 #define PLATFORM_CACHE_LINE_SIZE 0x40
 #define PLATFORM_INSTRUCTION_DIVISOR 2 /* instructions must begin on an even address */
 #define PLATFORM_MAX_INSTR  0x10
-#else
-#error "platform constant are not defined"
-#endif
 
 // TODO: remove this def after we have a makefile
 #ifndef __DEBUG__
@@ -42,7 +37,7 @@
 
 #define SANDBOX_ALLOC_SIZE 0x400
 
-extern long long patch_sandbox_start, patch_sandbox_end;
+extern uint64_t patch_sandbox_start, patch_sandbox_end;
 void make_sandbox_writeable(void *start, void *end) ;
 
 
@@ -58,12 +53,12 @@ struct patch {
 	struct patch *next;
 	unsigned int flags;
 	char name[0x40];
-	unsigned char SHA1[20];
+	uint8_t SHA1[20];
 	struct apply {
-		unsigned long long patch_dest; /* absolute addr within the sandbox */ 
-		unsigned long long reloc_dest; /* absolutre addr of the relocation */
-		unsigned char reloc_data[PLATFORM_MAX_INSTR]; /* max single instruction size is 15 */
-		unsigned long long patch_buf;  /* address of data to be patched */
+		uintptr_t patch_dest; /* absolute addr within the sandbox */ 
+		uintptr_t reloc_dest; /* absolutre addr of the relocation */
+		uint8_t reloc_data[PLATFORM_MAX_INSTR]; /* max single instruction size is 15 */
+		uintptr_t patch_buf;  /* address of data to be patched */
 	} apply;
-	unsigned char pad[(PATCH_PAD)];
+	uint8_t pad[(PATCH_PAD)];
 };
