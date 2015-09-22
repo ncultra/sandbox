@@ -1,4 +1,4 @@
-# start using a makefile ..
+BUILD_ROOT := "/home/mdday/src/sandbox/"
 
 
 
@@ -12,3 +12,14 @@ libsandbox.a: libsandbox.o
 libsandbox.o: libsandbox.c
 	gcc -c -g libsandbox.c
 
+
+,PHONY: intsall
+install:
+	cp -v libsandbox.a /usr/lib64/
+	cp -v sandbox.h /usr/include/
+
+.PHOMY: clean
+clean:
+	rm -v $(BUILD_ROOT)/sandbox
+	rm -v $(BUILD_ROOT)/*a
+	rm -v $(BUILD_ROOT)/*o
