@@ -21,6 +21,7 @@
 #define PLATFORM_INSTRUCTION_DIVISOR 2 /* instructions must begin on an even address */
 #define PLATFORM_MAX_INSTR  0x10
 
+#define MAX_PATCH_SIZE PLATFORM_PAGE_SIZE
 // TODO: remove this def after we have a makefile
 #ifndef __DEBUG__
 #define __DEBUG__ 1
@@ -36,12 +37,6 @@
 	
 
 #define SANDBOX_ALLOC_SIZE 0x400
-
-extern uint64_t patch_sandbox_start, patch_sandbox_end;
-
-void make_sandbox_writeable(void *start, void *end) ;
-struct patch *alloc_patch(char *name, int size);
-
 
 #define PATCH_APPLIED      0x01  // patch is applied
 #define PATCH_IN_SANDBOX   0x02  // patch resident in sandbox area
@@ -62,3 +57,29 @@ struct patch {
 	uintptr_t *patch_buf;  /* address of data to be patched */
 	uint8_t pad[(PATCH_PAD)];
 };
+
+
+extern uint64_t patch_sandbox_start, patch_sandbox_end, patch_cursor;
+extern struct patch *patch_list;
+
+void make_sandbox_writeable(void *start, void *end) ;
+struct patch *alloc_patch(char *name, int size);
+int apply_patch(struct patch *new_patch);
+
+
+// offset should be  positive when adding a new patch, negative when removing a patch
+static inline uint64_t update_patch_cursor(uint64_t offset)
+{
+	return patch_cursor + offset;
+}
+
+static inline void link_struct_patch(struct patch *p) 
+{
+	p->next = patch_list;
+	patch_list = p;
+};
+
+static inline uint64_t get_sandbox_free(void)
+{
+	return patch_sandbox_end - patch_cursor;
+}

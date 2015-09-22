@@ -11,6 +11,19 @@ __asm__("patch_sandbox_end:");
 __asm__("retq");
 
 struct patch *patch_list = NULL;
+uint64_t patch_cursor = 0;
+
+
+
+// sanity check parms
+// make sure there is room
+// update sandbox state (next_patch, sandbox_avail)
+int apply_patch(struct patch *new_patch)
+{
+	return 0;
+	
+}
+
 
 struct patch *alloc_patch(char *name, int size)
 {
@@ -31,7 +44,6 @@ exit_patch_buf:
 	free(new_patch->patch_buf);
 	return NULL;
 }
-
 
 
 void make_sandbox_writeable(void *start, void *end) 
