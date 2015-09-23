@@ -14,7 +14,8 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <getopt.h>
-#include <errno.h>
+#include <assert.h>
+//#include <atomic.h>
 
 #define PLATFORM_PAGE_SIZE 0x1000
 #define PLATFORM_CACHE_LINE_SIZE 0x40
@@ -37,7 +38,14 @@
 	
 
 #define SANDBOX_ALLOC_SIZE 0x400
+/* from /linux/include/uapi/kernel.h */
+#define __ALIGN_KERNEL(x, a) __ALIGN_KERNEL_MASK(x, (typeof(x))(a) - 1)
+#define __ALIGN_KERNEL_MASK(x, mask)    (((x) + (mask)) & ~(mask))
+ 
 
+
+
+/* flags for patch list */
 #define PATCH_APPLIED      0x01  // patch is applied
 #define PATCH_IN_SANDBOX   0x02  // patch resident in sandbox area
 #define PATCH_IS_DATA      0x04  // patch is modifying data
@@ -54,7 +62,9 @@ struct patch {
 	uintptr_t patch_dest; /* absolute addr within the sandbox */
 	uintptr_t reloc_dest; /* absolutre addr of the relocation */
 	uint8_t reloc_data[PLATFORM_MAX_INSTR]; /* max single instruction size is 15 */
+	uint8_t reloc_size;
 	uintptr_t *patch_buf;  /* address of data to be patched */
+	uint64_t patch_size;
 	uint8_t pad[(PATCH_PAD)];
 };
 
@@ -63,7 +73,9 @@ extern uint64_t patch_sandbox_start, patch_sandbox_end, patch_cursor;
 extern struct patch *patch_list;
 
 uint64_t make_sandbox_writeable(void *start, void *end) ;
-struct patch *alloc_patch(char *name, int size);
+struct patch *alloc_patch(char *name, uint64_t size);
+void free_patch(struct patch *p);
+
 int apply_patch(struct patch *new_patch);
 uint64_t init_sandbox(void);
 
@@ -71,7 +83,9 @@ uint64_t init_sandbox(void);
 // offset should be  positive when adding a new patch, negative when removing a patch
 static inline uint64_t update_patch_cursor(uint64_t offset)
 {
-	return patch_cursor + offset;
+	
+	patch_cursor = __ALIGN_KERNEL(patch_cursor + offset, PLATFORM_CACHE_LINE_SIZE);
+	return patch_cursor;
 }
 
 static inline void link_struct_patch(struct patch *p) 
