@@ -1,5 +1,5 @@
 BUILD_ROOT := "/home/mdday/src/sandbox/"
-CFLAGS =  -g -Wall -std=c11
+CFLAGS =  -g -Wall -std=gnu11
 
 
 sandbox: sandbox.o sandbox.h libsandbox.a
