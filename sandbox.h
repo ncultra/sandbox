@@ -62,9 +62,10 @@ struct patch {
 extern uint64_t patch_sandbox_start, patch_sandbox_end, patch_cursor;
 extern struct patch *patch_list;
 
-void make_sandbox_writeable(void *start, void *end) ;
+uint64_t make_sandbox_writeable(void *start, void *end) ;
 struct patch *alloc_patch(char *name, int size);
 int apply_patch(struct patch *new_patch);
+uint64_t init_sandbox(void);
 
 
 // offset should be  positive when adding a new patch, negative when removing a patch

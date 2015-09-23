@@ -46,13 +46,25 @@ exit_patch_buf:
 }
 
 
-void make_sandbox_writeable(void *start, void *end) 
+uint64_t make_sandbox_writeable(void *start, void *end) 
 {
-	
 	if (mprotect(start, end - start, PROT_READ|PROT_EXEC|PROT_WRITE))
 	{
 		DMSG("memprotect failed, %i\n", errno);
-		return;
-		
+		return 0;
 	}
+	return patch_sandbox_start;
 }
+
+
+uint64_t init_sandbox(void)
+{
+	uint64_t start = make_sandbox_writeable(&patch_sandbox_start,
+						&patch_sandbox_end);
+	if (start) {		
+		patch_cursor = start;
+	}
+	return start;
+}
+
+	
