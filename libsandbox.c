@@ -31,7 +31,7 @@ int apply_patch(struct patch *new_patch)
 	patch_cursor += s;
 
 	if (new_patch->reloc_dest) {
-		if (mprotect((void *)new_patch->reloc_dest,
+		if (mprotect((reloc_ptr_t)new_patch->reloc_dest,
 			     (size_t)new_patch->reloc_size + 0x40,
 			     PROT_READ|PROT_EXEC|PROT_WRITE)){
 
@@ -40,18 +40,14 @@ int apply_patch(struct patch *new_patch)
 			goto err_exit;
 		}
 		
-		if (mlock((void *)new_patch->reloc_dest, new_patch->reloc_size)) {
+		if (mlock((reloc_ptr_t)new_patch->reloc_dest, new_patch->reloc_size)) {
 				DMSG("Unable to lock  relocation record @ %p\n",
 				     (void *)new_patch->reloc_dest);
 				goto err_exit;
 		}
 
 		smp_mb();
-		
-		// TODO: this write needs to be atomic
-		// the assumption is that overwritten instructions will be included
-		// in the patch if they are needed and transferred to the sandbox.		
-		//
+		*(reloc_ptr_t)new_patch->reloc_dest = (uint64_t)new_patch->reloc_data;	
 	}
 	
 	
