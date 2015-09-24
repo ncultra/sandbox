@@ -14,6 +14,18 @@ struct patch *patch_list = NULL;
 uint64_t patch_cursor = 0;
 
 
+void viewsandbox_cursor(void *cursor)
+{
+	dump_sandbox(cursor, 64);
+}
+
+
+void viewsandbox(void *start, void *end)
+{
+	dump_sandbox(start, end - start);
+}
+
+
 
 // sanity check parms
 // make sure there is room

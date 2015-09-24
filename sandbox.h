@@ -80,6 +80,8 @@ void free_patch(struct patch *p);
 int apply_patch(struct patch *new_patch);
 uint64_t init_sandbox(void);
 void dump_sandbox(const void* data, size_t size);
+void viewsandbox(void *start, void *end);
+void viewsandbox_cursor(void *cursor);
 
 
 // offset should be  positive when adding a new patch, negative when removing a patch

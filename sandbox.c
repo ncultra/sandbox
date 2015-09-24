@@ -45,7 +45,10 @@ int main(int argc, char **argv)
 	}
 	
 	
-
+	init_sandbox();
+	viewsandbox(&patch_sandbox_start, &patch_sandbox_end);
+	viewsandbox_cursor(&patch_cursor);
+	
 	void(*call_patch_sandbox)(void) = (void *)&patch_sandbox_start;
 	make_sandbox_writeable((void *)&patch_sandbox_start, (void *)&patch_sandbox_end);
 	
@@ -61,7 +64,9 @@ int main(int argc, char **argv)
 		DMSG("write completed, calling into the patch sandbox\n\n");
 		
 		call_patch_sandbox();
-	
+
+		viewsandbox(&patch_sandbox_start, &patch_sandbox_end);
+		viewsandbox_cursor(&patch_cursor);
 		DMSG("returned from the patch sandbox\n\n");
 	}
 	       
