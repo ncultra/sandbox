@@ -6,12 +6,14 @@ sandbox: sandbox.o sandbox.h libsandbox.a
 	$(CC) $(CFLAGS) -static -c sandbox.c -llibsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
-libsandbox.a: libsandbox.o
-	ar cr libsandbox.a libsandbox.o
+libsandbox.a: libsandbox.o hexdump.o
+	ar cr libsandbox.a libsandbox.o hexdump.o
 
 libsandbox.o: libsandbox.c
 	$(CC) $(CFLAGS) -c  libsandbox.c
 
+hexdump.o:
+	$(CC) $(CFLAGS) -c hexdump.c	
 
 ,PHONY: intsall
 install:
