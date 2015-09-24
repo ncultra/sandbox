@@ -45,7 +45,8 @@ int apply_patch(struct patch *new_patch)
 				     (void *)new_patch->reloc_dest);
 				goto err_exit;
 		}
-				
+
+		smp_mb();
 		
 		// TODO: this write needs to be atomic
 		// the assumption is that overwritten instructions will be included
