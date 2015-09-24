@@ -37,16 +37,26 @@ int apply_patch(struct patch *new_patch)
 
 			DMSG("Unable to write relocation record @ %p\n",
 			     (void *)new_patch->reloc_dest);
-			return -1;
+			goto err_exit;
 		}
+		
+		if (mlock((void *)new_patch->reloc_dest, new_patch->reloc_size)) {
+				DMSG("Unable to lock  relocation record @ %p\n",
+				     (void *)new_patch->reloc_dest);
+				goto err_exit;
+		}
+				
+		
 		// TODO: this write needs to be atomic
 		// the assumption is that overwritten instructions will be included
 		// in the patch if they are needed and transferred to the sandbox.		
 		//
 	}
 	
-	return 0;
 	
+	return 0;
+err_exit:
+	return -1;
 }
 
 
