@@ -27,7 +27,7 @@ int apply_patch(struct patch *new_patch)
 	patch_cursor = __ALIGN_KERNEL(patch_cursor, 0x40);
 	memcpy((void *)patch_cursor, (void *)new_patch->patch_buf, s);
 
-	new_patch->flags |= PATCH_APPLIED;
+	new_patch->flags |= PATCH_IN_SANDBOX;
 	patch_cursor += s;
 
 	if (new_patch->reloc_dest) {
@@ -46,10 +46,18 @@ int apply_patch(struct patch *new_patch)
 				goto err_exit;
 		}
 
+		// the reloc value should be a near jump "e9 0xaaaaaaaa"
+		// OR the first 3 bytes of the current value of the dest into the reloc_data
+		// TODO: add some awareness of the data size to be written and the read mask
+		*(reloc_ptr_t)new_patch->reloc_data |=
+			*(reloc_ptr_t)new_patch->reloc_dest & (uint64_t)0xffffff;
+		
 		smp_mb();
-		*(reloc_ptr_t)new_patch->reloc_dest = (uint64_t)new_patch->reloc_data;	
+		*(reloc_ptr_t)new_patch->reloc_dest = *(reloc_ptr_t)new_patch->reloc_data;
+		munlock((reloc_ptr_t)new_patch->reloc_dest, new_patch->reloc_size);
 	}
 	
+	new_patch->flags |= PATCH_APPLIED;
 	
 	return 0;
 err_exit:
