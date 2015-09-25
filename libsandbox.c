@@ -34,10 +34,13 @@ int apply_patch(struct patch *new_patch)
 {
 	assert(get_sandbox_free() > new_patch->patch_size);
 	int s = new_patch->patch_size;
-	
+	// pointer arithmetic needs to be rewritten, casting pointers means
+	// that incrementing them is unpredictable
 	patch_cursor += (0x40 - 1);
 	patch_cursor = __ALIGN_KERNEL(patch_cursor, 0x40);
-	memcpy((void *)patch_cursor, (void *)new_patch->patch_buf, s);
+
+	
+	memcpy((void *)&patch_cursor, (void *)new_patch->patch_buf, s);
 
 	new_patch->flags |= PATCH_IN_SANDBOX;
 	patch_cursor += s;
@@ -45,19 +48,10 @@ int apply_patch(struct patch *new_patch)
 	if (new_patch->reloc_dest) {
 		if (mprotect((reloc_ptr_t)new_patch->reloc_dest,
 			     (size_t)new_patch->reloc_size + 0x40,
-			     PROT_READ|PROT_EXEC|PROT_WRITE)){
-
-			DMSG("Unable to write relocation record @ %p\n",
-			     (void *)new_patch->reloc_dest);
+			     PROT_READ|PROT_EXEC|PROT_WRITE)){			
+			assert(0);
 			goto err_exit;
 		}
-		
-		if (mlock((reloc_ptr_t)new_patch->reloc_dest, new_patch->reloc_size)) {
-				DMSG("Unable to lock  relocation record @ %p\n",
-				     (void *)new_patch->reloc_dest);
-				goto err_exit;
-		}
-
 		// the reloc value should be a near jump "e9 0xaaaaaaaa"
 		// OR the first 3 bytes of the current value of the dest into the reloc_data
 		// TODO: add some awareness of the data size to be written and the read mask
@@ -73,6 +67,7 @@ int apply_patch(struct patch *new_patch)
 	
 	return 0;
 err_exit:
+	DMSG("Unable to write relocation record @ %p\n", (void *)new_patch->reloc_dest);
 	return -1;
 }
 
@@ -137,11 +132,11 @@ uint64_t make_sandbox_writeable(void *start, void *end)
 
 uint64_t init_sandbox(void)
 {
-	uint64_t start = make_sandbox_writeable(&patch_sandbox_start,
+	
+	uint64_t start  = make_sandbox_writeable(&patch_sandbox_start,
 						&patch_sandbox_end);
-	if (start) {		
-		patch_cursor = start;
-	}
+	patch_cursor = start;
+	
 	return start;
 }
 
