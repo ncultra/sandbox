@@ -52,12 +52,13 @@ int main(int argc, char **argv)
 	
 	// init makes the sandbox area writeable
 	init_sandbox(); // returns a cursor to the patch area
-	printf ("----------------- sandbox --------------------\n");
-	viewsandbox(&patch_sandbox_start, &patch_sandbox_end);
-	printf ("----------------- cursor ---------------------\n");
-	viewsandbox_cursor(&patch_cursor);
+	printf ("patch_cursor %016lx\n", (uint64_t)patch_cursor);
+//	printf ("----------------- sandbox --------------------\n");
+//	viewsandbox(&patch_sandbox_start, &patch_sandbox_end);
+//	printf ("----------------- cursor ---------------------\n");
+//	viewsandbox_cursor(&patch_cursor);
 	
-	void(*call_patch_sandbox)(void) = (void *)&patch_sandbox_start;
+	void(*call_patch_sandbox)(void) = (void *)patch_sandbox_start;
 
 	patched();
 
@@ -68,22 +69,25 @@ int main(int argc, char **argv)
 		uint8_t jumpto[8] = {0xe9, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 00};
 		uint8_t patch_data[] = {0x55, 0x48, 0x89, 0xe5, 0xbf, 0xc8, 0x3b, 0x40, 0x00,
 				      0xe8, 0x47, 0xf5, 0xff, 0xff, 0x5d, 0xc3};
-		char *pname = "jumpto";
+		char *pname = strdup("pname");
+		
 		int err;
 		
 		printf (" replacement code: %lx\n", (uint64_t) jumpto[0]);
-		
-		DMSG("Sandbox is %ld bytes\n", &patch_sandbox_end - &patch_sandbox_start);
+
+		printf("sandbox start %016lx\n",  (uint64_t)&patch_sandbox_start);
+		printf("sandbox end   %016lx\n",  (uint64_t)&patch_sandbox_end);
+		DMSG("Sandbox is      %016lx bytes\n", (uint64_t)&patch_sandbox_end - (uint64_t)&patch_sandbox_start);
 		
 		DMSG("writing to patch sandbox...\n\n");
 
 		// allocate and init the patch structure
 
 		struct patch *p = alloc_patch(pname, sizeof(patch_data));
-		p->patch_dest = (uintptr_t)&patch_cursor;
-		p->reloc_dest = (uintptr_t)&main + 0x78;
+		p->patch_dest = patch_cursor;
+		p->reloc_dest = (uint8_t *)main + 0x78;
 		memcpy(&p->reloc_data[0], jumpto, sizeof(jumpto));
-		memcpy(p->patch_buf, &patch_data[0], sizeof(patch_data));
+		memcpy(&p->patch_buf[0], patch_data, sizeof(patch_data));
 		p->patch_size = sizeof(patch_data);
 
 		// apply the patch
@@ -97,9 +101,9 @@ int main(int argc, char **argv)
 		
 		call_patch_sandbox();
 
-		viewsandbox(&patch_sandbox_start, &patch_sandbox_end);
-		viewsandbox_cursor(&patch_cursor);
-		DMSG("returned from the patch sandbox\n\n");
+		//	viewsandbox(&patch_sandbox_start, &patch_sandbox_end);
+		//	viewsandbox_cursor(&patch_cursor);
+		DMSG("\nreturned from the patch sandbox\n\n");
 	}
 	       
 	return 0;
