@@ -58,9 +58,13 @@ int main(int argc, char **argv)
 	
 	
 	if (test_flag) {
-		uint8_t jumpto[] = {0xe9, 0x40, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00};
+		// these bytes should cause a near jump to the sandbox 
+		uint8_t jumpto[] = {0xe9, 0x0f, 0xfd, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00};
+
+		// these bytes get written to the sandbox and executed by the jump
+		//  0xc3 is a near return
 		uint8_t patch_data[] = {0xc3, 0x48, 0x89, 0xe5, 0xbf, 0xc8, 0x3b, 0x40, 0x00,
-				      0xe8, 0x47, 0xf5, 0xff, 0xff, 0x5d, 0xc3};
+					0xff, 0x00, 0x47, 0xf5, 0xff, 0xff, 0x5d, 0xc3};
 		char *pname = strdup("pname");
 		
 		int err;
@@ -77,7 +81,7 @@ int main(int argc, char **argv)
 
 		struct patch *p = alloc_patch(pname, sizeof(patch_data));
 		p->patch_dest = patch_cursor;
-		p->reloc_dest = (uintptr_t)main + 0x758; // points to the "patched" function
+		p->reloc_dest = (uintptr_t)&patched; // points to the "patched" function
 		memcpy(p->reloc_data, jumpto, sizeof(jumpto));
 		memcpy((uint8_t*)p->patch_buf, patch_data, sizeof(patch_data));
 		p->patch_size = sizeof(patch_data);
@@ -91,8 +95,10 @@ int main(int argc, char **argv)
 
 		void (*patched)(void) = (void (*)(void))&patch_sandbox_start;
 		patched();
-		
+
 		DMSG("\nreturned from the patch sandbox\n\n");
+		dump_sandbox(main + 0x758, 16);
+
 	}
 	       
 	return 0;
