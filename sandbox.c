@@ -52,23 +52,23 @@ int main(int argc, char **argv)
 	
 	// init makes the sandbox area writeable
 	init_sandbox(); // returns a cursor to the patch area
-	printf ("patch_cursor %016lx\n", (uint64_t)patch_cursor);
+	DMSG("patch_cursor %016lx\n", (uint64_t)patch_cursor);
 
-	printf("%p %p\n", (void *)patched, (void *)&_start);
+	DMSG("%p %p\n", (void *)patched, (void *)&_start);
 	
 	
 	if (test_flag) {
 		uint8_t jumpto[] = {0xe9, 0x40, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00};
-		uint8_t patch_data[] = {0x55, 0x48, 0x89, 0xe5, 0xbf, 0xc8, 0x3b, 0x40, 0x00,
+		uint8_t patch_data[] = {0xc3, 0x48, 0x89, 0xe5, 0xbf, 0xc8, 0x3b, 0x40, 0x00,
 				      0xe8, 0x47, 0xf5, 0xff, 0xff, 0x5d, 0xc3};
 		char *pname = strdup("pname");
 		
 		int err;
 		
-		printf (" replacement code: %lx\n", (uint64_t) jumpto[0]);
+		DMSG (" replacement code: %lx\n", (uint64_t) jumpto[0]);
 
-		printf("sandbox start %016lx\n",  (uint64_t)&patch_sandbox_start);
-		printf("sandbox end   %016lx\n",  (uint64_t)&patch_sandbox_end);
+		DMSG("sandbox start %016lx\n",  (uint64_t)&patch_sandbox_start);
+		DMSG("sandbox end   %016lx\n",  (uint64_t)&patch_sandbox_end);
 		DMSG("Sandbox is      %016lx bytes\n", (uint64_t)&patch_sandbox_end - (uint64_t)&patch_sandbox_start);
 		
 		DMSG("writing to patch sandbox...\n\n");
@@ -81,21 +81,17 @@ int main(int argc, char **argv)
 		memcpy(p->reloc_data, jumpto, sizeof(jumpto));
 		memcpy((uint8_t*)p->patch_buf, patch_data, sizeof(patch_data));
 		p->patch_size = sizeof(patch_data);
-
-
-		viewsandbox(&patch_sandbox_start, &patch_sandbox_end);
-		viewsandbox_cursor(&patch_cursor);
-		
+		dump_sandbox(&patch_sandbox_start, 16);
+				
 		// apply the patch
 		err = apply_patch(p);
 		printf ("err = %d\n", err);
 		DMSG("write completed, calling into the patch sandbox\n\n");
+		dump_sandbox(&patch_sandbox_start, 16);
 
-		viewsandbox(&patch_sandbox_start, &patch_sandbox_end);
-		viewsandbox_cursor(&patch_cursor);
+		void (*patched)(void) = (void (*)(void))&patch_sandbox_start;
+		patched();
 		
-		__asm__("jmp patch_sandbox_start");
-		//call_patch_sandbox();
 		DMSG("\nreturned from the patch sandbox\n\n");
 	}
 	       

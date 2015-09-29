@@ -15,22 +15,6 @@ uint8_t *patch_cursor = NULL;
 
 
 
-void viewsandbox_cursor(void *cursor)
-{
-	dump_sandbox(cursor, 64);
-}
-
-
-void viewsandbox(void *start, void *end)
-{
-	dump_sandbox(start, end - start);
-}
-
-
-
-// sanity check parms
-// make sure there is room
-// update sandbox cursor
 int apply_patch(struct patch *new_patch)
 {
 	assert(get_sandbox_free() > new_patch->patch_size);
@@ -61,17 +45,18 @@ int apply_patch(struct patch *new_patch)
 		// TODO: add some awareness of the data size to be written and the read mask
 
 
-//	*(uint64_t *)new_patch->reloc_data |=
-//		*(uint64_t *)new_patch->reloc_dest & (uint64_t)0xffffff;
 		
 		smp_mb();
 
-		for (int i = 0; i < PLATFORM_RELOC_SIZE; i++){
-			
-			*((uint8_t *)new_patch->reloc_dest + i) = new_patch->reloc_data[i];
-		}
 
-////		*(uint64_t *)new_patch->reloc_dest = *(uint64_t *)new_patch->reloc_data;
+		*(uint64_t *)new_patch->reloc_dest = *(uint64_t *)new_patch->reloc_data;
+		DMSG("relocated to:\n");
+		dump_sandbox((void *)new_patch->reloc_dest, 16);
+		DMSG("patched  instructions\n");
+		
+		dump_sandbox((void *)new_patch->patch_buf, 16);
+		
+		
 
 	
 	new_patch->flags |= PATCH_APPLIED;
