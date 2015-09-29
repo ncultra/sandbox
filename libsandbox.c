@@ -37,9 +37,10 @@ int apply_patch(struct patch *new_patch)
 	int s = new_patch->patch_size;
 	// pointer arithmetic needs to be rewritten, casting pointers means
 	// that incrementing them is unpredictable
-	patch_cursor = ALIGN_POINTER(patch_cursor, 0x40);
+	//patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor, 0x40);
+
 	
-	memcpy(patch_cursor, new_patch->patch_buf, s);
+	memcpy((uint8_t*)patch_cursor, (uint8_t *)new_patch->patch_buf, s);
 	new_patch->flags |= PATCH_IN_SANDBOX;
 	patch_cursor += s;
 
@@ -60,14 +61,14 @@ int apply_patch(struct patch *new_patch)
 		// TODO: add some awareness of the data size to be written and the read mask
 
 
-	*(uint64_t *)new_patch->reloc_data |=
-		*(uint64_t *)new_patch->reloc_dest & (uint64_t)0xffffff;
+//	*(uint64_t *)new_patch->reloc_data |=
+//		*(uint64_t *)new_patch->reloc_dest & (uint64_t)0xffffff;
 		
 		smp_mb();
 
 		for (int i = 0; i < PLATFORM_RELOC_SIZE; i++){
 			
-			new_patch->reloc_dest[i] = new_patch->reloc_data[i];
+			*((uint8_t *)new_patch->reloc_dest + i) = new_patch->reloc_data[i];
 		}
 
 ////		*(uint64_t *)new_patch->reloc_dest = *(uint64_t *)new_patch->reloc_data;
@@ -101,17 +102,17 @@ struct patch *alloc_patch(char *name, uint64_t size)
 		goto exit_null;;
 	}
 	
-	new_patch->patch_buf = aligned_alloc(0x40, size);
+	new_patch->patch_buf = (uintptr_t)aligned_alloc(0x40, size);
 	
-	if (new_patch->patch_buf == NULL) {
+	if (!new_patch->patch_buf) {
 		goto exit_patch_buf;
 	}
-	strncpy(&new_patch->name[0], name, 0x40);
+	strncpy(new_patch->name, name, 0x40 - 1);
 	new_patch->patch_size = size;
 	return new_patch;
 	
 exit_patch_buf:
-	free(new_patch->patch_buf);
+	free((uint8_t *)new_patch->patch_buf);
 exit_null:
 	
 	return NULL;
@@ -122,8 +123,8 @@ void free_patch(struct patch *p)
 {
 
 	if (p->patch_buf) {
-		free(p->patch_buf);
-		p->patch_buf = NULL;
+		free((uint8_t *)p->patch_buf);
+		p->patch_buf = 0L;
 	}
 
 	free(p);
@@ -156,12 +157,10 @@ uint8_t *make_sandbox_writeable(void)
 }
 
 
-uint8_t *init_sandbox(void)
+void init_sandbox(void)
 {
-	
-	uint8_t *start = make_sandbox_writeable();
-	printf ("make sandbox writeable return: %016lx\n", (uint64_t)start);
-       return patch_cursor = start;
+	make_sandbox_writeable();
+	patch_cursor = (uint8_t *)&patch_sandbox_start;
 }
 
 	

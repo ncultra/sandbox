@@ -63,16 +63,17 @@ struct patch {
 	char name[0x40];
 	uint8_t SHA1[20];
 	uint8_t *patch_dest; /* absolute addr within the sandbox */
-	uint8_t *reloc_dest; /* absolutre addr of the relocation */
+	uintptr_t reloc_dest; /* absolutre addr of the relocation */
 	uint8_t reloc_data[PLATFORM_RELOC_SIZE]; /* max single instruction size is 15 */
 	uint8_t reloc_size;
-	uint8_t *patch_buf;  /* address of data to be patched */
+	uintptr_t patch_buf;  /* address of data to be patched */
 	uint64_t patch_size;
 	uint8_t pad[(PATCH_PAD)];
 };
 
 
-extern uint8_t *patch_sandbox_start, *patch_sandbox_end, *patch_cursor;
+extern uintptr_t patch_sandbox_start, patch_sandbox_end;
+extern uint8_t *patch_cursor;
 extern struct patch *patch_list;
 
 uint8_t *make_sandbox_writeable(void);
@@ -80,30 +81,23 @@ struct patch *alloc_patch(char *name, uint64_t size);
 void free_patch(struct patch *p);
 
 int apply_patch(struct patch *new_patch);
-uint8_t *init_sandbox(void);
+void init_sandbox(void);
 void dump_sandbox(const void* data, size_t size);
 void viewsandbox(void *start, void *end);
 void viewsandbox_cursor(void *cursor);
 
-static inline uint8_t *ALIGN_POINTER(uint8_t *p, uint64_t offset)
+static inline uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
 {
-	uint64_t pi = (uint64_t)p;
-	
-	pi += (offset - 1);
-	pi &= ~(offset = 1);
-	return (uint8_t*)pi;
+
+	uintptr_t c = (uintptr_t)patch_cursor;
+	return (c  & ~(offset - 1));
 }
 
 
 // offset should be  positive when adding a new patch, negative when removing a patch
 static inline uint8_t *update_patch_cursor(uint64_t offset)
 {
-
-	offset -=1;
-	offset &= ~offset;
-	patch_cursor = patch_cursor + offset;
-	return patch_cursor;
-	
+	return (patch_cursor += offset);
 }
 
 static inline void link_struct_patch(struct patch *p) 
@@ -114,5 +108,5 @@ static inline void link_struct_patch(struct patch *p)
 
 static inline uint64_t get_sandbox_free(void)
 {
-	return patch_sandbox_end - patch_cursor;
+	return ((uintptr_t)patch_sandbox_end - (uintptr_t)patch_cursor);
 }

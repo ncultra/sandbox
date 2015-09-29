@@ -12,7 +12,7 @@ libsandbox.a: libsandbox.o hexdump.o
 libsandbox.o: libsandbox.c
 	$(CC) $(CFLAGS) -c  libsandbox.c
 
-hexdump.o:
+hexdump.o: hexdump.c
 	$(CC) $(CFLAGS) -c hexdump.c	
 
 ,PHONY: intsall
