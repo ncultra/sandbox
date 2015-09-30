@@ -38,26 +38,17 @@ int apply_patch(struct patch *new_patch)
 			assert(0);
 			goto err_exit;
 	}
-	
-	
 		// the reloc value should be a near jump "e9 0xaaaaaaaa"
 		// OR the first 3 bytes of the current value of the dest into the reloc_data
 		// TODO: add some awareness of the data size to be written and the read mask
-
-
 		
 		smp_mb();
-
 
 		*(uint64_t *)new_patch->reloc_dest = *(uint64_t *)new_patch->reloc_data;
 		DMSG("relocated to:\n");
 		dump_sandbox((void *)new_patch->reloc_dest, 16);
 		DMSG("patched  instructions\n");
-		
 		dump_sandbox((void *)new_patch->patch_buf, 16);
-		
-		
-
 	
 	new_patch->flags |= PATCH_APPLIED;
 	
@@ -73,6 +64,7 @@ err_exit:
 struct patch *alloc_patch(char *name, uint64_t size)
 {
 	uint64_t avail = get_sandbox_free();
+	DMSG("%08lx available in sandbox\n", avail);
 	
 	if (avail < size ) {
 		DMSG("Not enough room to apply patch: %ld available, %ld needed\n",

@@ -106,5 +106,5 @@ static inline void link_struct_patch(struct patch *p)
 
 static inline uint64_t get_sandbox_free(void)
 {
-	return ((uintptr_t)patch_sandbox_end - (uintptr_t)patch_cursor);
+	return ((uintptr_t)&patch_sandbox_end - (uintptr_t)patch_cursor);
 }
