@@ -19,14 +19,15 @@ int apply_patch(struct patch *new_patch)
 {
 	assert(get_sandbox_free() > new_patch->patch_size);
 	int s = new_patch->patch_size;
-	// pointer arithmetic needs to be rewritten, casting pointers means
-	// that incrementing them is unpredictable
-	//patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor, 0x40);
+
+	patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor, 0x40);
 
 	
 	memcpy((uint8_t*)patch_cursor, (uint8_t *)new_patch->patch_buf, s);
 	new_patch->flags |= PATCH_IN_SANDBOX;
 	patch_cursor += s;
+	patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor, 0x40);
+	
 
 	if (new_patch->reloc_dest) {
 		uint64_t p = (uint64_t)new_patch->reloc_dest;
@@ -51,7 +52,6 @@ int apply_patch(struct patch *new_patch)
 		dump_sandbox((void *)new_patch->patch_buf, 16);
 	
 	new_patch->flags |= PATCH_APPLIED;
-	
 	return 0;
 }
 

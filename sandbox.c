@@ -49,7 +49,6 @@ int main(int argc, char **argv)
 		DMSG("seleted option %s\n", long_options[option_index].name);
 	}
 	
-	
 	// init makes the sandbox area writeable
 	init_sandbox(); // returns a cursor to the patch area
 	DMSG("patch_cursor %016lx\n", (uint64_t)patch_cursor);

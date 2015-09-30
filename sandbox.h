@@ -83,12 +83,11 @@ void free_patch(struct patch *p);
 int apply_patch(struct patch *new_patch);
 void init_sandbox(void);
 void dump_sandbox(const void* data, size_t size);
-
 static inline uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
 {
-
-	uintptr_t c = (uintptr_t)patch_cursor;
-	return (c  & ~(offset - 1));
+	p += (offset - 1);
+	p &= ~(offset - 1);
+	return p;
 }
 
 
