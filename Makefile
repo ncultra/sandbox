@@ -9,8 +9,11 @@ sandbox: sandbox.o sandbox.h libsandbox.a
 libsandbox.a: libsandbox.o hexdump.o
 	ar cr libsandbox.a libsandbox.o hexdump.o
 
-libsandbox.o: libsandbox.c
+libsandbox.o: libsandbox.c platform.h
 	$(CC) $(CFLAGS) -c  libsandbox.c
+
+platform.h: config.sh
+	$(BUILD_ROOT)/config.sh
 
 hexdump.o: hexdump.c
 	$(CC) $(CFLAGS) -c hexdump.c	

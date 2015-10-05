@@ -17,15 +17,8 @@
 
 
 #include <assert.h>
-//#include <atomic.h>
+#include "platform.h"
 
-#define PLATFORM_PAGE_SIZE 0x1000
-#define PLATFORM_CACHE_LINE_SIZE 0x40
-#define PLATFORM_INSTRUCTION_DIVISOR 2 /* instructions must begin on an even address */
-#define PLATFORM_RELOC_SIZE  0x04
-#define PLATFORM_PAGE_MASK ~(PLATFORM_PAGE_SIZE - 1)
-
-#define MAX_PATCH_SIZE PLATFORM_PAGE_SIZE
 // TODO: remove this def after we have a makefile
 #ifndef __DEBUG__
 #define __DEBUG__ 1

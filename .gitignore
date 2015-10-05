@@ -6,3 +6,5 @@ a.out
 *.o
 *.a
 sandbox
+platform.h
+gdb-command

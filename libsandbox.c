@@ -139,5 +139,3 @@ void init_sandbox(void)
 	make_sandbox_writeable();
 	patch_cursor = (uint8_t *)&patch_sandbox_start;
 }
-
-	
