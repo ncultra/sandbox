@@ -35,8 +35,13 @@
 // must be page-aligned.
 #define SANDBOX_ALLOC_SIZE PLATFORM_PAGE_SIZE
 
+#ifdef X86_64
 #define smp_mb()    ({ asm volatile("mfence" ::: "memory"); (void)0; })
+#endif
 
+#ifdef PPC64LE
+#define smp_mb() {__asm__ __volatile__ ("sync" : : : "memory");}
+#endif
 typedef uint8_t * reloc_ptr_t;;
 
 

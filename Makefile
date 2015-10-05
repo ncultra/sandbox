@@ -13,7 +13,7 @@ libsandbox.o: libsandbox.c platform.h
 	$(CC) $(CFLAGS) -c  libsandbox.c
 
 platform.h: config.sh
-	$(BUILD_ROOT)/config.sh
+	$(BUILD_ROOT)config.sh
 
 hexdump.o: hexdump.c
 	$(CC) $(CFLAGS) -c hexdump.c	

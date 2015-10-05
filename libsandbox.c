@@ -1,14 +1,36 @@
 #include <sys/mman.h>
 #include "sandbox.h"
+
+
 __asm__(".global patch_sandbox_start");
 __asm__(".global patch_sandbox_end");
+#ifdef X86_64
 __asm__(".align 0x1000");
+#endif
+#ifdef  PPC64LE
+__asm__(".align 0x0c");
+#endif
 __asm__("patch_sandbox_start:");
+#ifdef X86_64
 __asm__("jmp patch_sandbox_end");
 __asm__(".fill 0x1000");
 __asm__(".align 8");
+#endif
+#ifdef PPC64LE
+__asm__("b patch_sandbox_end");
+__asm__(".fill 0x1000");
+__asm__(".align 3");
+
+#endif
 __asm__("patch_sandbox_end:");
+
+#ifdef X86_64
 __asm__("retq");
+#endif
+
+#ifdef PPC64LE
+__asm__("blr");
+#endif
 
 struct patch *patch_list = NULL;
 uint8_t *patch_cursor = NULL;
@@ -18,7 +40,8 @@ uint8_t *patch_cursor = NULL;
 int apply_patch(struct patch *new_patch)
 {
 	assert(get_sandbox_free() > new_patch->patch_size);
-	int s = new_patch->patch_size;
+        assert(new_patch->patch_size < MAX_PATCH_SIZE);
+        int s = new_patch->patch_size;
 
 	patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor, 0x40);
 
@@ -124,7 +147,7 @@ uint8_t *make_sandbox_writeable(void)
 	printf ("page size: %016lx\n", (uint64_t)PLATFORM_PAGE_SIZE);
 	printf("page-aligned address: %016lx\n", p);
 	
-	if (mprotect((void *)p, SANDBOX_ALLOC_SIZE - 1,
+	if (mprotect((void *)p, SANDBOX_ALLOC_SIZE,
 		     PROT_READ|PROT_EXEC|PROT_WRITE)) {
 		DMSG("memprotect failed, %i\n", errno);
 		perror("err: ");
