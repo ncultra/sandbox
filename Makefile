@@ -25,7 +25,7 @@ install:
 
 .PHOMY: clean
 clean:
-	rm -v $(BUILD_ROOT)/sandbox
+	rm -v $(BUILD_ROOT)sandbox
 	rm -v $(BUILD_ROOT)/*a
 	rm -v $(BUILD_ROOT)/*o
 

@@ -4,8 +4,8 @@ static int test_flag;
 struct patch *create_test_patch;
 extern uint64_t _start;
 
-void patched(void);
-
+void (*patched)(void);
+void patched_stub(void);
 
 #ifdef X86_64
 // these bytes should cause a near jump to the sandbox
@@ -102,8 +102,10 @@ int main(int argc, char **argv)
 		printf ("err = %d\n", err);
 		DMSG("write completed, calling into the patch sandbox\n\n");
 		dump_sandbox(&patch_sandbox_start, 16);
-
-		void (*patched)(void) = (void (*)(void))&patch_sandbox_start;
+		
+		patched_stub();
+		
+		patched  = (void (*)(void))&patch_sandbox_start;
 		patched();
 
 		DMSG("\nreturned from the patch sandbox\n\n");
@@ -114,8 +116,8 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void patched(void)
+void patched_stub(void)
 {
-	printf("executing inside the patched code\n");
-	
+	static int count = 0;
+	printf("executing inside the patched code, count: %i\n", ++count);
 }
