@@ -23,7 +23,8 @@ gitsha.o: gitsha.c
 
 gitsha.c: .git/HEAD .git/index
 	echo "const char *gitversion = \"$(shell git rev-parse HEAD)\";" > $@	
-
+	echo "const char *cc = \"$(shell $(CC) --version)\";" >> $@
+	echo "const char *ccflags = \"$(CFLAGS)\";" >> $@
 ,PHONY: intsall
 install:
 	cp -v libsandbox.a /usr/lib64/
@@ -31,10 +32,10 @@ install:
 
 .PHOMY: clean
 clean:
-	rm -v $(BUILD_ROOT)sandbox
-	rm -v $(BUILD_ROOT)/*a
-	rm -v $(BUILD_ROOT)/*o
-	rm -v gitsha.c
+	-rm -v $(BUILD_ROOT)sandbox
+	-rm -v $(BUILD_ROOT)/*a
+	-rm -v $(BUILD_ROOT)/*o
+	-rm -v gitsha.c
 
 .PHONY: qemu
 qemu:

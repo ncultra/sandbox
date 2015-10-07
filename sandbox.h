@@ -97,8 +97,8 @@ struct patch {
 };
 
 
-
-extern const char *gitversion;
+// these const strings contain information generated at build time.
+extern const char *gitversion, *cc, *cflags;
 extern uintptr_t patch_sandbox_start, patch_sandbox_end;
 extern uint8_t *patch_cursor;
 extern struct patch *patch_list;
