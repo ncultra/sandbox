@@ -8,3 +8,4 @@ a.out
 sandbox
 platform.h
 gdb-command
+gitsha.c

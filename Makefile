@@ -6,10 +6,10 @@ sandbox: sandbox.o sandbox.h libsandbox.a
 	$(CC) $(CFLAGS) -static -c sandbox.c -llibsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
-libsandbox.a: libsandbox.o hexdump.o
-	ar cr libsandbox.a libsandbox.o hexdump.o
+libsandbox.a: libsandbox.o hexdump.o gitsha.o
+	ar cr libsandbox.a libsandbox.o hexdump.o gitsha.o
 
-libsandbox.o: libsandbox.c platform.h
+libsandbox.o: libsandbox.c  platform.h
 	$(CC) $(CFLAGS) -c  libsandbox.c
 
 platform.h: config.sh
@@ -17,6 +17,12 @@ platform.h: config.sh
 
 hexdump.o: hexdump.c
 	$(CC) $(CFLAGS) -c hexdump.c	
+
+gitsha.o: gitsha.c
+	$(CC) $(CFLAGS) -c gitsha.c
+
+gitsha.c: .git/HEAD .git/index
+	echo "const char *gitversion = \"$(shell git rev-parse HEAD)\";" > $@	
 
 ,PHONY: intsall
 install:
@@ -28,6 +34,7 @@ clean:
 	rm -v $(BUILD_ROOT)sandbox
 	rm -v $(BUILD_ROOT)/*a
 	rm -v $(BUILD_ROOT)/*o
+	rm -v gitsha.c
 
 .PHONY: qemu
 qemu:

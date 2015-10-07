@@ -97,6 +97,8 @@ struct patch {
 };
 
 
+
+extern const char *gitversion;
 extern uintptr_t patch_sandbox_start, patch_sandbox_end;
 extern uint8_t *patch_cursor;
 extern struct patch *patch_list;
