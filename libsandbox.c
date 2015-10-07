@@ -1,7 +1,15 @@
 #include <sys/mman.h>
 #include "sandbox.h"
 
-
+/************************************************************
+ * The .align instruction has a different syntax on X86_64
+ * than it does on PPC64. 
+ *
+ * On X86_64, the operand to .align is an absolute address.
+ * On PP64, the operand is an exponent of base 2.
+ * .align 8 on X86 is equal to .align 3 on PPC (2^3 = 8.)
+ *
+ ************************************************************/
 __asm__(".global patch_sandbox_start");
 __asm__(".global patch_sandbox_end");
 #ifdef X86_64
