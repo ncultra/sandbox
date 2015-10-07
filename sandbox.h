@@ -53,7 +53,7 @@ typedef uint8_t * reloc_ptr_t;;
 #define PATCH_WRITE_ONCE   0x08  // patch can be applied in one copy operation
 // version of the sandbox interface is in the two high-order bytes
 // of the flag 
-#define SANDBOX_VERSION(f) ((uint64_t)(f) >> 0x38)
+#define SANDBOX_VERSION(f) (((uint64_t)(f) >> 0x38) & 0xff)
 
 /* needs to be padded to an order of 2 */
 /* TODO: align members on cache lines */
