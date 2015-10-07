@@ -51,15 +51,42 @@ typedef uint8_t * reloc_ptr_t;;
 #define PATCH_IN_SANDBOX   0x02  // patch resident in sandbox area
 #define PATCH_IS_DATA      0x04  // patch is modifying data
 #define PATCH_WRITE_ONCE   0x08  // patch can be applied in one copy operation
+// version of the sandbox interface is in the two high-order bytes
+// of the flag 
+#define SANDBOX_VERSION(f) ((uint64_t)(f) >> 0x38)
 
 /* needs to be padded to an order of 2 */
 /* TODO: align members on cache lines */
 #define PATCH_PAD 0
+
+/*****************************************************************
+ *   STRUCT PATCH Members
+ *  
+ *  name: human-readable name for the patch
+ *  SHA1: cryptographic signature of the patch data
+ *  canary: an array of bytes that must match decoded instructions in 
+ *         the patch target of the running binary.
+ *  build_id: id of the binary to which this patch applies. This is intended
+ *            to be a git commit # for the head of the repository when the 
+ *            binary is built. 
+ *  patch_dest: address of the patch once applied - a pointer 
+ *              into the sandbox.
+ *  reloc_dest: absolute address where the jump record, or trampoline, 
+ *              is written.
+ *  reloc_size: size in bytes of the jump record
+ *  patch_buf: buffer containing patch bytes to be written to the sandbox.
+ *  patch_size: the number of bytes in the patch, also the number 
+ *              of bytes to be written to the sandbox, and the 
+ *              size of the patch buffer.
+ *  pad: empty bytes if needed for alignment purposes.
+ ****************************************************************/
 struct patch {
 	struct patch *next;
 	unsigned int flags;
 	char name[0x40];
 	uint8_t SHA1[20];
+	uint8_t canary[128];
+	uint8_t build_id[128];	
 	uint8_t *patch_dest; /* absolute addr within the sandbox */
 	uintptr_t reloc_dest; /* absolutre addr of the relocation */
 	uint8_t reloc_data[PLATFORM_RELOC_SIZE]; /* max single instruction size is 15 */
