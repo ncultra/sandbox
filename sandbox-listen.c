@@ -3,12 +3,6 @@
  *
  * listen on a unix domain socket for incoming patches
  ****************************************************************/
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <time.h>
 #include "sandbox.h"
 
 

@@ -16,6 +16,12 @@
 #include <getopt.h>
 #include <assert.h>
 #include <stddef.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <time.h>
 #include "platform.h"
 
 // TODO: remove this def after we have a makefile
@@ -105,10 +111,10 @@ extern struct patch *patch_list;
 uint8_t *make_sandbox_writeable(void);
 struct patch *alloc_patch(char *name, uint64_t size);
 void free_patch(struct patch *p);
-
 int apply_patch(struct patch *new_patch);
 void init_sandbox(void);
 void dump_sandbox(const void* data, size_t size);
+
 static inline uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
 {
 	p += (offset - 1);
@@ -133,3 +139,11 @@ static inline uint64_t get_sandbox_free(void)
 {
 	return ((uintptr_t)&patch_sandbox_end - (uintptr_t)patch_cursor);
 }
+
+
+
+
+// from sandbox-listen.h
+int listen_sandbox_sock(const char *sock_name);
+
+int accept_sandbox_sock(int listenfd, uid_t *uidptr);
