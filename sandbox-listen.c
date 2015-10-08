@@ -6,6 +6,42 @@
 #include "sandbox.h"
 
 
+/*************************************************************************/
+/*                 Message format                                        */
+/*-----------------------------------------------------------------------*/
+/*       0                   1                   2                   3   */
+/*       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 */
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |     message header: 0x53414e44  'SAND' in ascii                */
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      | protocol version              |   message id                  |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      | overall message length                                        |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |   20 bytes sha1 of the sandbox binary's master branch HEAD    |*/
+/*      |                                                               |*/
+/*      |                              ...                              |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |    4 bytes field 1 length                                     |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |    field  1                  ...                              |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |    4 bytes field n length                                     |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |    field  n                    ...                            |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+/* required fields:
+   1) patch name (string)
+   2) canary (128 bytes of binary instructions), used to
+      verify the jump address.
+   3) jump location (64 bit absolute address for jump)
+   4) patch (bytes[patchlen] of instructions) destined for sandbox
+   5) sha1 of this message (20 bytes)
+   6) count of extended fields (4 bytes, always zero for this version).
+ */
+
+
 #define QLEN 5 // depth of the listening queue
 #define STALE 30 // timout for client user id data
 
