@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <assert.h>
+#include <stddef.h>
 #include "platform.h"
 
 // TODO: remove this def after we have a makefile
