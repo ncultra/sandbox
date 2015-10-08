@@ -14,8 +14,6 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include <getopt.h>
-
-
 #include <assert.h>
 #include "platform.h"
 

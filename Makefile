@@ -3,23 +3,19 @@ CFLAGS =  -g -Wall -std=gnu11
 
 
 sandbox: sandbox.o sandbox.h libsandbox.a
-	$(CC) $(CFLAGS) -static -c sandbox.c -llibsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
-libsandbox.a: libsandbox.o hexdump.o gitsha.o
-	ar cr libsandbox.a libsandbox.o hexdump.o gitsha.o
+libsandbox.a: libsandbox.o hexdump.o gitsha.o sandbox-listen.o
+	ar cr libsandbox.a libsandbox.o hexdump.o gitsha.o sandbox-listen.o
 
 libsandbox.o: libsandbox.c  platform.h
 	$(CC) $(CFLAGS) -c  libsandbox.c
 
+*.o: *.c
+	$(CC) $(CFLAGS) -c $<	
+
 platform.h: config.sh
 	$(BUILD_ROOT)config.sh
-
-hexdump.o: hexdump.c
-	$(CC) $(CFLAGS) -c hexdump.c	
-
-gitsha.o: gitsha.c
-	$(CC) $(CFLAGS) -c gitsha.c
 
 gitsha.c: .git/HEAD .git/index
 	echo "const char *gitversion = \"$(shell git rev-parse HEAD)\";" > $@	
