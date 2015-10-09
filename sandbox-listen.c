@@ -31,16 +31,49 @@
 /*      |    field  n                    ...                            |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-/* required fields:
-   1) patch name (string)
-   2) canary (128 bytes of binary instructions), used to
+
+/* Message ID 1: apply patch ********************************************/
+/* Fields:
+   1) header
+   2) patch name (string)
+   3) canary (128 bytes of binary instructions), used to
       verify the jump address.
-   3) jump location (64 bit absolute address for jump)
-   4) patch (bytes[patchlen] of instructions) destined for sandbox
-   5) sha1 of this message (20 bytes)
-   6) count of extended fields (4 bytes, always zero for this version).
+   4) jump location (64 bit absolute address for jump)
+   5) patch (bytes[patchlen] of instructions) destined for sandbox
+   6) sha1 of the patch bytes (20 bytes)
+   7) count of extended fields (4 bytes, always zero for this version).
+
+   reply msg:
+   1) header
+   2) uint64_t  0L "OK," or error code
  */
 
+/* Message ID 2: list patch ********************************************/
+/* Fields:
+   1) header
+   2) patch name (string, wild cards ok)
+   3) sha1 of the patch (corresponding to field 5 of message ID 1),
+      20-byte buffer
+
+   reply msg:
+   1) header
+   2) uint64_t 0L "OK, or error code.
+   3) patch name (if found)
+   4) sha1 of the patch
+*/
+
+/* Message ID 3: get build info ********************************************/
+
+/* Fields:
+   1) header (msg id 3)
+
+   reply msg:
+   1) header
+   2) uint64_t 0L "OK, or error code.
+   3) 20-bytes sha1 git HEAD of the running binary
+   4) $CC at build time (string)
+   5) $CFLAGS at build time (string)
+*/
 
 #define QLEN 5 // depth of the listening queue
 #define STALE 30 // timout for client user id data
