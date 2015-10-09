@@ -12,7 +12,7 @@
 /*       0                   1                   2                   3   */
 /*       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 */
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-/*      |     message header: 0x53414e44  'SAND' in ascii                */
+/*      |     magic number:   0x53414e44  'SAND' in ascii                */
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      | protocol version              |   message id                  |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
@@ -31,7 +31,25 @@
 /*      |    field  n                    ...                            |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
+#define SANDBOX_MSG_MAGIC 0x53414e44
+#define SANDBOX_MSG_VERSION (uint16_t)0x01
+#define SANDBOX_MSG_HDRLEN (uint16_t)0x44 
+#define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 0x20))
+#define SANDBOX_MSG_GET_ID(b) (*(uint16_t *)((uint8_t *)b + 0x30))
+#define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
+#define SANDBOX_MSG_GET_LEN(b) (*(uint64_t *)((uint8_t *)b + 0x40))
 
+#define SANDBOX_MSG_APPLY 1
+#define SANDBOX_MSG_APPLYRSP 2
+#define SANDBOX_MSG_LIST 3
+#define SANDBOX_MSG_LISTRSP 4
+#define SANDBOX_MSG_GET_BLD 5
+#define SANDBOX_MSG_GET_BLDRSP 6
+
+#define SANDBOX_ERR_BAD_HDR -2
+#define SANDBOX_ERR_BAD_VER -3
+#define SANDBOX_ERR_BAD_LEN -4
+#define SANDBOX_ERR_BAD_MSGID -5
 /* Message ID 1: apply patch ********************************************/
 /* Fields:
    1) header
@@ -43,31 +61,31 @@
    6) sha1 of the patch bytes (20 bytes)
    7) count of extended fields (4 bytes, always zero for this version).
 
-   reply msg:
+   reply msg: ID 2
    1) header
    2) uint64_t  0L "OK," or error code
  */
 
-/* Message ID 2: list patch ********************************************/
+/* Message ID 3: list patch ********************************************/
 /* Fields:
    1) header
    2) patch name (string, wild cards ok)
    3) sha1 of the patch (corresponding to field 5 of message ID 1),
       20-byte buffer
 
-   reply msg:
+   reply msg ID 4:
    1) header
    2) uint64_t 0L "OK, or error code.
    3) patch name (if found)
    4) sha1 of the patch
 */
 
-/* Message ID 3: get build info ********************************************/
+/* Message ID 5: get build info ********************************************/
 
 /* Fields:
    1) header (msg id 3)
 
-   reply msg:
+   reply msg ID 6:
    1) header
    2) uint64_t 0L "OK, or error code.
    3) 20-bytes sha1 git HEAD of the running binary
@@ -238,4 +256,47 @@ ssize_t writen(int fd, const void *vptr, size_t n)
 	return (n);
 }
 
+/* header is  3 * 32 bytes -
+ * 'SAND'
+ * version
+ * id
+ * overall message length
+ */
+/* if this function returns ERR, ptr parameters are undefined */
+/* if it returns 0, ptr parameters will have correct values */
+ssize_t read_sandbox_message_header(int fd, uint16_t *version,
+				    uint16_t *id, uint64_t *len)
+{
+	uint8_t hbuf[0x60];
+	ssize_t ccode = 0;
+		
+	
+	if ((ccode = readn(fd, &hbuf, sizeof(hbuf)) != sizeof(hbuf))) {
+		goto errout;
+	}
+	if ( *(uint32_t *)&hbuf[0] != SANDBOX_MSG_MAGIC) {
+		ccode = SANDBOX_ERR_BAD_HDR;
+		goto errout;
+	}
+	if (SANDBOX_MSG_VERSION != (*version = SANDBOX_MSG_GET_VER(hbuf))) {
+		ccode = SANDBOX_ERR_BAD_VER;
+		goto errout;
+	}
+
+	*id = SANDBOX_MSG_GET_VER(hbuf);
+	
+	if (*id < SANDBOX_MSG_APPLY || *id > SANDBOX_MSG_GET_BLDRSP) {
+		ccode = SANDBOX_ERR_BAD_MSGID;
+		goto errout;
+	}
+
+ 	if (SANDBOX_MSG_MAX_LEN > (*len = SANDBOX_MSG_GET_LEN(hbuf))) {
+		ccode = SANDBOX_ERR_BAD_LEN;
+		goto errout;
+	}
+
+errout:	
+	return ccode;
+	
+}
 

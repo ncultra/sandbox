@@ -144,7 +144,10 @@ static inline uint64_t get_sandbox_free(void)
 
 
 // from sandbox-listen.h
-int listen_sandbox_sock(const char *sock_name);
-int accept_sandbox_sock(int listenfd, uid_t *uidptr);
+ssize_t listen_sandbox_sock(const char *sock_name);
+ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr);
 ssize_t	readn(int fd, void *vptr, size_t n);
 ssize_t writen(int fd, const void *vptr, size_t n);
+ssize_t read_sandbox_message_header(int fd, uint16_t *version,
+				    uint16_t *id, uint64_t *len);
+
