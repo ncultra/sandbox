@@ -46,6 +46,7 @@
 #define SANDBOX_MSG_GET_BLD 5
 #define SANDBOX_MSG_GET_BLDRSP 6
 
+#define SANDBOX_OK 0
 #define SANDBOX_ERR_BAD_HDR -2
 #define SANDBOX_ERR_BAD_VER -3
 #define SANDBOX_ERR_BAD_LEN -4
@@ -92,6 +93,24 @@
    4) $CC at build time (string)
    5) $CFLAGS at build time (string)
 */
+
+ssize_t dispatch_apply(int, void **);
+ssize_t dispatch_list(int, void **);
+ssize_t dispatch_getbld(int, void **);
+ssize_t dummy(int, void **);
+
+typedef ssize_t (*handler)(int, void **);
+
+handler dispatch[] =
+{
+	dispatch_apply,
+	dummy,
+	dispatch_list,
+	dummy,
+	dispatch_getbld,
+	dummy,
+	NULL
+};
 
 #define QLEN 5 // depth of the listening queue
 #define STALE 30 // timout for client user id data
@@ -269,7 +288,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 {
 	uint8_t hbuf[0x60];
 	ssize_t ccode = 0;
-		
+	void *dispatch_buffer;
 	
 	if ((ccode = readn(fd, &hbuf, sizeof(hbuf)) != sizeof(hbuf))) {
 		goto errout;
@@ -294,9 +313,33 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 		ccode = SANDBOX_ERR_BAD_LEN;
 		goto errout;
 	}
-
+	ccode = dispatch[*id](fd, &dispatch_buffer);
+	
 errout:	
 	return ccode;
 	
 }
+
+
+
+ssize_t dispatch_apply(int fd, void ** bufp)
+{
+	return(SANDBOX_OK);
+}
+
+ssize_t dispatch_list(int fd, void **bufp)
+{
+	return(SANDBOX_OK);
+}
+
+ssize_t dispatch_getbld(int fd, void **bufp)
+{
+	return(SANDBOX_OK);
+}
+
+ssize_t dummy(int fd, void **bufp)
+{
+	return(SANDBOX_ERR_BAD_HDR);
+}
+
 
