@@ -36,6 +36,3 @@ qemu:
 	cp -v  libsandbox.c ~/src/qemu/target-i386/libsandbox.c
 	cp -v  sandbox.h ~/src/qemu/include/qemu/sandbox.h
 
-*.o: *.c
-	$(CC) $(CFLAGS) -c $<
-
