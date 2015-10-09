@@ -84,7 +84,7 @@
 // create and listen on a unix domain socket.
 // connect, peek at the incoming data. 
 // sock_name: full path of the socket e.g. /var/run/sandbox 
-int listen_sandbox_sock(const char *sock_name)
+ssize_t listen_sandbox_sock(const char *sock_name)
 {
 	int fd, len, err, ccode;
 	struct sockaddr_un un;
@@ -122,7 +122,7 @@ errout:
 }
 
 
-int accept_sandbox_sock(int listenfd, uid_t *uidptr)
+ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr)
 {
 	int clifd, err, ccode;
 	socklen_t len;
