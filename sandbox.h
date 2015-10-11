@@ -91,7 +91,7 @@ struct patch {
 	char name[0x40];
 	uint8_t SHA1[20];
 	uint8_t canary[128];
-	uint8_t build_id[128];	
+	uint8_t build_id[20]; /* sha1 of git head when built */	
 	uint8_t *patch_dest; /* absolute addr within the sandbox */
 	uintptr_t reloc_dest; /* absolutre addr of the relocation */
 	uint8_t reloc_data[PLATFORM_RELOC_SIZE]; /* max single instruction size is 15 */

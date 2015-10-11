@@ -18,10 +18,6 @@
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      | overall message length                                        |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-/*      |   20 bytes sha1 of the sandbox binary's master branch HEAD    |*/
-/*      |                                                               |*/
-/*      |                              ...                              |*/
-/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      |    4 bytes field 1 length                                     |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      |    field  1                  ...                              |*/
@@ -39,6 +35,8 @@
 #define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
 #define SANDBOX_MSG_GET_LEN(b) (*(uint64_t *)((uint8_t *)b + 0x40))
 
+
+
 #define SANDBOX_MSG_APPLY 1
 #define SANDBOX_MSG_APPLYRSP 2
 #define SANDBOX_MSG_LIST 3
@@ -51,16 +49,21 @@
 #define SANDBOX_ERR_BAD_VER -3
 #define SANDBOX_ERR_BAD_LEN -4
 #define SANDBOX_ERR_BAD_MSGID -5
+#define SANDBOX_ERR_NOMEM -6
+#define SANDBOX_ERR_RW -7
+
+
 /* Message ID 1: apply patch ********************************************/
 /* Fields:
    1) header
-   2) patch name (string)
-   3) canary (128 bytes of binary instructions), used to
+   2) sha1 build id of the target - must match (20 bytes)
+   3) patch name (string)
+   4) canary (64 bytes of binary instructions), used to
       verify the jump address.
-   4) jump location (64 bit absolute address for jump)
-   5) patch (bytes[patchlen] of instructions) destined for sandbox
-   6) sha1 of the patch bytes (20 bytes)
-   7) count of extended fields (4 bytes, always zero for this version).
+   5) jump location (uintptr_t  absolute address for jump)
+   6) patch (bytes[patchlen] of instructions) destined for sandbox
+   7) sha1 of the patch bytes (20 bytes)
+   8) count of extended fields (4 bytes, always zero for this version).
 
    reply msg: ID 2
    1) header
@@ -288,9 +291,9 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 {
 	uint8_t hbuf[0x60];
 	ssize_t ccode = 0;
-	void *dispatch_buffer;
+	void *dispatch_buffer = NULL;
 	
-	if ((ccode = readn(fd, &hbuf, sizeof(hbuf)) != sizeof(hbuf))) {
+	if ((ccode = readn(fd, &hbuf, sizeof(hbuf)) != sizeof(hbuf))) {x
 		goto errout;
 	}
 	if ( *(uint32_t *)&hbuf[0] != SANDBOX_MSG_MAGIC) {
@@ -322,6 +325,94 @@ errout:
 
 
 
+
+ssize_t marshall_patch_data(int sock, void **bufp)
+{
+	assert(bufp && *bufp == NULL);
+
+	/* alloc a big buffer (default is page size), then realloc it to be 
+	 *  smaller after we copy the patch data. Then pass the buffer to
+	 *  alloc_patch and it will be assigned as the buffer for the struct patch.
+	 */
+	
+	if ((*bufp = calloc(sizeof(uint8_t),  PLATFORM_ALLOC_SIZE)) == NULL) {
+		return SANDBOX_ERR_NOMEM;
+	}
+	
+	uint8_t bldid[0x14], patch_sig[0x14], name[0x81], canary[0x40];
+	uintptr_t jmpaddr;
+	uint64_t len, patchlen;
+	ssize_t ccode;
+
+	/* target build id * - size must be 20 bytes */
+	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == 0x14) {
+		ccode = readn(sock, bldid, len);
+		if (ccode != len) {
+			ccode = SANDBOX_ERR_BAD_LEN;
+			goto errout;
+		}
+	} else {
+		ccode = SANDBOX_ERR_RW;
+		goto errout;
+	}
+	
+	//TODO: macro-ize this repitive code
+	
+	/* patch name, zero the buffer  */
+	memset(name, 0x00, sizeof(name));
+	if (readn(sock, &len, sizoef(len)) == sizeof(len)) {
+		if (len > 0x80 || len < 0) {
+			ccode = SANDBOX_ERR_BAD_LEN;
+			goto errout;
+		} 
+		if (readn(sock, name, len) != len); {
+			ccode = SANDBOX_ERR_RW;
+			goto errout;
+		}
+	} else {
+		ccode = SANDBOX_ERR_RW;
+		goto errout;
+	}
+
+	/* patch canary, 64 bytes */
+
+	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == 0x40) {
+		if (readn(sock, canary, 0x40) != 0x40) {
+			ccode  = SANDBOX_ERR_RW;
+			goto errout;
+		}	
+	}  else {
+		ccode = SANDBOX_ERR_RW;
+		goto errout;
+	}
+
+	/* jump location */
+	/* jmp location should be absolute when read here. the socket writer should have */
+	/* added the location of _start to the relative offset. Then we check it using the canary. */
+	/* The canary should be identical to 64 bytes starting at the jmp location (inclusively) */
+	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == sizeof(uintptr_t)) {
+		if (readn(sock, &jmpaddr, sizeof(uintptr_t)) != sizeof(uintptr_t)) {
+			ccode = SANDBOX_ERR_RW;
+			goto errout;
+		}	
+	}  else {
+		ccode = SANDBOX_ERR_RW;
+		goto errout;
+	}
+	
+errout:
+
+	free(*bufp);
+	return ccode;
+}
+
+
+
+/*****************************************************************
+ * Dispatch functions: at this point socket's file pointer 
+ * is at the first field
+ *
+ *****************************************************************/
 ssize_t dispatch_apply(int fd, void ** bufp)
 {
 	return(SANDBOX_OK);

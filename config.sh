@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 echo "// platform definitions" > platform.h
 echo "// this file is generated automatically by runing config.sh" >> platform.h
 
@@ -10,7 +9,7 @@ echo "#define PLATFORM_PAGE_SIZE $PAGESIZE" >> platform.h
 echo "#define PLATFORM_RELOC_SIZE  0x04" >> platform.h
 echo "#define PLATFORM_PAGE_MASK (~($(getconf PAGESIZE) - 1))" >> platform.h
 echo "#define MAX_PATCH_SIZE $(getconf PAGESIZE)" >> platform.h
-
+echo "#define PLATFORM_ALLOC_SIZE 0x1000" >> platform.h
 case $(uname -i) in
     "x86_64") 
     
