@@ -387,9 +387,11 @@ ssize_t marshall_patch_data(int sock, void **bufp)
 	}
 
 	/* jump location */
-	/* jmp location should be absolute when read here. the socket writer should have */
-	/* added the location of _start to the relative offset. Then we check it using the canary. */
-	/* The canary should be identical to 64 bytes starting at the jmp location (inclusively) */
+	/* the socker writer will provide the relative jump location. we need to make */
+	/*   it absolute by adding the start of the .text segment to the address. */
+	/* Then we check it using the canary. The canary should be identical to */
+        /*  64 bytes starting at the jmp location (inclusively) */
+
 	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == sizeof(uintptr_t)) {
 		if (readn(sock, &jmpaddr, sizeof(uintptr_t)) != sizeof(uintptr_t)) {
 			ccode = SANDBOX_ERR_RW;
