@@ -92,7 +92,7 @@ err_exit:
 }
 
 
-struct patch *alloc_patch(char *name, uint64_t size)
+struct patch *alloc_patch(uint8_t *name, uint64_t size)
 {
 	uint64_t avail = get_sandbox_free();
 	DMSG("%08lx available in sandbox\n", avail);

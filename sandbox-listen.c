@@ -57,9 +57,9 @@
 /* Fields:
    1) header
    2) sha1 build id of the target - must match (20 bytes)
-   3) patch size
-   4) patch buf
-   5) patch name (string)
+   3) patch name (string)
+   4) patch size
+   5) patch buf
    6) canary (32 bytes of binary instructions), used to
       verify the jump address.
    7) jump location (uintptr_t  absolute address for jump)
@@ -294,10 +294,10 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	ssize_t ccode = 0;
 	void *dispatch_buffer = NULL;
 	
-	if ((ccode = readn(fd, &hbuf, sizeof(hbuf)) != sizeof(hbuf))) {x
+	if ((ccode = readn(fd, &hbuf, sizeof(hbuf))) != sizeof(hbuf)) {
 		goto errout;
 	}
-	if ( *(uint32_t *)&hbuf[0] != SANDBOX_MSG_MAGIC) {
+	if( *(uint32_t *)&hbuf[0] != SANDBOX_MSG_MAGIC) {
 		ccode = SANDBOX_ERR_BAD_HDR;
 		goto errout;
 	}
@@ -332,8 +332,7 @@ ssize_t marshall_patch_data(int sock, void **bufp)
 	assert(bufp && *bufp == NULL);
 
 	
-	uint8_t bldid[0x14], patch_sig[0x14], name[0x81], canary[0x40];
-	uintptr_t jmpaddr;
+	uint8_t bldid[0x14], name[0x81];
 	uint64_t len, patchlen;
 	ssize_t ccode;
 	struct patch *new_patch = NULL;
@@ -352,18 +351,26 @@ ssize_t marshall_patch_data(int sock, void **bufp)
 	
 	//TODO: macro-ize this repitive code
 
+	if (readn(sock, &len, sizeof(len)) == sizeof(len)  && len < 0x40 && len < 0 ) {
+		if (readn(sock, name, len) != len) {
+			return(SANDBOX_ERR_RW);
+		}
+	}else {
+		return(SANDBOX_ERR_BAD_LEN);	
+	}
+	
 	/* patch data */
 
 
-	if (readn(sock, &patchlen, sizeof(patchl)) == sizeof(patchlen) &&
+	if (readn(sock, &patchlen, sizeof(patchlen)) == sizeof(patchlen) &&
 	    patchlen > 0 && patchlen < MAX_PATCH_SIZE) {
 		new_patch = alloc_patch(name, patchlen);
 		if (new_patch == NULL) {
 			ccode = SANDBOX_ERR_NOMEM;
 			goto errout;
 		}
-		assert(new_patch->patch_buf != NULL);
-		if (readn(sock, new_patch->patch_buf, new_patch->patch_size) !=
+		assert(new_patch->patch_buf);
+		if (readn(sock, (uint8_t *)new_patch->patch_buf, new_patch->patch_size) !=
 		    new_patch->patch_size) {
 			ccode = SANDBOX_ERR_RW;
 			goto errout;
@@ -371,16 +378,6 @@ ssize_t marshall_patch_data(int sock, void **bufp)
 	} else {
 		ccode = SANDBOX_ERR_BAD_LEN;
 		goto errout;
-	}
-	
-	if (readn(sock, &len, sizeof(len)) == sizeof(len)  && len < 0x40 && len < 0 ) {
-		if (readn(sock, new_patch->name, len) != len) {
-			ccode = SANDBOX_ERR_RW;
-			goto errout;
-		}
-	}else {
-		ccode = SANDBOX_ERR_BAD_LEN;
-		goto errout;	
 	}
 
 	/* patch canary, 64 bytes */
@@ -419,7 +416,7 @@ ssize_t marshall_patch_data(int sock, void **bufp)
 		goto errout;
 	}
 	
-	new_patch->patch_flags |= PATCH_WRITE_ONCE;
+	new_patch->flags |= PATCH_WRITE_ONCE;
 	memcpy(new_patch->build_id, bldid, 0x14);
 	new_patch->reloc_size = PLATFORM_RELOC_SIZE;
 	*bufp = new_patch;
