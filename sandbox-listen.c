@@ -327,7 +327,7 @@ errout:
 
 
 
-ssize_t marshall_patch_data(int sock, void **bufp)
+ssize_t marshal_patch_data(int sock, void **bufp)
 {
 	assert(bufp && *bufp == NULL);
 
