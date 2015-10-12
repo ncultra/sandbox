@@ -111,7 +111,6 @@ struct patch *alloc_patch(char *name, uint64_t size)
 	}
 	
 	new_patch->patch_buf = (uintptr_t)aligned_alloc(0x40, size);
-	
 	if (!new_patch->patch_buf) {
 		goto exit_patch_buf;
 	}
@@ -120,9 +119,9 @@ struct patch *alloc_patch(char *name, uint64_t size)
 	return new_patch;
 	
 exit_patch_buf:
-	free((uint8_t *)new_patch->patch_buf);
+	if (new_patch->patch_buf != NULL)
+		free((uint8_t *)new_patch->patch_buf);
 exit_null:
-	
 	return NULL;
 }
 

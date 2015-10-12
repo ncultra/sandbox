@@ -57,11 +57,12 @@
 /* Fields:
    1) header
    2) sha1 build id of the target - must match (20 bytes)
-   3) patch name (string)
-   4) canary (64 bytes of binary instructions), used to
+   3) patch size
+   4) patch buf
+   5) patch name (string)
+   6) canary (32 bytes of binary instructions), used to
       verify the jump address.
-   5) jump location (uintptr_t  absolute address for jump)
-   6) patch (bytes[patchlen] of instructions) destined for sandbox
+   7) jump location (uintptr_t  absolute address for jump)
    7) sha1 of the patch bytes (20 bytes)
    8) count of extended fields (4 bytes, always zero for this version).
 
@@ -330,81 +331,108 @@ ssize_t marshall_patch_data(int sock, void **bufp)
 {
 	assert(bufp && *bufp == NULL);
 
-	/* alloc a big buffer (default is page size), then realloc it to be 
-	 *  smaller after we copy the patch data. Then pass the buffer to
-	 *  alloc_patch and it will be assigned as the buffer for the struct patch.
-	 */
-	
-	if ((*bufp = calloc(sizeof(uint8_t),  PLATFORM_ALLOC_SIZE)) == NULL) {
-		return SANDBOX_ERR_NOMEM;
-	}
 	
 	uint8_t bldid[0x14], patch_sig[0x14], name[0x81], canary[0x40];
 	uintptr_t jmpaddr;
 	uint64_t len, patchlen;
 	ssize_t ccode;
+	struct patch *new_patch = NULL;
+	
 
 	/* target build id * - size must be 20 bytes */
+	//TODO - check the build id!
 	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == 0x14) {
 		ccode = readn(sock, bldid, len);
 		if (ccode != len) {
-			ccode = SANDBOX_ERR_BAD_LEN;
-			goto errout;
+			return(SANDBOX_ERR_BAD_LEN);
 		}
 	} else {
-		ccode = SANDBOX_ERR_RW;
-		goto errout;
+		return(SANDBOX_ERR_RW);
 	}
 	
 	//TODO: macro-ize this repitive code
-	
-	/* patch name, zero the buffer  */
-	memset(name, 0x00, sizeof(name));
-	if (readn(sock, &len, sizoef(len)) == sizeof(len)) {
-		if (len > 0x80 || len < 0) {
-			ccode = SANDBOX_ERR_BAD_LEN;
+
+	/* patch data */
+
+
+	if (readn(sock, &patchlen, sizeof(patchl)) == sizeof(patchlen) &&
+	    patchlen > 0 && patchlen < MAX_PATCH_SIZE) {
+		new_patch = alloc_patch(name, patchlen);
+		if (new_patch == NULL) {
+			ccode = SANDBOX_ERR_NOMEM;
 			goto errout;
-		} 
-		if (readn(sock, name, len) != len); {
+		}
+		assert(new_patch->patch_buf != NULL);
+		if (readn(sock, new_patch->patch_buf, new_patch->patch_size) !=
+		    new_patch->patch_size) {
 			ccode = SANDBOX_ERR_RW;
 			goto errout;
 		}
 	} else {
-		ccode = SANDBOX_ERR_RW;
+		ccode = SANDBOX_ERR_BAD_LEN;
 		goto errout;
+	}
+	
+	if (readn(sock, &len, sizeof(len)) == sizeof(len)  && len < 0x40 && len < 0 ) {
+		if (readn(sock, new_patch->name, len) != len) {
+			ccode = SANDBOX_ERR_RW;
+			goto errout;
+		}
+	}else {
+		ccode = SANDBOX_ERR_BAD_LEN;
+		goto errout;	
 	}
 
 	/* patch canary, 64 bytes */
 
-	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == 0x40) {
-		if (readn(sock, canary, 0x40) != 0x40) {
-			ccode  = SANDBOX_ERR_RW;
-			goto errout;
+	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == 0x20) {
+		if (readn(sock, new_patch->canary, 0x20) != 0x20) {
+			return(SANDBOX_ERR_RW);
 		}	
 	}  else {
-		ccode = SANDBOX_ERR_RW;
-		goto errout;
+		return(SANDBOX_ERR_BAD_LEN);
 	}
 
 	/* jump location */
-	/* the socker writer will provide the relative jump location. we need to make */
+	/* the socket writer will provide the relative jump location. we need to make */
 	/*   it absolute by adding the start of the .text segment to the address. */
 	/* Then we check it using the canary. The canary should be identical to */
         /*  64 bytes starting at the jmp location (inclusively) */
 
 	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == sizeof(uintptr_t)) {
-		if (readn(sock, &jmpaddr, sizeof(uintptr_t)) != sizeof(uintptr_t)) {
-			ccode = SANDBOX_ERR_RW;
-			goto errout;
+		if (readn(sock, &new_patch->reloc_dest, sizeof(uintptr_t)) != sizeof(uintptr_t)) {
+			return(SANDBOX_ERR_RW);
 		}	
 	}  else {
-		ccode = SANDBOX_ERR_RW;
+		return(SANDBOX_ERR_BAD_LEN);
+	}
+	
+	/* patch sha1 signature */
+	if (readn(sock, &len, sizeof(len)) == 0x14) {
+		// TODO: actually check the signature !
+		if (readn(sock, new_patch->SHA1, 0x14) != 0X14) {
+			ccode = SANDBOX_ERR_RW;
+			goto errout;
+		}
+	} else {
+		ccode = SANDBOX_ERR_BAD_LEN;
 		goto errout;
 	}
 	
+	new_patch->patch_flags |= PATCH_WRITE_ONCE;
+	memcpy(new_patch->build_id, bldid, 0x14);
+	new_patch->reloc_size = PLATFORM_RELOC_SIZE;
+	*bufp = new_patch;
+	return(0L);
+	
 errout:
-
-	free(*bufp);
+	if (new_patch != NULL) {
+		free_patch(new_patch);
+	}
+	if (bufp && *bufp != NULL) {
+		free(*bufp);
+	}
+	
 	return ccode;
 }
 
