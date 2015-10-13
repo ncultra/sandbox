@@ -56,6 +56,10 @@ typedef uint8_t * reloc_ptr_t;;
 #define PATCH_IN_SANDBOX   0x02  // patch resident in sandbox area
 #define PATCH_IS_DATA      0x04  // patch is modifying data
 #define PATCH_WRITE_ONCE   0x08  // patch can be applied in one copy operation
+#define PATCH_LIST_HDR     -1L;			\
+
+//TODO: store the patch version in flags for each patch,
+// return that info in reply messages.
 // version of the sandbox interface is in the two high-order bytes
 // of the flag 
 #define SANDBOX_VERSION(f) (((uint64_t)(f) >> 0x38) & 0xff)
