@@ -92,7 +92,7 @@ err_exit:
 }
 
 
-struct patch *alloc_patch(uint8_t *name, uint64_t size)
+struct patch *alloc_patch(char  *name, uint64_t size)
 {
 	uint64_t avail = get_sandbox_free();
 	DMSG("%08lx available in sandbox\n", avail);
@@ -119,7 +119,7 @@ struct patch *alloc_patch(uint8_t *name, uint64_t size)
 	return new_patch;
 	
 exit_patch_buf:
-	if (new_patch->patch_buf != NULL)
+	if (new_patch->patch_buf)
 		free((uint8_t *)new_patch->patch_buf);
 exit_null:
 	return NULL;

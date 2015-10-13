@@ -88,7 +88,7 @@ typedef uint8_t * reloc_ptr_t;;
 struct patch {
 	struct patch *next;
 	unsigned int flags;
-	uint8_t name[0x40];
+	char  name[0x40];
 	uint8_t SHA1[20];
 	uint8_t canary[32];
 	uint8_t build_id[20]; /* sha1 of git head when built */	
@@ -109,7 +109,7 @@ extern uint8_t *patch_cursor;
 extern struct patch *patch_list;
 
 uint8_t *make_sandbox_writeable(void);
-struct patch *alloc_patch(uint8_t *name, uint64_t size);
+struct patch *alloc_patch(char *name, uint64_t size);
 void free_patch(struct patch *p);
 int apply_patch(struct patch *new_patch);
 void init_sandbox(void);

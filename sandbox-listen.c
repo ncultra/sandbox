@@ -13,13 +13,13 @@
 /*       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 */
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      |     magic number:   0x53414e44  'SAND' in ascii                */
-/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      +-+-+-+-f+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      | protocol version              |   message id                  |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      | overall message length                                        |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      |    4 bytes field 1 length                                     |*/
-/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ <------- hdr ends here */
 /*      |    field  1                  ...                              |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      |    4 bytes field n length                                     |*/
@@ -27,9 +27,9 @@
 /*      |    field  n                    ...                            |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-#define SANDBOX_MSG_MAGIC 0x53414e44
-#define SANDBOX_MSG_VERSION (uint16_t)0x01
-#define SANDBOX_MSG_HDRLEN (uint16_t)0x44 
+#define SANDBOX_MSG_HDRLEN 0x00000010
+#define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
+#define SANDBOX_MSG_VERSION (uint16_t)0x0001				      
 #define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 0x20))
 #define SANDBOX_MSG_GET_ID(b) (*(uint16_t *)((uint8_t *)b + 0x30))
 #define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
@@ -98,10 +98,23 @@
    5) $CFLAGS at build time (string)
 */
 
+static inline ssize_t check_magic(uint8_t *magic)
+{
+	uint8_t m[] = SANDBOX_MSG_MAGIC;
+	
+	return memcmp(magic, m, sizeof(m));
+}
+
 ssize_t dispatch_apply(int, void **);
 ssize_t dispatch_list(int, void **);
 ssize_t dispatch_getbld(int, void **);
 ssize_t dummy(int, void **);
+
+ssize_t marshal_patch_data(int sock, void **bufp);
+ssize_t send_apply_response(int fd, ssize_t errcode);
+
+
+
 
 typedef ssize_t (*handler)(int, void **);
 
@@ -297,7 +310,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	if ((ccode = readn(fd, &hbuf, sizeof(hbuf))) != sizeof(hbuf)) {
 		goto errout;
 	}
-	if( *(uint32_t *)&hbuf[0] != SANDBOX_MSG_MAGIC) {
+	if (check_magic(hbuf)) {
 		ccode = SANDBOX_ERR_BAD_HDR;
 		goto errout;
 	}
@@ -332,7 +345,8 @@ ssize_t marshal_patch_data(int sock, void **bufp)
 	assert(bufp && *bufp == NULL);
 
 	
-	uint8_t bldid[0x14], name[0x81];
+	uint8_t bldid[0x14];
+	char name[0x81];
 	uint64_t len, patchlen;
 	ssize_t ccode;
 	struct patch *new_patch = NULL;
@@ -434,6 +448,49 @@ errout:
 }
 
 
+ssize_t send_apply_response(int fd, ssize_t errcode)
+{
+	ssize_t ccode;
+	uint8_t sand[] = SANDBOX_MSG_MAGIC;
+	uint16_t pver = SANDBOX_MSG_VERSION;
+	uint64_t msgid = SANDBOX_MSG_APPLYRSP, len = SANDBOX_MSG_HDRLEN + 4;
+
+	/* magic header */
+	ccode = writen(fd, sand, sizeof(sand));
+	if (ccode != sizeof(sand)) {
+		goto errout;
+	}
+
+	/* protocol version */
+	ccode = writen(fd, &pver, sizeof(pver));
+	if (ccode != sizeof(pver)) {
+		goto errout;
+	}
+	/* message id - apply response */
+	ccode = writen(fd, &msgid, sizeof(msgid));
+	if (ccode != sizeof(msgid)) {
+		goto errout;
+	}
+
+	/* msg length */
+	ccode = writen(fd, &len, sizeof(len));
+	if (ccode != sizeof(len)) {
+		goto errout;
+	}
+	
+	/* this message return code */
+	ccode = errcode;
+	if ((writen(fd, &ccode, sizeof(ccode))) != sizeof(ccode)){
+		goto errout;
+	}
+	
+	return(SANDBOX_OK);
+	
+errout:
+	return(SANDBOX_ERR_RW);
+	
+}
+
 
 /*****************************************************************
  * Dispatch functions: at this point socket's file pointer 
@@ -442,7 +499,17 @@ errout:
  *****************************************************************/
 ssize_t dispatch_apply(int fd, void ** bufp)
 {
-	return(SANDBOX_OK);
+	ssize_t ccode = marshal_patch_data(fd, bufp);
+	if (ccode) {
+		return ccode;
+	}
+	
+	struct patch *p = (struct patch *)*bufp;
+	
+	ccode = apply_patch(p);
+	
+	send_apply_response(fd, ccode);
+	return(ccode);
 }
 
 ssize_t dispatch_list(int fd, void **bufp)

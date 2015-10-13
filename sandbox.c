@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 
 		// allocate and init the patch structure
 
-		struct patch *p = alloc_patch(pname, sizeof(patch_data));
+		struct patch *p = (struct patch *)alloc_patch(pname, sizeof(patch_data));
 		p->patch_dest = patch_cursor;
 		p->reloc_dest = (uintptr_t)&patched; // points to the "patched" function
 		memcpy(p->reloc_data, jumpto, sizeof(jumpto));
