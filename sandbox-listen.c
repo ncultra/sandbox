@@ -109,12 +109,8 @@ ssize_t dispatch_apply(int, void **);
 ssize_t dispatch_list(int, void **);
 ssize_t dispatch_getbld(int, void **);
 ssize_t dummy(int, void **);
-
+ssize_t send_response(int fd, uint64_t id, ssize_t errcode);
 ssize_t marshal_patch_data(int sock, void **bufp);
-ssize_t send_apply_response(int fd, ssize_t errcode);
-
-
-
 
 typedef ssize_t (*handler)(int, void **);
 
@@ -132,15 +128,38 @@ handler dispatch[] =
 #define QLEN 5 // depth of the listening queue
 #define STALE 30 // timout for client user id data
 
+
+
+// TODO: handle signals in the thread
+
+void *listen_thread(void *arg)
+{
+	char *socket_name = (char *)arg;
+	uint64_t quit = 0;
+	int listen_fd, client_fd;
+	uid_t client_id;
+	do {
+		listen_fd = listen_sandbox_sock(socket_name);
+		if (listen_fd > 0) {	
+			client_fd = accept_sandbox_sock(listen_fd, &client_id);
+			if (client_fd > 0) {
+				uint16_t version, id;
+				uint64_t len;
+				quit   = read_sandbox_message_header(client_fd, &version, &id, &len);
+			}
+		}
+	} while (!quit && listen_fd > 0);
+	return NULL;
+}
+
+
 // WRS
-
-
 // create and listen on a unix domain socket.
 // connect, peek at the incoming data. 
 // sock_name: full path of the socket e.g. /var/run/sandbox 
 ssize_t listen_sandbox_sock(const char *sock_name)
 {
-	int fd, len, err, ccode;
+	ssize_t fd, len, err, ccode;
 	struct sockaddr_un un;
 
 	if (strlen(sock_name) >= sizeof(un.sun_path)) {
@@ -168,6 +187,8 @@ ssize_t listen_sandbox_sock(const char *sock_name)
 		ccode = -4;
 		goto errout;
 	}
+
+	return fd;
 errout:
 	err = errno;
 	close(fd);
@@ -333,7 +354,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	ccode = dispatch[*id](fd, &dispatch_buffer);
 	
 errout:	
-	return ccode;
+	return send_response(fd, SANDBOX_ERR_BAD_HDR,  ccode);
 	
 }
 
@@ -444,16 +465,17 @@ errout:
 		free(*bufp);
 	}
 	
-	return ccode;
+	return send_response(sock, SANDBOX_ERR_BAD_HDR, ccode);
+	
 }
 
 
-ssize_t send_apply_response(int fd, ssize_t errcode)
+ssize_t send_response(int fd, uint64_t id, ssize_t errcode)
 {
 	ssize_t ccode;
 	uint8_t sand[] = SANDBOX_MSG_MAGIC;
 	uint16_t pver = SANDBOX_MSG_VERSION;
-	uint64_t msgid = SANDBOX_MSG_APPLYRSP, len = SANDBOX_MSG_HDRLEN + 4;
+	uint64_t msgid = id, len = SANDBOX_MSG_HDRLEN + 4;
 
 	/* magic header */
 	ccode = writen(fd, sand, sizeof(sand));
@@ -488,7 +510,13 @@ ssize_t send_apply_response(int fd, ssize_t errcode)
 	
 errout:
 	return(SANDBOX_ERR_RW);
-	
+}
+
+
+
+static inline ssize_t send_apply_response(int fd, ssize_t errcode)
+{
+	return send_response(fd, SANDBOX_MSG_APPLYRSP, errcode);
 }
 
 
@@ -500,13 +528,11 @@ errout:
 ssize_t dispatch_apply(int fd, void ** bufp)
 {
 	ssize_t ccode = marshal_patch_data(fd, bufp);
-	if (ccode) {
-		return ccode;
+	if (ccode == SANDBOX_OK) {
+		
+		struct patch *p = (struct patch *)*bufp;
+		ccode = apply_patch(p);
 	}
-	
-	struct patch *p = (struct patch *)*bufp;
-	
-	ccode = apply_patch(p);
 	
 	send_apply_response(fd, ccode);
 	return(ccode);
@@ -514,17 +540,19 @@ ssize_t dispatch_apply(int fd, void ** bufp)
 
 ssize_t dispatch_list(int fd, void **bufp)
 {
-	return(SANDBOX_OK);
-}
+	return send_response(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+} 
 
 ssize_t dispatch_getbld(int fd, void **bufp)
 {
-	return(SANDBOX_OK);
+	return send_response(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 }
 
 ssize_t dummy(int fd, void **bufp)
 {
-	return(SANDBOX_ERR_BAD_HDR);
+
+	return send_response(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+	
 }
 
 

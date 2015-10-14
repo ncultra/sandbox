@@ -22,6 +22,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
 #include "platform.h"
 
 // TODO: remove this def after we have a makefile

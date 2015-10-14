@@ -70,8 +70,17 @@ int main(int argc, char **argv)
 	// init makes the sandbox area writeable
 	init_sandbox(); // returns a cursor to the patch area
 	DMSG("patch_cursor %016lx\n", (uint64_t)patch_cursor);
-
+	patched  = (void (*)(void))&patch_sandbox_start;
 	DMSG("%p %p\n", (void *)patched, (void *)&_start);
+	DMSG("%p\n", (void *)patched_stub);
+	
+	DMSG("%i\n", getpid());
+	
+	char c;
+	
+	while( (c = getchar()) ) {
+		sleep(10);
+	}
 	
 	
 	if (test_flag) {
@@ -104,8 +113,6 @@ int main(int argc, char **argv)
 		dump_sandbox(&patch_sandbox_start, 16);
 		
 		patched_stub();
-		
-		patched  = (void (*)(void))&patch_sandbox_start;
 		patched();
 
 		DMSG("\nreturned from the patch sandbox\n\n");
