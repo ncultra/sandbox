@@ -3,9 +3,10 @@
 * Patches are placed in the "sandbox," which is a area in the
 * .text segment
 * 
-* Copyright 2015 Rackspace, Inc.
+* Copyright 2015-16 Rackspace, Inc.
 ***************************************************************/
-
+#define _GNU_SOURCE
+#include <link.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -23,8 +24,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <pthread.h>
-#include "platform.h"
 
+#include "platform.h"
 // TODO: remove this def after we have a makefile
 #ifndef __DEBUG__
 #define __DEBUG__ 1
@@ -120,13 +121,30 @@ int apply_patch(struct patch *new_patch);
 void init_sandbox(void);
 void dump_sandbox(const void* data, size_t size);
 
+/* dl_iterate_phdr will call this function. */
+int callback(struct dl_phdr_info *info, size_t size, void *data);
+
+/* reflect - call this function to query the sandbox for the location
+   of dynamic symbols.
+   
+   parameters
+        struct dl_phdr_info *info   struct must contain a name or an address 
+	   the sandbox will search using the name, address, or both
+	int (*cb)(struct dl_phdr_info *info, size_t size, void *data), 
+	   sandbox will
+
+*/
+int reflect(struct dl_phdr_info *info,
+	    int (*cb)(struct dl_phdr_info *info, size_t, void *data));
+
+
 static inline uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
 {
 	p += (offset - 1);
 	p &= ~(offset - 1);
 	return p;
 }
-
+ 
 
 // offset should be  positive when adding a new patch, negative when removing a patch
 static inline uint8_t *update_patch_cursor(uint64_t offset)

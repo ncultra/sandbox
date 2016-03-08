@@ -26,13 +26,31 @@ uint8_t patch_data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
 #endif
 
+
 int usage(void) 
 {
-	printf("\n: sandbox [options]\n");
+	printf("\n sandbox [options]\n");
 	printf("\t --test: call into the sandbox\n");
 	printf("\t --help: display this usage information\n");
+	printf("\t --symbols: show dynamic symbols\n");
 	return 0;
 }
+
+
+int callback(struct dl_phdr_info *info, size_t size, void *data)
+{
+	int j;
+	
+	printf("name=%s (%d segments)\n", info->dlpi_name,
+               info->dlpi_phnum);
+	
+	for (j = 0; j < info->dlpi_phnum; j++)
+                printf("\t\t header %2d: address=%10p\n", j,
+		       (void *) (info->dlpi_addr + info->dlpi_phdr[j].p_vaddr));
+	return 0;
+}
+
+
 
 int main(int argc, char **argv)
 {
@@ -42,10 +60,12 @@ int main(int argc, char **argv)
 		int c;
 		static struct option long_options[] = {
 			{"test", no_argument, &test_flag, 1},
+			{"help", no_argument, NULL, 0},
+			{"symbols", no_argument, NULL, 0},
 			{0,0,0,0}
 		};
 		int option_index = 0;
-		c = getopt_long(argc, argv, "t", long_options, &option_index);
+		c = getopt_long(argc, argv, "ths", long_options, &option_index);
 		if (c == -1)
 		    break;
 
@@ -53,28 +73,37 @@ int main(int argc, char **argv)
 		case  't':
 			if (strstr(long_options[option_index].name, "test") ) {
 				test_flag = 1;
-			} else {
-				break;
 			}
+			
+			break;
 		case 'h':
 			if (!strstr(long_options[option_index].name, "help")) {
 				usage();
-				break;	
+				exit(1);	
 			}
+		case 's' : {
+			struct dl_phdr_info search;
+			c = reflect(&search, callback);
+			
+			exit(0);
+			
+		}
+		
+			
 		default:
 			break;	
 		}
-		DMSG("seleted option %s\n", long_options[option_index].name);
+		DMSG("selected option %s\n", long_options[option_index].name);
 	}
 	
 	// init makes the sandbox area writeable
 	init_sandbox(); // returns a cursor to the patch area
-	DMSG("patch_cursor %016lx\n", (uint64_t)patch_cursor);
+	DMSG("Current patch_cursor: %016lx\n", (uint64_t)patch_cursor);
 	patched  = (void (*)(void))&patch_sandbox_start;
-	DMSG("%p %p\n", (void *)patched, (void *)&_start);
-	DMSG("%p\n", (void *)patched_stub);
+	DMSG(" patched symbol %p; _start %p\n", (void *)patched, (void *)&_start);
+	DMSG("jump to: %p\n", (void *)patched_stub);
 	
-	DMSG("%i\n", getpid());
+	DMSG("pid: %i\n", getpid());
 	
 	char c;
 	

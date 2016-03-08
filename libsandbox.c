@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+#include <link.h>
+
 #include <sys/mman.h>
 #include "sandbox.h"
 
@@ -148,13 +151,13 @@ uint8_t *make_sandbox_writeable(void)
 	
 	uint64_t p = (uint64_t)&patch_sandbox_start;
 	
-	printf ("sandbox start before alignment\n %016lx\n",(uint64_t)&patch_sandbox_start);
-	printf ("sandbox end before alignment\n %016lx\n",(uint64_t)&patch_sandbox_end);
+	DMSG ("sandbox start before alignment\n %016lx\n",(uint64_t)&patch_sandbox_start);
+	DMSG ("sandbox end before alignment\n %016lx\n",(uint64_t)&patch_sandbox_end);
 	p &= PLATFORM_PAGE_MASK;
-	printf("page mask: %016lx\n", (uint64_t)PLATFORM_PAGE_MASK);
+	DMSG("page mask: %016lx\n", (uint64_t)PLATFORM_PAGE_MASK);
 	
-	printf ("sandbox start %016lx\n", (uint64_t)&patch_sandbox_start);
-	printf ("page size: %016lx\n", (uint64_t)PLATFORM_PAGE_SIZE);
+	DMSG ("sandbox start %016lx\n", (uint64_t)&patch_sandbox_start);
+	DMSG ("page size: %016lx\n", (uint64_t)PLATFORM_PAGE_SIZE);
 	printf("page-aligned address: %016lx\n", p);
 	
 	if (mprotect((void *)p, SANDBOX_ALLOC_SIZE,
@@ -169,6 +172,17 @@ uint8_t *make_sandbox_writeable(void)
 
 void init_sandbox(void)
 {
-	make_sandbox_writeable();
+	make_sandbox_writeable(); 
 	patch_cursor = (uint8_t *)&patch_sandbox_start;
+}
+
+
+
+int reflect(struct dl_phdr_info *info,
+	    int (*cb)(struct dl_phdr_info *i, size_t s, void *data))
+{
+	dl_iterate_phdr(cb, NULL);
+	
+	return 0;
+
 }
