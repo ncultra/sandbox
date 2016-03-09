@@ -14,7 +14,7 @@
  *
  ************************************************************/
 __asm__(".global patch_sandbox_start");
-__asm__(".global patch_sandbox_end");
+
 #ifdef X86_64
 __asm__(".align 0x1000");
 #endif
@@ -24,12 +24,12 @@ __asm__(".align 0x0c");
 __asm__("patch_sandbox_start:");
 #ifdef X86_64
 __asm__("jmp patch_sandbox_end");
-__asm__(".fill 0x1000");
+__asm__(".fill PLATFORM_ALLOC_SIZE");
 __asm__(".align 8");
 #endif
 #ifdef PPC64LE
 __asm__("b patch_sandbox_end");
-__asm__(".fill 0x1000");
+__asm__(".fill PLATFORM_ALLOC_SIZE");
 __asm__(".align 3");
 
 #endif
@@ -47,6 +47,17 @@ struct patch *patch_list;
 
 uint8_t *patch_cursor = NULL;
 
+
+uint64_t get_sandbox_start(void)
+{
+	return patch_sandbox_start;
+}
+
+uint64_t get_sandbox_end(void)
+{
+	return PLATFORM_ALLOC_SIZE + get_sandbox_start();
+	
+}
 
 
 int apply_patch(struct patch *new_patch)
@@ -152,7 +163,6 @@ uint8_t *make_sandbox_writeable(void)
 	uint64_t p = (uint64_t)&patch_sandbox_start;
 	
 	DMSG ("sandbox start before alignment\n %016lx\n",(uint64_t)&patch_sandbox_start);
-	DMSG ("sandbox end before alignment\n %016lx\n",(uint64_t)&patch_sandbox_end);
 	p &= PLATFORM_PAGE_MASK;
 	DMSG("page mask: %016lx\n", (uint64_t)PLATFORM_PAGE_MASK);
 	

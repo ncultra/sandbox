@@ -164,6 +164,9 @@ static inline uint64_t get_sandbox_free(void)
 }
 
 
+uint64_t get_sandbox_start(void);
+uint64_t get_sandbox_end(void);
+
 
 
 // from sandbox-listen.h

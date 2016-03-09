@@ -85,11 +85,8 @@ int main(int argc, char **argv)
 			struct dl_phdr_info search;
 			c = reflect(&search, callback);
 			
-			exit(0);
-			
+			exit(0);	
 		}
-		
-			
 		default:
 			break;	
 		}
@@ -120,8 +117,8 @@ int main(int argc, char **argv)
 		DMSG (" replacement code: %lx\n", (uint64_t) jumpto[0]);
 
 		DMSG("sandbox start %016lx\n",  (uint64_t)&patch_sandbox_start);
-		DMSG("sandbox end   %016lx\n",  (uint64_t)&patch_sandbox_end);
-		DMSG("Sandbox is      %016lx bytes\n", (uint64_t)&patch_sandbox_end - (uint64_t)&patch_sandbox_start);
+		DMSG("sandbox end   %016lx\n",  get_sandbox_end());
+		DMSG("Sandbox is      %016lx bytes\n", get_sandbox_end() - (uint64_t)&patch_sandbox_start);
 		
 		DMSG("writing to patch sandbox...\n\n");
 

@@ -1,6 +1,8 @@
 BUILD_ROOT := "/home/mdday/src/sandbox/"
-CFLAGS =  -g -Wall -fPIC -std=gnu11
+CFLAGS =  -g -Wall -fPIC -std=gnu11  -mcmodel=large
 
+LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o 
+#LIB_FILES=hexdump.o sandbox-listen.o 
 
 sandbox: sandbox.o libsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
@@ -18,18 +20,35 @@ gitsha.c: .git/HEAD .git/index
 platform.h:
 	$(shell $(BUILD_ROOT)config.sh)
 
-.PHONY: install
-install:
-	cp -v libsandbox.a /usr/lib64/
-	cp -v sandbox.h /usr/include/
 
-.PHOMY: clean
+.PHONY: clean
 clean:
 	-rm -v $(BUILD_ROOT)sandbox
 	-rm -v $(BUILD_ROOT)/*a
 	-rm -v $(BUILD_ROOT)/*o
 	-rm -v gitsha.c
 	-rm -v platform.h
+
+
+
+
+.PHONY: shared
+shared: clean libsandbox.so
+
+libsandbox.so: $(LIB_FILES)
+	$(CC) -fPIC -shared -o $@ $(LIB_FILES)
+
+.PHONY: static
+static: clean libsandbox.a
+
+.PHONY: all
+all: static shared sandbox
+
+.PHONY: install
+install:
+	cp -v libsandbox.a /usr/lib64/
+	cp -v sandbox.h /usr/include/
+
 
 .PHONY: qemu
 qemu:
