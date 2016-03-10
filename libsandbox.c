@@ -13,6 +13,10 @@
  * .align 8 on X86 is equal to .align 3 on PPC (2^3 = 8.)
  *
  ************************************************************/
+
+uint64_t fill = PLATFORM_ALLOC_SIZE;
+__asm__(".text");
+
 __asm__(".global patch_sandbox_start");
 
 #ifdef X86_64
@@ -24,7 +28,7 @@ __asm__(".align 0x0c");
 __asm__("patch_sandbox_start:");
 #ifdef X86_64
 __asm__("jmp patch_sandbox_end");
-__asm__(".fill PLATFORM_ALLOC_SIZE");
+__asm__(".fill 0x1000");
 __asm__(".align 8");
 #endif
 #ifdef PPC64LE
@@ -50,7 +54,7 @@ uint8_t *patch_cursor = NULL;
 
 uint64_t get_sandbox_start(void)
 {
-	return patch_sandbox_start;
+	return  &patch_sandbox_start;
 }
 
 uint64_t get_sandbox_end(void)
@@ -86,7 +90,7 @@ int apply_patch(struct patch *new_patch)
 			goto err_exit;
 	}
 		// the reloc value should be a near jump "e9 0xaaaaaaaa"
-		// OR the first 3 bytes of the current value of the dest into the reloc_data
+		// OR the first 3 bytes of the current value of the dest into the reloc_data 
 		// TODO: add some awareness of the data size to be written and the read mask
 		
 		smp_mb();

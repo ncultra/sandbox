@@ -8,13 +8,15 @@ void (*patched)(void);
 void patched_stub(void);
 
 #ifdef X86_64
-// these bytes should cause a near jump to the sandbox
-uint8_t jumpto[] = {0xe9, 0x0f, 0xfd, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00};
-
+// jmp far,  operand will change with every build
+uint8_t jumpto[] = {0xff,0x17,0x04,0x00,0x0c};
 // these bytes get written to the sandbox and executed by the jump
-//  0xc3 is a near return
-uint8_t patch_data[] = {0xc3, 0x48, 0x89, 0xe5, 0xbf, 0xc8, 0x3b, 0x40, 0x00,
-			0xff, 0x00, 0x47, 0xf5, 0xff, 0xff, 0x5d, 0xc3};
+//  0xc3 is a near return, the rest is a nopq
+
+__asm__("jmp patched_stub");
+
+uint8_t patch_data[] = {0xc3, 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00};
+
 #endif
 
 #ifdef PPC64LE
@@ -49,7 +51,6 @@ int callback(struct dl_phdr_info *info, size_t size, void *data)
 		       (void *) (info->dlpi_addr + info->dlpi_phdr[j].p_vaddr));
 	return 0;
 }
-
 
 
 int main(int argc, char **argv)
@@ -102,13 +103,6 @@ int main(int argc, char **argv)
 	
 	DMSG("pid: %i\n", getpid());
 	
-	char c;
-	
-	while( (c = getchar()) ) {
-		sleep(10);
-	}
-	
-	
 	if (test_flag) {
 		char *pname = strdup("pname");
 		
@@ -126,7 +120,7 @@ int main(int argc, char **argv)
 
 		struct patch *p = (struct patch *)alloc_patch(pname, sizeof(patch_data));
 		p->patch_dest = patch_cursor;
-		p->reloc_dest = (uintptr_t)&patched; // points to the "patched" function
+		p->reloc_dest = (uintptr_t)patched; // points to the "patched" function
 		memcpy(p->reloc_data, jumpto, sizeof(jumpto));
 		memcpy((uint8_t*)p->patch_buf, patch_data, sizeof(patch_data));
 		p->patch_size = sizeof(patch_data);
@@ -135,22 +129,34 @@ int main(int argc, char **argv)
 		// apply the patch
 		err = apply_patch(p);
 		printf ("err = %d\n", err);
-		DMSG("write completed, calling into the patch sandbox\n\n");
 		dump_sandbox(&patch_sandbox_start, 16);
+		DMSG("write completed, calling into the patch sandbox\n\n");
 		
-		patched_stub();
 		patched();
-
+		
 		DMSG("\nreturned from the patch sandbox\n\n");
 		dump_sandbox(main + 0x758, 16);
 
 	}
-	       
+
+	
+	char c;
+	
+	while( (c = getchar()) ) {
+		sleep(10);
+	}
+	
+	__asm__("jmp patched_stub_entry");
+	
+	
+	
 	return 0;
 }
 
 void patched_stub(void)
 {
+	__asm__("patched_stub_entry:");
+	
 	static int count = 0;
 	printf("executing inside the patched code, count: %i\n", ++count);
 }
