@@ -6,7 +6,7 @@ LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o
 sandbox: sandbox.o libsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
-libsandbox.a: libsandbox.o hexdump.o sandbox-listen.o gitsha
+git libsandbox.a: libsandbox.o hexdump.o sandbox-listen.o gitsha
 	ar cr libsandbox.a libsandbox.o hexdump.o sandbox-listen.o
 
 .PHONY: gitsha
@@ -22,6 +22,7 @@ gitsha.txt: .git/HEAD .git/index
 	echo -n "'compiled': '$(shell $(CC) --version)'," >> $@
 	echo -n "'ccflags': '$(CFLAGS)'," >> $@
 	echo -n "'compile-date': '$(shell date)'" >> $@
+	echo -n "'tag': '$(shell git describe --tags)'," >> $@
 	echo  "}" >> $@
 	echo -n "SANDBOXBUILDINFOEND" >> $@
 
