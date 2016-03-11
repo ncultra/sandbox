@@ -1,19 +1,29 @@
 BUILD_ROOT := "/home/mdday/src/sandbox/"
 CFLAGS =  -g -Wall -fPIC -std=gnu11  -mcmodel=large
 
-LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o 
-#LIB_FILES=hexdump.o sandbox-listen.o 
+LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o
 
 sandbox: sandbox.o libsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
-libsandbox.a: libsandbox.o hexdump.o gitsha.o sandbox-listen.o
-	ar cr libsandbox.a libsandbox.o hexdump.o gitsha.o sandbox-listen.o
+libsandbox.a: libsandbox.o hexdump.o sandbox-listen.o gitsha
+	ar cr libsandbox.a libsandbox.o hexdump.o sandbox-listen.o
 
-gitsha.c: .git/HEAD .git/index
-	echo "const char *gitversion = \"$(shell git rev-parse HEAD)\";" > $@	
-	echo "const char *cc = \"$(shell $(CC) --version)\";" >> $@
-	echo "const char *ccflags = \"$(CFLAGS)\";" >> $@
+.PHONY: gitsha
+gitsha: gitsha.txt libsandbox.o
+	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
+
+libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.txt
+
+gitsha.txt: .git/HEAD .git/index
+	echo -n "SANDBOXBUILDINFOSTART" > $@
+	echo -n "{" >> $@
+	echo -n "'git-revision': '$(shell git rev-parse HEAD)'," >> $@	
+	echo -n "'compiled': '$(shell $(CC) --version)'," >> $@
+	echo -n "'ccflags': '$(CFLAGS)'," >> $@
+	echo -n "'compile-date': '$(shell date)'" >> $@
+	echo  "}" >> $@
+	echo -n "SANDBOXBUILDINFOEND" >> $@
 
 *.c: platform.h
 
@@ -26,7 +36,7 @@ clean:
 	-rm -v $(BUILD_ROOT)sandbox
 	-rm -v $(BUILD_ROOT)/*a
 	-rm -v $(BUILD_ROOT)/*o
-	-rm -v gitsha.c
+	-rm -v gitsha.txt
 	-rm -v platform.h
 
 
@@ -35,7 +45,7 @@ clean:
 .PHONY: shared
 shared: clean libsandbox.so
 
-libsandbox.so: $(LIB_FILES)
+libsandbox.so: $(LIB_FILES) gitsha
 	$(CC) -fPIC -shared -o $@ $(LIB_FILES)
 
 .PHONY: static
