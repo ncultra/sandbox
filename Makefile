@@ -21,8 +21,8 @@ gitsha.txt: .git/HEAD .git/index
 	echo -n "'git-revision': '$(shell git rev-parse HEAD)'," >> $@	
 	echo -n "'compiled': '$(shell $(CC) --version)'," >> $@
 	echo -n "'ccflags': '$(CFLAGS)'," >> $@
-	echo -n "'compile-date': '$(shell date)'" >> $@
-	echo -n "'tag': '$(shell git describe --tags)'," >> $@
+	echo -n "'compile-date': '$(shell date)'," >> $@
+	echo -n "'tag': '$(shell git describe --abbrev=0 --tags)'" >> $@
 	echo  "}" >> $@
 	echo -n "SANDBOXBUILDINFOEND" >> $@
 
