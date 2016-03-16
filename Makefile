@@ -15,6 +15,9 @@ gitsha: gitsha.txt libsandbox.o
 
 libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.txt
 
+# use the git tag as the version number
+# tag should be in the format v0.0.0
+
 gitsha.txt: .git/HEAD .git/index
 	echo -n "SANDBOXBUILDINFOSTART" > $@
 	echo -n "{" >> $@
