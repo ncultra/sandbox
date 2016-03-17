@@ -167,9 +167,104 @@ static inline uint64_t get_sandbox_free(void)
 uint64_t get_sandbox_start(void);
 uint64_t get_sandbox_end(void);
 
-
-
 // from sandbox-listen.h
+#define SANDBOX_MSG_HDRLEN 0x00000010
+#define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
+#define SANDBOX_MSG_VERSION (uint16_t)0x0001				      
+#define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 0x20))
+#define SANDBOX_MSG_GET_ID(b) (*(uint16_t *)((uint8_t *)b + 0x30))
+#define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
+#define SANDBOX_MSG_GET_LEN(b) (*(uint64_t *)((uint8_t *)b + 0x40))
+
+
+
+#define SANDBOX_MSG_APPLY 1
+#define SANDBOX_MSG_APPLYRSP 2
+#define SANDBOX_MSG_LIST 3
+#define SANDBOX_MSG_LISTRSP 4
+#define SANDBOX_MSG_GET_BLD 5
+#define SANDBOX_MSG_GET_BLDRSP 6
+
+#define SANDBOX_OK 0
+#define SANDBOX_ERR_BAD_HDR -2
+#define SANDBOX_ERR_BAD_VER -3
+#define SANDBOX_ERR_BAD_LEN -4
+#define SANDBOX_ERR_BAD_MSGID -5
+#define SANDBOX_ERR_NOMEM -6
+#define SANDBOX_ERR_RW -7
+
+
+/*************************************************************************/
+/*                 Message format                                        */
+/*-----------------------------------------------------------------------*/
+/*       0                   1                   2                   3   */
+/*       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 */
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |     magic number:   0x53414e44  'SAND' in ascii                */
+/*      +-+-+-+-f+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      | protocol version              |   message id                  |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      | overall message length                                        |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |    4 bytes field 1 length                                     |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ <------- hdr ends here */
+/*      |    field  1                  ...                              |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |    4 bytes field n length                                     |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+/*      |    field  n                    ...                            |*/
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+
+
+
+/* Message ID 1: apply patch ********************************************/
+/* Fields:
+   1) header
+   2) sha1 build id of the target - must match (20 bytes)
+   3) patch name (string)
+   4) patch size
+   5) patch buf
+   6) canary (32 bytes of binary instructions), used to
+      verify the jump address.
+   7) jump location (uintptr_t  absolute address for jump)
+   7) sha1 of the patch bytes (20 bytes)
+   8) count of extended fields (4 bytes, always zero for this version).
+
+   reply msg: ID 2
+   1) header
+   2) uint64_t  0L "OK," or error code
+ */
+
+/* Message ID 3: list patch ********************************************/
+/* Fields:
+   1) header
+   2) patch name (string, wild cards ok)
+   3) sha1 of the patch (corresponding to field 5 of message ID 1),
+      20-byte buffer
+
+   reply msg ID 4:
+   1) header
+   2) uint64_t 0L "OK, or error code.
+   3) patch name (if found)
+   4) sha1 of the patch
+*/
+
+/* Message ID 5: get build info ********************************************/
+
+/* Fields:
+   1) header (msg id 3)
+
+   reply msg ID 6:
+   1) header
+   2) uint64_t 0L "OK, or error code.
+   3) 20-bytes sha1 git HEAD of the running binary
+   4) $CC at build time (string)
+   5) $CFLAGS at build time (string)
+*/
+
+
+
+
 ssize_t listen_sandbox_sock(const char *sock_name);
 ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr);
 ssize_t	readn(int fd, void *vptr, size_t n);

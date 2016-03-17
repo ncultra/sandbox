@@ -3,17 +3,23 @@ CFLAGS =  -g -Wall -fPIC -std=gnu11  -mcmodel=large
 
 LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o
 
-sandbox: sandbox.o libsandbox.a
-	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
-
-git libsandbox.a: libsandbox.o hexdump.o sandbox-listen.o gitsha
-	ar cr libsandbox.a libsandbox.o hexdump.o sandbox-listen.o
 
 .PHONY: gitsha
 gitsha: gitsha.txt libsandbox.o
 	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 
+sandbox: clean sandbox.o libsandbox.a
+	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
+
+libsandbox.a: libsandbox.o hexdump.o sandbox-listen.o gitsha
+	ar cr libsandbox.a libsandbox.o hexdump.o sandbox-listen.o
+
 libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.txt
+
+.PHONY: raxl
+raxl: clean raxlpqemu.o libsandbox.a
+	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o libsandbox.a	
+
 
 # use the git tag as the version number
 # tag should be in the format v0.0.0
@@ -56,7 +62,7 @@ libsandbox.so: $(LIB_FILES) gitsha
 static: clean libsandbox.a
 
 .PHONY: all
-all: static shared sandbox
+all: static shared sandbox raxl
 
 .PHONY: install
 install:

@@ -1,5 +1,5 @@
 /*****************************************************************
- * Copyright 2015 Rackspace, Inc.
+ * Copyright 2015, 2016 Rackspace, Inc.
  *
  * listen on a unix domain socket for incoming patches
  ****************************************************************/
@@ -27,30 +27,6 @@
 /*      |    field  n                    ...                            |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-#define SANDBOX_MSG_HDRLEN 0x00000010
-#define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
-#define SANDBOX_MSG_VERSION (uint16_t)0x0001				      
-#define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 0x20))
-#define SANDBOX_MSG_GET_ID(b) (*(uint16_t *)((uint8_t *)b + 0x30))
-#define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
-#define SANDBOX_MSG_GET_LEN(b) (*(uint64_t *)((uint8_t *)b + 0x40))
-
-
-
-#define SANDBOX_MSG_APPLY 1
-#define SANDBOX_MSG_APPLYRSP 2
-#define SANDBOX_MSG_LIST 3
-#define SANDBOX_MSG_LISTRSP 4
-#define SANDBOX_MSG_GET_BLD 5
-#define SANDBOX_MSG_GET_BLDRSP 6
-
-#define SANDBOX_OK 0
-#define SANDBOX_ERR_BAD_HDR -2
-#define SANDBOX_ERR_BAD_VER -3
-#define SANDBOX_ERR_BAD_LEN -4
-#define SANDBOX_ERR_BAD_MSGID -5
-#define SANDBOX_ERR_NOMEM -6
-#define SANDBOX_ERR_RW -7
 
 
 /* Message ID 1: apply patch ********************************************/
@@ -554,5 +530,3 @@ ssize_t dummy(int fd, void **bufp)
 	return send_response(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 	
 }
-
-
