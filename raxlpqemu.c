@@ -3,18 +3,20 @@
  *
  * listen on a unix domain socket for incoming patches
  ****************************************************************/
-#include "sandbox.h"
-
 /* these are not used by any other obj, so keep the #includes here */
 #include <zlib.h>
 #include <libelf.h>
 #include <openssl/sha.h>
+
+#include "sandbox.h"
+#include "live_patch.h"
 
 static int info_flag, list_flag, apply_flag, remove_flag;
 static char filepath[PATH_MAX];
 static char patch_basename[PATH_MAX];
 static inline char *get_patch_name(char *path)
 {
+	
 	strncpy(patch_basename, basename(path), PATH_MAX - 1);
 	return patch_basename;
 }
@@ -37,8 +39,163 @@ int open_patch_file(char *path)
 	return patchfd;
 }
 
+#if 0
+int load_patch_file(int fd, char *filename, struct patch *patch)
+{
+    if (extract_sha1_from_filename(patch->sha1, sizeof(patch->sha1),
+                                   filename) < 0)
+        return -1;
 
+    /* Calculate SHA1 hash and verify it matches filename */
+    struct stat st;
+    if (fstat(fd, &st) < 0) {
+        fprintf(stderr, "%s: stat(): %m\n", filename);
+        return -1;
+    }
 
+    SHA_CTX sha1;
+    SHA1_Init(&sha1);
+    size_t bytesread = 0;
+    while (bytesread < st.st_size) {
+        unsigned char buf[4096];
+        size_t readsize = sizeof(buf);
+        if (st.st_size - bytesread < readsize)
+            readsize = st.st_size - bytesread;
+
+        if (_read(filename, fd, buf, readsize) < 0)
+            return -1;
+
+        SHA1_Update(&sha1, buf, readsize);
+        bytesread += readsize;
+    }
+    unsigned char hash[SHA_DIGEST_LENGTH];
+    SHA1_Final(hash, &sha1);
+
+    if (memcmp(patch->sha1, hash, sizeof(patch->sha1)) != 0) {
+        char hex[SHA_DIGEST_LENGTH * 2 + 1];
+        fprintf(stderr, "%s: hash mismatch\n", filename);
+        bin2hex(hash, sizeof(hash), hex, sizeof(hex));
+        fprintf(stderr, "  calculated %s\n", hex);
+        return -1;
+    }
+
+    lseek(fd, 0, SEEK_SET);
+
+    char signature[8];
+    if (_read(filename, fd, signature, sizeof(signature)) < 0)
+        return -1;
+
+    if (memcmp(signature, XSPATCH_COOKIE, sizeof(signature))) {
+        fprintf(stderr, "%s: invalid signature\n", filename);
+        return -1;
+    }
+
+    /* Read Xen version and compile date */
+    if (_read(filename, fd, patch->xenversion,
+              sizeof(patch->xenversion)) < 0)
+        return -1;
+    if (_read(filename, fd, patch->xencompiledate,
+              sizeof(patch->xencompiledate)) < 0)
+        return -1;
+
+    /* Only used for crowbar, ignored in this utility */
+    if (_readu64(filename, fd, &patch->crowbarabs) < 0)
+        return -1;
+
+    /* Virtual address used for first-stage relocation */
+    if (_readu64(filename, fd, &patch->refabs) < 0)
+        return -1;
+
+    /* Pull the blob out */
+    if (_readu32(filename, fd, &patch->bloblen) < 0)
+        return -1;
+
+    patch->blob = _zalloc(patch->bloblen);
+    if (_read(filename, fd, patch->blob, patch->bloblen) < 0)
+        return -1;
+
+    /* Pull out second-stage relocations */
+    if (_readu16(filename, fd, &patch->numrelocs) < 0)
+        return -1;
+
+    patch->relocs = _zalloc(patch->numrelocs * sizeof(uint32_t));
+    size_t i;
+    for (i = 0; i < patch->numrelocs; i++) {
+        if (_readu32(filename, fd, &patch->relocs[i]) < 0)
+            return -1;
+    }
+
+    /* Pull out check data. Only used for crowbar */
+    if (_readu16(filename, fd, &patch->numchecks) < 0)
+        return -1;
+
+    patch->checks = _zalloc(sizeof(struct check) * patch->numchecks);
+    for (i = 0; i < patch->numchecks; i++) {
+        struct check *check = &patch->checks[i];
+
+        if (_readu64(filename, fd, &check->hvabs) < 0)
+            return -1;
+        if (_readu16(filename, fd, &check->datalen) < 0)
+            return -1;
+
+        check->data = _zalloc(check->datalen);
+        if (_read(filename, fd, check->data, check->datalen) < 0)
+            return -1;
+    }
+
+    /* Pull out function to patch */
+    if (_readu16(filename, fd, &patch->numfuncs) < 0)
+        return -1;
+
+    patch->funcs = _zalloc(patch->numfuncs * sizeof(patch->funcs[0]));
+    for (i = 0; i < patch->numfuncs; i++) {
+        struct function_patch *func = &patch->funcs[i];
+
+        uint16_t size;
+        if (_readu16(filename, fd, &size) < 0)
+            return -1;
+        func->funcname = _zalloc(size + 1);
+        if (_read(filename, fd, func->funcname, size) < 0)
+            return -1;
+
+        if (_readu64(filename, fd, &func->oldabs) < 0)
+            return -1;
+        if (_readu32(filename, fd, &func->newrel) < 0)
+            return -1;
+    }
+
+    /* Pull out table patches. Only used for crowbar currently */
+    if (_readu16(filename, fd, &patch->numtables) < 0)
+        return -1;
+
+    patch->tables = _zalloc(sizeof(struct table_patch) * patch->numtables);
+    for (i = 0; i < patch->numtables; i++) {
+        struct table_patch *table = &patch->tables[i];
+
+        uint16_t tablenamelen;
+        if (_readu16(filename, fd, &tablenamelen) < 0)
+            return -1;
+
+        table->tablename = _zalloc(tablenamelen + 1);
+        if (_read(filename, fd, table->tablename, tablenamelen) < 0)
+            return -1;
+
+        if (_readu64(filename, fd, &table->hvabs) < 0)
+            return -1;
+        if (_readu16(filename, fd, &table->datalen) < 0)
+            return -1;
+
+        table->data = _zalloc(table->datalen);
+        if (_read(filename, fd, table->data, table->datalen) < 0)
+            return -1;
+    }
+
+    close(fd);
+
+    return 0;
+}
+
+#endif
 
 int main(int argc, char **argv)
 {
@@ -97,6 +254,7 @@ int main(int argc, char **argv)
 			
 			int pfd;
 			char *fdname;
+			struct patch;
 			DMSG("selected option %s with arg %s\n",
 			     long_options[option_index].name, optarg);
 

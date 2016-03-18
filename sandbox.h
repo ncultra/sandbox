@@ -6,7 +6,7 @@
 * Copyright 2015-16 Rackspace, Inc.
 ***************************************************************/
 #define _GNU_SOURCE
-#include <link.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -24,9 +24,10 @@
 #include <unistd.h>
 #include <time.h>
 #include <pthread.h>
-
+#include <libgen.h>
 #include "platform.h"
-// TODO: remove this def after we have a makefile
+
+// TODO: remove move this def to the makefile
 #ifndef __DEBUG__
 #define __DEBUG__ 1
 #endif
@@ -107,6 +108,54 @@ struct patch {
 	uint8_t pad[(PATCH_PAD)];
 };
 
+struct check {
+    uint64_t hvabs;
+    uint16_t datalen;
+    unsigned char *data;
+};
+
+
+struct function_patch {
+    char *funcname;
+    uint64_t oldabs;
+    uint32_t newrel;
+};
+
+
+struct table_patch {
+    char *tablename;
+    uint64_t hvabs;
+    uint16_t datalen;
+    unsigned char *data;
+};
+
+
+struct xpatch {
+    unsigned char sha1[20];
+
+    char xenversion[32];
+    char xencompiledate[32];
+
+    uint64_t crowbarabs;
+    uint64_t refabs;
+
+    uint32_t bloblen;
+    unsigned char *blob;
+
+    uint16_t numrelocs;
+    uint32_t *relocs;
+
+    uint16_t numchecks;
+    struct check *checks;
+
+    uint16_t numfuncs;
+    struct function_patch *funcs;
+
+    uint16_t numtables;
+    struct table_patch *tables;
+};
+
+
 
 // these const strings contain information generated at build time.
 extern const char *gitversion, *cc, *cflags;
@@ -120,23 +169,6 @@ void free_patch(struct patch *p);
 int apply_patch(struct patch *new_patch);
 void init_sandbox(void);
 void dump_sandbox(const void* data, size_t size);
-
-/* dl_iterate_phdr will call this function. */
-int callback(struct dl_phdr_info *info, size_t size, void *data);
-
-/* reflect - call this function to query the sandbox for the location
-   of dynamic symbols.
-   
-   parameters
-        struct dl_phdr_info *info   struct must contain a name or an address 
-	   the sandbox will search using the name, address, or both
-	int (*cb)(struct dl_phdr_info *info, size_t size, void *data), 
-	   sandbox will
-
-*/
-int reflect(struct dl_phdr_info *info,
-	    int (*cb)(struct dl_phdr_info *info, size_t, void *data));
-
 
 static inline uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
 {
@@ -176,8 +208,6 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
 #define SANDBOX_MSG_GET_LEN(b) (*(uint64_t *)((uint8_t *)b + 0x40))
 
-
-
 #define SANDBOX_MSG_APPLY 1
 #define SANDBOX_MSG_APPLYRSP 2
 #define SANDBOX_MSG_LIST 3
@@ -193,6 +223,7 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_ERR_NOMEM -6
 #define SANDBOX_ERR_RW -7
 #define SANDBOX_ERR_BAD_FD -8
+
 
 
 /*************************************************************************/
@@ -263,13 +294,9 @@ uint64_t get_sandbox_end(void);
    5) $CFLAGS at build time (string)
 */
 
-
-
-
 ssize_t listen_sandbox_sock(const char *sock_name);
 ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr);
 ssize_t	readn(int fd, void *vptr, size_t n);
 ssize_t writen(int fd, const void *vptr, size_t n);
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 				    uint16_t *id, uint64_t *len);
-

@@ -39,19 +39,6 @@ int usage(void)
 }
 
 
-int callback(struct dl_phdr_info *info, size_t size, void *data)
-{
-	int j;
-	
-	printf("name=%s (%d segments)\n", info->dlpi_name,
-               info->dlpi_phnum);
-	
-	for (j = 0; j < info->dlpi_phnum; j++)
-                printf("\t\t header %2d: address=%10p\n", j,		       (void *) (info->dlpi_addr + info->dlpi_phdr[j].p_vaddr));
-	return 0;
-}
-
-
 int main(int argc, char **argv)
 {
 
@@ -82,8 +69,6 @@ int main(int argc, char **argv)
 				exit(1);	
 			}
 		case 's' : {
-			struct dl_phdr_info search;
-			c = reflect(&search, callback);
 			
 			exit(0);	
 		}
