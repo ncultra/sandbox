@@ -3,7 +3,6 @@ CFLAGS =  -g -Wall -fPIC -std=gnu11  -mcmodel=large
 
 LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o
 
-
 .PHONY: gitsha
 gitsha: gitsha.txt libsandbox.o
 	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
@@ -45,13 +44,7 @@ platform.h:
 
 .PHONY: clean
 clean:
-	-rm -v $(BUILD_ROOT)sandbox
-	-rm -v $(BUILD_ROOT)/*a
-	-rm -v $(BUILD_ROOT)/*o
-	-rm -v $(BUILD_ROOT)/*so	
-	-rm -v gitsha.txt
-	-rm -v platform.h
-
+	@-rm -f sandbox  *o *a *so gitsha.txt platform.h &>/dev/null
 
 .PHONY: shared
 shared: clean libsandbox.so
