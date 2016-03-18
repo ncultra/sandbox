@@ -34,7 +34,6 @@ int usage(void)
 	printf("\n sandbox [options]\n");
 	printf("\t --test: call into the sandbox\n");
 	printf("\t --help: display this usage information\n");
-	printf("\t --symbols: show dynamic symbols\n");
 	return 0;
 }
 
@@ -68,10 +67,8 @@ int main(int argc, char **argv)
 				usage();
 				exit(1);	
 			}
-		case 's' : {
+			break;
 			
-			exit(0);	
-		}
 		default:
 			break;	
 		}
