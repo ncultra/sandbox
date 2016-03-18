@@ -192,6 +192,7 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_ERR_BAD_MSGID -5
 #define SANDBOX_ERR_NOMEM -6
 #define SANDBOX_ERR_RW -7
+#define SANDBOX_ERR_BAD_FD -8
 
 
 /*************************************************************************/

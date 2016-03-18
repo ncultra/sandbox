@@ -11,7 +11,13 @@
 #include <openssl/sha.h>
 
 static int info_flag, list_flag, apply_flag, remove_flag;
-
+static char filepath[PATH_MAX];
+static char patch_basename[PATH_MAX];
+static inline char *get_patch_name(char *path)
+{
+	strncpy(patch_basename, basename(path), PATH_MAX - 1);
+	return patch_basename;
+}
 
 void usage(void)
 {
@@ -19,12 +25,29 @@ void usage(void)
 	exit(0);	
 }
 
+int open_patch_file(char *path)
+{
+	int patchfd;
+	patchfd = open(path, O_RDONLY);
+	if (patchfd < 0) {
+		DMSG("error: open(%s): %m\n", path);
+		return SANDBOX_ERR_BAD_FD;
+	}
+	strncpy(filepath, path, PATH_MAX -1);
+	return patchfd;
+}
+
+
+
 
 int main(int argc, char **argv)
 {
 	
 	while (1)
 	{
+		if (argc < 2)
+			usage();
+		
 		int c;
 		static struct option long_options[] = {
 			{"dummy-for-short-option", no_argument, NULL, 0},
@@ -69,9 +92,23 @@ int main(int argc, char **argv)
 			DMSG("selected option %s\n", long_options[option_index].name);
 			break;
 		case 3:
-		case 4:
+		case 4: 
+		{
+			
+			int pfd;
+			char *fdname;
 			DMSG("selected option %s with arg %s\n",
 			     long_options[option_index].name, optarg);
+
+			fdname  = get_patch_name(optarg);
+			DMSG("patch file name: %s\n", fdname);			
+			if ((pfd = open_patch_file(optarg)) == SANDBOX_ERR_BAD_FD)
+				exit(0);
+			DMSG("patch file fd %d\n", pfd);
+			
+		}
+		
+			
 			break;
 		case 5:
 			usage();
