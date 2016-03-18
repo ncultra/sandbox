@@ -11,10 +11,12 @@ gitsha: gitsha.txt libsandbox.o
 sandbox: clean sandbox.o libsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
-libsandbox.a: libsandbox.o hexdump.o sandbox-listen.o gitsha
+libsandbox.a: gitsha.txt libsandbox.o hexdump.o sandbox-listen.o
+		$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
+
 	ar cr libsandbox.a libsandbox.o hexdump.o sandbox-listen.o
 
-libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.txt
+libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c 
 
 .PHONY: raxl
 raxl: clean raxlpqemu.o libsandbox.a
@@ -46,17 +48,18 @@ clean:
 	-rm -v $(BUILD_ROOT)sandbox
 	-rm -v $(BUILD_ROOT)/*a
 	-rm -v $(BUILD_ROOT)/*o
+	-rm -v $(BUILD_ROOT)/*so	
 	-rm -v gitsha.txt
 	-rm -v platform.h
-
-
 
 
 .PHONY: shared
 shared: clean libsandbox.so
 
-libsandbox.so: $(LIB_FILES) gitsha
+libsandbox.so: gitsha.txt $(LIB_FILES)
 	$(CC) -fPIC -shared -o $@ $(LIB_FILES)
+	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
+
 
 .PHONY: static
 static: clean libsandbox.a
