@@ -304,12 +304,12 @@ int main(int argc, char **argv)
 			DMSG("selected option %s\n", long_options[option_index].name);
 			break;
 		case 3:
-		case 4: 
-		{
+		 {
 			
 			int pfd;
 			char *fdname;
-			struct patch;
+			struct xpatch patch;
+			
 			DMSG("selected option %s with arg %s\n",
 			     long_options[option_index].name, optarg);
 
@@ -318,9 +318,17 @@ int main(int argc, char **argv)
 			if ((pfd = open_patch_file(optarg)) == SANDBOX_ERR_BAD_FD)
 				exit(0);
 			DMSG("patch file fd %d\n", pfd);
+
+			if (load_patch_file(pfd, fdname, &patch) < 0) {
+				return SANDBOX_ERR_BAD_FD;
+			}			
+			
+
+			break;
 			
 		}
-		
+	
+		case 4: 
 			
 			break;
 		case 5:
