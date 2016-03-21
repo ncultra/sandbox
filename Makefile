@@ -32,6 +32,7 @@ platform.h:
 .PHONY: raxlpqemu
 raxlpqemu: clean raxlpqemu.o util.o libsandbox.a platform.h
 	$(CC) $(CFLAGS) -c raxlpqemu.c util.c
+#TODO: might need to link libraries statically (probably not)
 	$(CC) $(CFLAGS) -o raxlpqemu -lz -lelf -lcrypto -lpthread -ldl raxlpqemu.o util.o libsandbox.a
 
 # use the git tag as the version number
