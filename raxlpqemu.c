@@ -10,6 +10,10 @@
 
 #include "sandbox.h"
 #include "live_patch.h"
+#include "util.h"
+#include <openssl/sha.h>
+
+#define XSPATCH_COOKIE	"XSPATCH2"
 
 static int info_flag, list_flag, apply_flag, remove_flag;
 static char filepath[PATH_MAX];
@@ -39,8 +43,61 @@ int open_patch_file(char *path)
 	return patchfd;
 }
 
-#if 0
-int load_patch_file(int fd, char *filename, struct patch *patch)
+int string2sha1(const char *string, unsigned char *sha1)
+{
+    int i;
+    /* Make sure first 40 chars of string are composed of only hex digits */
+    for (i = 0; i < 40; i += 2) {
+        if (sscanf(string + i, "%02x", (int*)(&sha1[i / 2])) != 1) {
+            fprintf(stderr, "error: not a valid sha1 string: %s\n", string);
+            return -1;
+        }
+    }
+    return 0;
+}
+
+int extract_sha1_from_filename(unsigned char *sha1, size_t sha1len,
+                               const char *filename)
+{
+
+    /* Make sure suffix is .raxlpxs */
+    if (strstr(filename, ".raxlpxs") == NULL) {
+        fprintf(stderr, "error: missing .raxlpxs extension: filename must be of form <sha1>.raxlpxs\n");
+        return -1;
+    }
+
+    /* Make sure filename length is 48: 40 (<sha1>) + 8 ('.raxlpxs') */
+    if (strlen(filename) != 48) {
+        fprintf(stderr, "error: filename must be of form <sha1>.raxlpxs\n");
+        return -1;
+    }
+
+    return string2sha1(filename, sha1);
+}
+
+
+static void bin2hex(unsigned char *bin, size_t binlen, char *buf,
+                    size_t buflen)
+{
+    static const char hexchars[] = "0123456789abcdef";
+    size_t i;
+
+    for (i = 0; i < binlen; i++, bin++) {
+        /* Ensure we can fit two characters and the terminating nul */
+        if (buflen >= 3) {
+            *buf++ = hexchars[(*bin >> 4) & 0x0f];
+            *buf++ = hexchars[*bin & 0x0f];
+
+            buflen -= 2;
+        }
+    }
+
+    if (buflen)
+        *buf = 0;
+}
+
+
+int load_patch_file(int fd, char *filename, struct xpatch *patch)
 {
     if (extract_sha1_from_filename(patch->sha1, sizeof(patch->sha1),
                                    filename) < 0)
@@ -194,8 +251,6 @@ int load_patch_file(int fd, char *filename, struct patch *patch)
 
     return 0;
 }
-
-#endif
 
 int main(int argc, char **argv)
 {
