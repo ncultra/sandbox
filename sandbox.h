@@ -209,6 +209,7 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
 #define SANDBOX_MSG_GET_LEN(b) (*(uint64_t *)((uint8_t *)b + 0x40))
 
+
 #define SANDBOX_MSG_APPLY 1
 #define SANDBOX_MSG_APPLYRSP 2
 #define SANDBOX_MSG_LIST 3

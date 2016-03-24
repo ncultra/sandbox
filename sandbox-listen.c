@@ -4,7 +4,7 @@
  * listen on a unix domain socket for incoming patches
  ****************************************************************/
 #include "sandbox.h"
-
+#include "gitsha.h"
 
 /*************************************************************************/
 /*                 Message format                                        */
@@ -69,9 +69,17 @@
    reply msg ID 6:
    1) header
    2) uint64_t 0L "OK, or error code.
-   3) 20-bytes sha1 git HEAD of the running binary
-   4) $CC at build time (string)
-   5) $CFLAGS at build time (string)
+  
+ the next field is one string with each field starting on a newline.
+ Note: major, minor, revision are combined in one line
+
+   3) 20-bytes sha1 git HEAD of the running binary,
+     $CC at build time,
+     $CFLAGS at build time,
+     $compile_date,
+     major version,
+     minor version,
+     revision
 */
 
 static inline ssize_t check_magic(uint8_t *magic)
@@ -85,7 +93,7 @@ ssize_t dispatch_apply(int, void **);
 ssize_t dispatch_list(int, void **);
 ssize_t dispatch_getbld(int, void **);
 ssize_t dummy(int, void **);
-ssize_t send_response(int fd, uint64_t id, ssize_t errcode);
+ssize_t send_response(int fd, uint64_t id, uint32_t errcode);
 ssize_t marshal_patch_data(int sock, void **bufp);
 
 typedef ssize_t (*handler)(int, void **);
@@ -495,8 +503,8 @@ errout:
 	
 }
 
-
-ssize_t send_response(int fd, uint64_t id, ssize_t errcode)
+/* TODO: this should return an int */
+ssize_t send_response(int fd, uint64_t id, uint32_t errcode)
 {
 	ssize_t ccode;
 	uint8_t sand[] = SANDBOX_MSG_MAGIC;
@@ -538,6 +546,18 @@ errout:
 	return(SANDBOX_ERR_RW);
 }
 
+/* write the buf size, then write the  buf */
+int send_buffer(int fd, void *buf, size_t bufsize)
+{
+	uint32_t len = bufsize;
+
+	if (writen(fd, &len, sizeof(len)) != sizeof(len) ||
+	    writen(fd, buf, len) != sizeof(len)) {
+		return SANDBOX_ERR_RW;
+	}
+	return SANDBOX_OK;
+}
+
 
 
 static inline ssize_t send_apply_response(int fd, ssize_t errcode)
@@ -569,8 +589,28 @@ ssize_t dispatch_list(int fd, void **bufp)
 	return send_response(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 } 
 
+
+/*****************************************************************
+ * Dispatch functions: at this point socket's file pointer 
+ * is at the first field
+ *
+ *****************************************************************/
+
 ssize_t dispatch_getbld(int fd, void **bufp)
 {
+        /* construct a string buffer with each data on a separate line */
+
+	char bldinfo[512];
+	memset(bldinfo, 0x00, 512);
+	snprintf(bldinfo, 512, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
+		 get_git_revision(),
+		 get_git_revision(), get_compiled(), get_ccflags(),
+		 get_compiled_date(), get_tag(),
+		 get_major(), get_minor(), get_revision());
+
+	
+
+	
 	return send_response(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 }
 

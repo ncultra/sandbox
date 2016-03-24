@@ -1,6 +1,8 @@
 BUILD_ROOT := "/home/mdday/src/sandbox/"
 CFLAGS =  -g -Wall -fPIC -std=gnu11 -mcmodel=large -ffunction-sections
-
+MAJOR_VERSION=0
+MINOR_VERSION=0
+REVISION=1
 LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o gitsha.o
 LIBELF=/usr/lib64/libelf.a
 CLEAN=@-rm -f sandbox raxlpqemu *o *a *so gitsha.txt platform.h \
@@ -61,12 +63,17 @@ gitsha.h: .git/HEAD .git/index
 	@echo "const char *ccflags=\"$(CFLAGS)\";" >> $@
 	@echo "const char *compile_date=\"$(shell date)\";" >> $@
 	@echo "const char *tag=\"$(shell git describe --abbrev=0 --tags)\";" >> $@
-	@echo "static inline const char *get_revision(void){return git_revision;}" >> $@
+	@echo "const int major = $(MAJOR_VERSION);" >> $@
+	@echo "const int minor = $(MINOR_VERSION);" >> $@
+	@echo "const int revision = $(REVISION);" >> $@
+	@echo "static inline const char *get_git_revision(void){return git_revision;}" >> $@
 	@echo "static inline const char *get_compiled(void){return compiled;}" >> $@
 	@echo "static inline const char *get_ccflags(void){return ccflags;}" >> $@
 	@echo "static inline const char *get_compiled_date(void){return compile_date;}" >> $@
 	@echo "static inline const char *get_tag(void){return tag;}" >> $@
-
+	@echo "static inline const int get_major(void){return major;}" >> $@
+	@echo "static inline const int get_minor(void){return minor;}" >> $@
+	@echo "static inline const int get_revision(void){return revision;}" >> $@
 
 .PHONY: shared
 shared: clean libsandbox.so
