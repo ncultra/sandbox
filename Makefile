@@ -2,7 +2,7 @@ BUILD_ROOT := "/home/mdday/src/sandbox/"
 CFLAGS =  -g -Wall -fPIC -std=gnu11 -mcmodel=large -ffunction-sections
 
 LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o
-
+LIBELF=/usr/lib64/libelf.a
 CLEAN=@-rm -f sandbox raxlpqemu *o *a *so gitsha.txt platform.h &>/dev/null
 
 .PHONY: gitsha
@@ -14,8 +14,11 @@ sandbox: clean sandbox.o libsandbox.a
 
 # any target that requires libsandbox will pull in gitsha.txt automatically
 libsandbox.a: gitsha.txt libsandbox.o hexdump.o sandbox-listen.o
-		$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
-	ar cr libsandbox.a libsandbox.o hexdump.o sandbox-listen.o
+	$(shell objcopy --add-section .buildinfo=gitsha.txt \
+	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
+# add the static elf library to the sandbox
+	ar crT libsandbox.a libsandbox.o hexdump.o sandbox-listen.o \
+	$(LIBELF)
 
 libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c 
 

@@ -1,6 +1,6 @@
 #define _GNU_SOURCE
 #include <link.h>
-
+#include <libelf.h>
 #include <sys/mman.h>
 #include "sandbox.h"
 

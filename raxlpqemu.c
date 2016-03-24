@@ -100,16 +100,26 @@ static void bin2hex(unsigned char *bin, size_t binlen, char *buf,
         *buf = 0;
 }
 
+/* TODO: add the sandbox pid to the name so there can be more than one. */
+/*     "/var/run/sandbox.getpid()" */
+
+/* use a wrapper function so we can eventually support other media beyond */
+/* a domain socket, eg sysfs file */
+int connect_to_sandbox(const char *sandbox_name)
+{
+	return cli_conn(sandbox_name);	
+}
+
+
+
+
 #if 0
 int cmd_apply(int argc, char *argv[])
 {
     if (argc < 3)
         usage();
 
-    xc_interface_t xch;
-    if (open_xc(&xch) < 0)
-        return -1;
-
+      
     const char *path = argv[2];
     char filepath[PATH_MAX];
 
@@ -118,13 +128,13 @@ int cmd_apply(int argc, char *argv[])
     filepath[sizeof(filepath) - 1] = 0;
     char *filename = basename(filepath);
 
-    int fd = open(path, O_RDONLY);
+    int fd = connect_to_sandbox(path);
     if (fd < 0) {
         fprintf(stderr, "error: open(%s): %m\n", path);
         return -1;
     }
 
-    struct patch patch;
+    struct xpatch patch;
     if (load_patch_file(fd, filename, &patch) < 0)
         return -1;
 
