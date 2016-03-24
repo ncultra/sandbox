@@ -3,7 +3,7 @@
 #include <libelf.h>
 #include <sys/mman.h>
 #include "sandbox.h"
-
+#include "gitsha.h"
 /************************************************************
  * The .align instruction has a different syntax on X86_64
  * than it does on PPC64. 
@@ -26,7 +26,7 @@ __asm__(".align 0x1000");
 __asm__(".align 0x0c");
 #endif
 __asm__("patch_sandbox_start:");
-#ifdef X86_64
+#ifdef X86_6
 __asm__("jmp patch_sandbox_end");
 __asm__(".fill 0x1000");
 __asm__(".align 8");
