@@ -25,6 +25,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <libgen.h>
+#include <openssl/sha.h>
 #include "platform.h"
 
 // TODO: remove move this def to the makefile
@@ -294,8 +295,12 @@ uint64_t get_sandbox_end(void);
    5) $CFLAGS at build time (string)
 */
 
+// TODO: add pid to socket name
+#define SSANDBOX "/var/run/sandbox"
+
 ssize_t listen_sandbox_sock(const char *sock_name);
 ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr);
+int cli_conn(const char *sock_name);
 ssize_t	readn(int fd, void *vptr, size_t n);
 ssize_t writen(int fd, const void *vptr, size_t n);
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,

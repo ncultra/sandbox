@@ -4,14 +4,18 @@
  * listen on a unix domain socket for incoming patches
  ****************************************************************/
 /* these are not used by any other obj, so keep the #includes here */
+
 #include <zlib.h>
 #include <libelf.h>
 #include <openssl/sha.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <errno.h>
 
-#include "sandbox.h"
 #include "live_patch.h"
 #include "util.h"
-#include <openssl/sha.h>
+
+#include "sandbox.h"
 
 #define XSPATCH_COOKIE	"XSPATCH2"
 
@@ -95,6 +99,130 @@ static void bin2hex(unsigned char *bin, size_t binlen, char *buf,
     if (buflen)
         *buf = 0;
 }
+
+#if 0
+int cmd_apply(int argc, char *argv[])
+{
+    if (argc < 3)
+        usage();
+
+    xc_interface_t xch;
+    if (open_xc(&xch) < 0)
+        return -1;
+
+    const char *path = argv[2];
+    char filepath[PATH_MAX];
+
+    /* basename() can modify its argument, so make a copy */
+    strncpy(filepath, path, sizeof(filepath) - 1);
+    filepath[sizeof(filepath) - 1] = 0;
+    char *filename = basename(filepath);
+
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        fprintf(stderr, "error: open(%s): %m\n", path);
+        return -1;
+    }
+
+    struct patch patch;
+    if (load_patch_file(fd, filename, &patch) < 0)
+        return -1;
+
+    /* Make sure this patch applies to this version of Xen */
+    char rxenversion[255];
+    char rxencompiledate[255];
+
+    if (get_xen_version(rxenversion, sizeof(rxenversion)) < 0)
+        return -1;
+    if (get_xen_compile_date(rxencompiledate, sizeof(rxencompiledate)) < 0)
+        return -1;
+
+    printf("Running Xen Information:\n");
+    printf("  Hypervisor Version: %s\n", rxenversion);
+    printf("  Hypervisor Compile Date: %s\n", rxencompiledate);
+
+    printf("\n");
+    printf("Patch Applies To:\n");
+    printf("  Hypervisor Version: %s\n", patch.xenversion);
+    printf("  Hypervisor Compile Date: %s\n", patch.xencompiledate);
+    printf("\n");
+
+    if (strcmp(rxenversion, patch.xenversion) != 0 ||
+        strcmp(rxencompiledate, patch.xencompiledate) != 0) {
+        fprintf(stderr, "error: patch does not match hypervisor build\n");
+        return -1;
+    }
+
+    /* Perform some sanity checks */
+    if (patch.crowbarabs != 0) {
+        fprintf(stderr, "error: cannot handle crowbar style patches\n");
+        return -1;
+    }
+
+    if (patch.numchecks > 0) {
+        fprintf(stderr, "error: cannot handle prechecks\n");
+        return -1;
+    }
+
+    /* FIXME: Handle hypercall table writes too */
+    if (patch.numtables > 0) {
+        fprintf(stderr, "error: cannot handle table writes, yet\n");
+        return -1;
+    }
+
+    struct xenlp_patch_info *info = NULL;
+    /* Do a list first and make sure patch isn't already applied yet */
+    if (find_patch(xch, patch.sha1, sizeof(patch.sha1), &info) < 0) {
+        fprintf(stderr, "error: could not search for patches\n");
+        return -1;
+    }
+    if (info) {
+        printf("Patch already applied, skipping\n");
+        return 0;
+    }
+
+    /* Convert into a series of writes for the live patch functionality */
+    uint32_t numwrites = patch.numfuncs;
+    struct xenlp_patch_write writes[numwrites];
+    memset(writes, 0, sizeof(writes));
+
+    size_t i;
+    for (i = 0; i < patch.numfuncs; i++) {
+        struct function_patch *func = &patch.funcs[i];
+        struct xenlp_patch_write *pw = &writes[i];
+
+        pw->hvabs = func->oldabs;
+
+        /* Create jmp trampoline */
+        /* jmps are relative to next instruction, so subtract out 5 bytes
+         * for the jmp instruction itself */
+        int32_t jmpoffset = (patch.refabs + func->newrel) - func->oldabs - 5;
+
+        pw->data[0] = 0xe9;		/* jmp instruction */
+        memcpy(&pw->data[1], &jmpoffset, sizeof(jmpoffset));
+
+        pw->reloctype = XENLP_RELOC_INT32;
+        pw->dataoff = 1;
+
+        printf("Patching function %s @ %llx\n", func->funcname, func->oldabs);
+    }
+
+    size_t buflen = fill_patch_buf(NULL, &patch, numwrites, writes);
+    unsigned char *buf = _zalloc(buflen);
+    buflen = fill_patch_buf(buf, &patch, numwrites, writes);
+
+    int ret = do_lp_apply(xch, buf, buflen);
+    if (ret < 0) {
+        fprintf(stderr, "failed to patch hypervisor: %m\n");
+        return -1;
+    }
+
+    char sha1str[41];
+    bin2hex(patch.sha1, sizeof(patch.sha1), sha1str, sizeof(sha1str));
+    printf("\nSuccessfully applied patch %s\n", sha1str);
+    return 0;
+}
+#endif
 
 
 int load_patch_file(int fd, char *filename, struct xpatch *patch)
@@ -322,7 +450,7 @@ int main(int argc, char **argv)
 			if (load_patch_file(pfd, fdname, &patch) < 0) {
 				return SANDBOX_ERR_BAD_FD;
 			}			
-			
+			DMSG("patch file is loaded\n");
 
 			break;
 			
@@ -337,8 +465,5 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
-
-
-
 	printf("bye\n");	
 }

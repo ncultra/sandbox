@@ -1,5 +1,5 @@
 BUILD_ROOT := "/home/mdday/src/sandbox/"
-CFLAGS =  -g -Wall -fPIC -std=gnu11  -mcmodel=large
+CFLAGS =  -g -Wall -fPIC -std=gnu11 -mcmodel=large -ffunction-sections
 
 LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o
 
