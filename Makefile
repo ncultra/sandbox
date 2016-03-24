@@ -28,7 +28,7 @@ clean:
 	$(CLEAN)
 	@echo "repo is clean"
 
-*.c: platform.h gitsha.c
+*.c: platform.h
 
 platform.h:
 	$(shell $(BUILD_ROOT)config.sh)
@@ -42,27 +42,30 @@ raxlpqemu: clean raxlpqemu.o util.o libsandbox.a platform.h
 # use the git tag as the version number
 # tag should be in the format v0.0.0
 gitsha.txt: .git/HEAD .git/index
-	echo -n "SANDBOXBUILDINFOSTART" > $@
-	echo -n "{" >> $@
-	echo -n "'git-revision': '$(shell git rev-parse HEAD)'," >> $@	
-	echo -n "'compiled': '$(shell $(CC) --version)'," >> $@
-	echo -n "'ccflags': '$(CFLAGS)'," >> $@
-	echo -n "'compile-date': '$(shell date)'," >> $@
-	echo -n "'tag': '$(shell git describe --abbrev=0 --tags)'" >> $@
-	echo  "}" >> $@
-	echo -n "SANDBOXBUILDINFOEND" >> $@
+	@echo  "generating .buildinfo elf section..."
+	@echo -n "SANDBOXBUILDINFOSTART" > $@
+	@echo -n "{" >> $@
+	@echo -n "'git-revision': '$(shell git rev-parse HEAD)'," >> $@	
+	@echo -n "'compiled': '$(shell $(CC) --version)'," >> $@
+	@echo -n "'ccflags': '$(CFLAGS)'," >> $@
+	@echo -n "'compile-date': '$(shell date)'," >> $@
+	@echo -n "'tag': '$(shell git describe --abbrev=0 --tags)'" >> $@
+	@echo  "}" >> $@
+	@echo -n "SANDBOXBUILDINFOEND" >> $@
 
 gitsha.h: .git/HEAD .git/index
-	echo "const char *git_revision=\"$(shell git rev-parse HEAD)\";" > $@
-	echo "const char *compiled=\"$(shell $(CC) --version)\";" >> $@
-	echo "const char *ccflags=\"$(CFLAGS)\";" >> $@
-	echo "const char *compile_date=\"$(shell date)\";" >> $@
-	echo "const char *tag=\"$(shell git describe --abbrev=0 --tags)\";" >> $@
-	echo "static inline const char *get_revision(void){return git_revision;}" >> $@
-	echo "static inline const char *get_compiled(void){return compiled;}" >> $@
-	echo "static inline const char *get_ccflags(void){return ccflags;}" >> $@
-	echo "static inline const char *get_compiled_date(void){return compile_date;}" >> $@
-	echo "static inline const char *get_tag(void){return tag;}" >> $@
+	@echo "generating gitsha.h...."
+	@echo "/* this file is generated automatically in the Makefile */" >$@
+	@echo "const char *git_revision=\"$(shell git rev-parse HEAD)\";" >> $@
+	@echo "const char *compiled=\"$(shell $(CC) --version)\";" >> $@
+	@echo "const char *ccflags=\"$(CFLAGS)\";" >> $@
+	@echo "const char *compile_date=\"$(shell date)\";" >> $@
+	@echo "const char *tag=\"$(shell git describe --abbrev=0 --tags)\";" >> $@
+	@echo "static inline const char *get_revision(void){return git_revision;}" >> $@
+	@echo "static inline const char *get_compiled(void){return compiled;}" >> $@
+	@echo "static inline const char *get_ccflags(void){return ccflags;}" >> $@
+	@echo "static inline const char *get_compiled_date(void){return compile_date;}" >> $@
+	@echo "static inline const char *get_tag(void){return tag;}" >> $@
 
 
 .PHONY: shared
