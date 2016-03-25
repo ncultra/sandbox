@@ -204,11 +204,11 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_HDRLEN 0x00000010
 #define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
 #define SANDBOX_MSG_VERSION (uint16_t)0x0001				      
-#define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 0x20))
-#define SANDBOX_MSG_GET_ID(b) (*(uint16_t *)((uint8_t *)b + 0x30))
+#define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 4))
+#define SANDBOX_MSG_GET_ID(b) (*(uint16_t *)((uint8_t *)b + 6))
 #define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
-#define SANDBOX_MSG_GET_LEN(b) (*(uint64_t *)((uint8_t *)b + 0x40))
-
+#define SANDBOX_MSG_GET_LEN(b) (*(uint32_t *)((uint8_t *)b + 7))
+#define SANDBOX_MSG_PUT_LEN(b, l) ((*(uint32_t *)((uint8_t *)b + 7)) = (uint32_t)l)
 
 #define SANDBOX_MSG_APPLY 1
 #define SANDBOX_MSG_APPLYRSP 2

@@ -93,7 +93,7 @@ ssize_t dispatch_apply(int, void **);
 ssize_t dispatch_list(int, void **);
 ssize_t dispatch_getbld(int, void **);
 ssize_t dummy(int, void **);
-ssize_t send_response(int fd, uint64_t id, uint32_t errcode);
+ssize_t send_response4b(int fd, uint16_t id, uint32_t errcode);
 ssize_t marshal_patch_data(int sock, void **bufp);
 
 typedef ssize_t (*handler)(int, void **);
@@ -388,7 +388,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	ccode = dispatch[*id](fd, &dispatch_buffer);
 	
 errout:	
-	return send_response(fd, SANDBOX_ERR_BAD_HDR,  ccode);
+	return send_response4b(fd, SANDBOX_ERR_BAD_HDR,  ccode);
 	
 }
 
@@ -499,16 +499,16 @@ errout:
 		free(*bufp);
 	}
 	
-	return send_response(sock, SANDBOX_ERR_BAD_HDR, ccode);
+	return send_response4b(sock, SANDBOX_ERR_BAD_HDR, ccode);
 	
 }
-
-ssize_t send_response(int fd, uint64_t id, uint32_t errcode)
+/* send response message that only has a 4-byte error code */
+ssize_t send_response4b(int fd, uint16_t id, uint32_t errcode)
 {
-	uint32_t ccode;
+	uint32_t ccode, len = SANDBOX_MSG_HDRLEN + 4;
 	uint8_t sand[] = SANDBOX_MSG_MAGIC;
 	uint16_t pver = SANDBOX_MSG_VERSION;
-	uint64_t msgid = id, len = SANDBOX_MSG_HDRLEN + 4;
+	uint16_t msgid = id;
 
 	/* magic header */
 	ccode = writen(fd, sand, sizeof(sand));
@@ -545,6 +545,64 @@ errout:
 	return(SANDBOX_ERR_RW);
 }
 
+ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
+			  uint32_t bufsize, uint8_t *buf)
+{
+	uint32_t ccode, len = SANDBOX_MSG_HDRLEN + 4 + bufsize;
+	uint8_t sand[] = SANDBOX_MSG_MAGIC;
+	uint16_t pver = SANDBOX_MSG_VERSION;
+	uint16_t msgid = id;
+
+	/* magic header */
+	ccode = writen(fd, sand, sizeof(sand));
+	if (ccode != sizeof(sand)) {
+		goto errout;
+	}
+
+	/* protocol version */
+	ccode = writen(fd, &pver, sizeof(pver));
+	if (ccode != sizeof(pver)) {
+		goto errout;
+	}
+	/* message id  */
+	ccode = writen(fd, &msgid, sizeof(msgid));
+	if (ccode != sizeof(msgid)) {
+		goto errout;
+	}
+
+	/* message len = header + buflen + bufsize */
+	
+	ccode = writen(fd, &len, sizeof(len));
+	if (ccode != sizeof(len)) {
+		goto errout;
+	}
+	
+	/* this message return code */
+	
+	if ((writen(fd, &errcode, sizeof(errcode))) != sizeof(errcode)){
+		goto errout;
+	}
+
+	
+	/* bufsize */
+	if ((writen(fd, &bufsize, sizeof(bufsize))) != sizeof(bufsize)) {
+		goto errout;
+	}
+	
+	/* write the buffer */	
+
+	if (writen(fd, buf, bufsize) != bufsize) {
+		goto errout;
+	}
+	
+	return(SANDBOX_OK);
+
+errout:
+	return(SANDBOX_ERR_RW);
+
+}
+
+/* TODO - this will mess up the message length field */
 /* write the buf size, then write the  buf */
 int send_buffer(int fd, void *buf, ssize_t bufsize)
 {
@@ -558,10 +616,10 @@ int send_buffer(int fd, void *buf, ssize_t bufsize)
 }
 
 
-
-static inline ssize_t send_apply_response(int fd, ssize_t errcode)
+/* TODO: WTF */
+static inline ssize_t send_apply_response(int fd, uint32_t errcode)
 {
-	return send_response(fd, SANDBOX_MSG_APPLYRSP, errcode);
+	return send_response4b(fd, SANDBOX_MSG_APPLYRSP, errcode);
 }
 
 
@@ -570,6 +628,7 @@ static inline ssize_t send_apply_response(int fd, ssize_t errcode)
  * is at the first field
  *
  *****************************************************************/
+/* TODO - init message len field */
 ssize_t dispatch_apply(int fd, void ** bufp)
 {
 	ssize_t ccode = marshal_patch_data(fd, bufp);
@@ -585,7 +644,7 @@ ssize_t dispatch_apply(int fd, void ** bufp)
 
 ssize_t dispatch_list(int fd, void **bufp)
 {
-	return send_response(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+	return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 } 
 
 
@@ -610,12 +669,12 @@ ssize_t dispatch_getbld(int fd, void **bufp)
 	
 
 	
-	return send_response(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+	return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 }
 
 ssize_t dummy(int fd, void **bufp)
 {
 
-	return send_response(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+	return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 	
 }
