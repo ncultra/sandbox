@@ -112,6 +112,24 @@ handler dispatch[] =
 
 
 
+
+
+pthread_t *run_listener(char *sockname)
+{
+	int ccode;
+	
+	pthread_t *thr = calloc(1, sizeof(pthread_t));
+	if (!thr)
+		goto errout;
+	
+	if ((ccode = pthread_create(thr, NULL, listen_thread, (void *)sockname)))
+		return thr;
+	free(thr);		
+errout:
+	return NULL;
+}
+
+
 // TODO: handle signals in the thread
 
 void *listen_thread(void *arg)
@@ -139,7 +157,7 @@ void *listen_thread(void *arg)
 // create and listen on a unix domain socket.
 // connect, peek at the incoming data. 
 // sock_name: full path of the socket e.g. /var/run/sandbox 
-ssize_t listen_sandbox_sock(const char *sock_name)
+int listen_sandbox_sock(const char *sock_name)
 {
 	ssize_t fd, len, err, ccode;
 	struct sockaddr_un un;
@@ -346,16 +364,16 @@ ssize_t writen(int fd, const void *vptr, size_t n)
 }
 
 int write_sandbox_message_header(int fd,
-				     uint16_t *version, uint16_t *id)
+				     uint16_t version, uint16_t id)
 {
 	uint8_t magic[] = SANDBOX_MSG_MAGIC;
 	uint32_t len = SANDBOX_MSG_HDRLEN;
 	
 	if (writen(fd, magic, sizeof(magic)) != sizeof(magic))
 		goto errout;
-	if (writen(fd, version, sizeof(uint16_t)) != sizeof(uint64_t))
+	if (writen(fd, &version, sizeof(uint16_t)) != sizeof(uint16_t))
 		goto errout;
-	if (writen(fd, id, sizeof(uint16_t)) != sizeof(uint16_t))
+	if (writen(fd, &id, sizeof(uint16_t)) != sizeof(uint16_t))
 		goto errout;
 	if (writen(fd, &len, sizeof(len)) != sizeof(len))
 		goto errout;

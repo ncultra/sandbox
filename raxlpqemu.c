@@ -31,7 +31,8 @@ static inline char *get_patch_name(char *path)
 
 void usage(void)
 {
-	printf("\nraxlpqemu --info --list --apply <patch> --remove <patch> --help\n");
+	printf("\nraxlpqemu --info --list --apply <patch> \
+--remove <patch> --socket --help\n");
 	exit(0);	
 }
 
@@ -396,6 +397,10 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
     return 0;
 }
 
+
+char sockname[PATH_MAX];
+
+
 int main(int argc, char **argv)
 {
 	
@@ -411,11 +416,12 @@ int main(int argc, char **argv)
 			{"list", no_argument, &list_flag, 1},
 			{"apply", required_argument, &apply_flag, 1},
 			{"remove", required_argument, &remove_flag, 1},
+			{"socket", required_argument, 0, 0},
 			{"help", no_argument, NULL, 0},
 			{0,0,0,0}
 		};
 		int option_index = 0;
-		c = getopt_long(argc, argv, "ila:r:h", long_options, &option_index);
+		c = getopt_long(argc, argv, "ila:r:s:h", long_options, &option_index);
 		if (c == -1) {
 			break;
 		}
@@ -436,8 +442,11 @@ int main(int argc, char **argv)
 			case 'r':
 				option_index = 4;
 				goto restart_long;
-			case 'h':
+			case 's':
 				option_index = 5;
+				goto restart_long;
+			case 'h':
+				option_index = 6;
 				goto restart_long;
 			default:
 				break;
@@ -448,8 +457,7 @@ int main(int argc, char **argv)
 			DMSG("selected option %s\n", long_options[option_index].name);
 			break;
 		case 3:
-		 {
-			
+		{	
 			int pfd;
 			char *fdname;
 			struct xpatch patch;
@@ -469,13 +477,24 @@ int main(int argc, char **argv)
 			DMSG("patch file is loaded\n");
 
 			break;
-			
 		}
-	
 		case 4: 
 			
 			break;
-		case 5:
+		case 5: 
+		{
+			
+			memset(sockname, 0x00, PATH_MAX);
+			strncpy(sockname, optarg, PATH_MAX);
+			DMSG("socket: %s\n", sockname);
+			int sockfd = cli_conn(sockname);
+			DMSG("socket destriptor: %d\n", sockfd);
+			
+			
+			break;
+		}
+		
+		case 6:
 			usage();
 		default:
 			break;

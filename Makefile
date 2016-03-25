@@ -1,5 +1,5 @@
 BUILD_ROOT := "/home/mdday/src/sandbox/"
-CFLAGS =  -g -Wall -fPIC -std=gnu11 -mcmodel=large -ffunction-sections
+CFLAGS =  -g -Wall -fPIC -std=gnu11 -mcmodel=large -ffunction-sections -pthread
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1

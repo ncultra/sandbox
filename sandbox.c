@@ -83,6 +83,10 @@ int main(int argc, char **argv)
 	DMSG("jump to: %p\n", (void *)patched_stub);
 	
 	DMSG("pid: %i\n", getpid());
+
+	int ccode = listen_sandbox_sock("/var/run/qemu_sock");
+	DMSG("listen sandbox errcode: %d\n", ccode);
+	
 	
 	if (test_flag) {
 		char *pname = strdup("pname");
