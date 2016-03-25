@@ -3,7 +3,7 @@
 #include <libelf.h>
 #include <sys/mman.h>
 #include "sandbox.h"
-#include "gitsha.h"
+
 /************************************************************
  * The .align instruction has a different syntax on X86_64
  * than it does on PPC64. 

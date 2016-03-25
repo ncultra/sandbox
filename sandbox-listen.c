@@ -119,7 +119,7 @@ handler dispatch[] =
 void *listen_thread(void *arg)
 {
 	char *socket_name = (char *)arg;
-	uint64_t quit = 0;
+	uint32_t quit = 0;
 	int listen_fd, client_fd;
 	uid_t client_id;
 	do {
@@ -128,7 +128,7 @@ void *listen_thread(void *arg)
 			client_fd = accept_sandbox_sock(listen_fd, &client_id);
 			if (client_fd > 0) {
 				uint16_t version, id;
-				uint64_t len;
+				uint32_t len;
 				quit   = read_sandbox_message_header(client_fd, &version, &id, &len);
 			}
 		}
@@ -356,10 +356,10 @@ ssize_t writen(int fd, const void *vptr, size_t n)
 /* if this function returns ERR, ptr parameters are undefined */
 /* if it returns 0, ptr parameters will have correct values */
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
-				    uint16_t *id, uint64_t *len)
+				    uint16_t *id, uint32_t *len)
 {
 	uint8_t hbuf[0x60];
-	ssize_t ccode = 0;
+	uint32_t ccode = 0;
 	void *dispatch_buffer = NULL;
 	
 	if ((ccode = readn(fd, &hbuf, sizeof(hbuf))) != sizeof(hbuf)) {
@@ -503,10 +503,9 @@ errout:
 	
 }
 
-/* TODO: this should return an int */
 ssize_t send_response(int fd, uint64_t id, uint32_t errcode)
 {
-	ssize_t ccode;
+	uint32_t ccode;
 	uint8_t sand[] = SANDBOX_MSG_MAGIC;
 	uint16_t pver = SANDBOX_MSG_VERSION;
 	uint64_t msgid = id, len = SANDBOX_MSG_HDRLEN + 4;
@@ -547,9 +546,9 @@ errout:
 }
 
 /* write the buf size, then write the  buf */
-int send_buffer(int fd, void *buf, size_t bufsize)
+int send_buffer(int fd, void *buf, ssize_t bufsize)
 {
-	uint32_t len = bufsize;
+	uint32_t len = (uint32_t)bufsize;
 
 	if (writen(fd, &len, sizeof(len)) != sizeof(len) ||
 	    writen(fd, buf, len) != sizeof(len)) {
