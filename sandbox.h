@@ -308,3 +308,5 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 				    uint16_t *id, uint32_t *len);
 ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
 			  uint32_t bufsize, uint8_t *buf);
+int write_sandbox_message_header(int fd,
+				 uint16_t *version, uint16_t *id);

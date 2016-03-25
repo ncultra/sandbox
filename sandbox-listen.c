@@ -345,6 +345,26 @@ ssize_t writen(int fd, const void *vptr, size_t n)
 	return (n);
 }
 
+int write_sandbox_message_header(int fd,
+				     uint16_t *version, uint16_t *id)
+{
+	uint8_t magic[] = SANDBOX_MSG_MAGIC;
+	uint32_t len = SANDBOX_MSG_HDRLEN;
+	
+	if (writen(fd, magic, sizeof(magic)) != sizeof(magic))
+		goto errout;
+	if (writen(fd, version, sizeof(uint16_t)) != sizeof(uint64_t))
+		goto errout;
+	if (writen(fd, id, sizeof(uint16_t)) != sizeof(uint16_t))
+		goto errout;
+	if (writen(fd, &len, sizeof(len)) != sizeof(len))
+		goto errout;
+	
+	return SANDBOX_OK;
+errout:
+	return SANDBOX_ERR_RW;
+}
+
 /* header is  3 * 32 bytes -
  * 'SAND'
  * version
