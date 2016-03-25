@@ -266,7 +266,7 @@ uint64_t get_sandbox_end(void);
 
    reply msg: ID 2
    1) header
-   2) uint64_t  0L "OK," or error code
+   2) uint32_t  0L "OK," or error code
  */
 
 /* Message ID 3: list patch ********************************************/

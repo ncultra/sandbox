@@ -94,8 +94,8 @@ ssize_t dispatch_list(int, void **);
 ssize_t dispatch_getbld(int, void **);
 ssize_t dummy(int, void **);
 ssize_t send_response4b(int fd, uint16_t id, uint32_t errcode);
-ssize_t marshal_patch_data(int sock, void **bufp);
-
+ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
+			  uint32_t bufsize, uint8_t *buf);
 typedef ssize_t (*handler)(int, void **);
 
 handler dispatch[] =
@@ -502,48 +502,6 @@ errout:
 	return send_response4b(sock, SANDBOX_ERR_BAD_HDR, ccode);
 	
 }
-/* send response message that only has a 4-byte error code */
-ssize_t send_response4b(int fd, uint16_t id, uint32_t errcode)
-{
-	uint32_t ccode, len = SANDBOX_MSG_HDRLEN + 4;
-	uint8_t sand[] = SANDBOX_MSG_MAGIC;
-	uint16_t pver = SANDBOX_MSG_VERSION;
-	uint16_t msgid = id;
-
-	/* magic header */
-	ccode = writen(fd, sand, sizeof(sand));
-	if (ccode != sizeof(sand)) {
-		goto errout;
-	}
-
-	/* protocol version */
-	ccode = writen(fd, &pver, sizeof(pver));
-	if (ccode != sizeof(pver)) {
-		goto errout;
-	}
-	/* message id - apply response */
-	ccode = writen(fd, &msgid, sizeof(msgid));
-	if (ccode != sizeof(msgid)) {
-		goto errout;
-	}
-
-	/* msg length */
-	ccode = writen(fd, &len, sizeof(len));
-	if (ccode != sizeof(len)) {
-		goto errout;
-	}
-	
-	/* this message return code */
-	ccode = errcode;
-	if ((writen(fd, &ccode, sizeof(ccode))) != sizeof(ccode)){
-		goto errout;
-	}
-	
-	return(SANDBOX_OK);
-	
-errout:
-	return(SANDBOX_ERR_RW);
-}
 
 ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
 			  uint32_t bufsize, uint8_t *buf)
@@ -552,7 +510,7 @@ ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
 	uint8_t sand[] = SANDBOX_MSG_MAGIC;
 	uint16_t pver = SANDBOX_MSG_VERSION;
 	uint16_t msgid = id;
-
+	
 	/* magic header */
 	ccode = writen(fd, sand, sizeof(sand));
 	if (ccode != sizeof(sand)) {
@@ -571,11 +529,15 @@ ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
 	}
 
 	/* message len = header + buflen + bufsize */
+
+	if (!bufsize)
+		len = SANDBOX_MSG_HDRLEN + 4;
 	
 	ccode = writen(fd, &len, sizeof(len));
 	if (ccode != sizeof(len)) {
 		goto errout;
 	}
+			
 	
 	/* this message return code */
 	
@@ -583,6 +545,8 @@ ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
 		goto errout;
 	}
 
+	if (!bufsize)
+		return(SANDBOX_OK);
 	
 	/* bufsize */
 	if ((writen(fd, &bufsize, sizeof(bufsize))) != sizeof(bufsize)) {
@@ -594,33 +558,18 @@ ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
 	if (writen(fd, buf, bufsize) != bufsize) {
 		goto errout;
 	}
-	
 	return(SANDBOX_OK);
-
+	
 errout:
 	return(SANDBOX_ERR_RW);
-
 }
-
-/* TODO - this will mess up the message length field */
-/* write the buf size, then write the  buf */
-int send_buffer(int fd, void *buf, ssize_t bufsize)
-{
-	uint32_t len = (uint32_t)bufsize;
-
-	if (writen(fd, &len, sizeof(len)) != sizeof(len) ||
-	    writen(fd, buf, len) != sizeof(len)) {
-		return SANDBOX_ERR_RW;
-	}
-	return SANDBOX_OK;
-}
-
 
 /* TODO: WTF */
 static inline ssize_t send_apply_response(int fd, uint32_t errcode)
 {
-	return send_response4b(fd, SANDBOX_MSG_APPLYRSP, errcode);
+return (send_response_buf(fd, SANDBOX_MSG_APPLYRSP, errcode, 0, 0));
 }
+
 
 
 /*****************************************************************
@@ -631,20 +580,20 @@ static inline ssize_t send_apply_response(int fd, uint32_t errcode)
 /* TODO - init message len field */
 ssize_t dispatch_apply(int fd, void ** bufp)
 {
-	ssize_t ccode = marshal_patch_data(fd, bufp);
-	if (ccode == SANDBOX_OK) {
+ssize_t ccode = marshal_patch_data(fd, bufp);
+if (ccode == SANDBOX_OK) {
 		
-		struct patch *p = (struct patch *)*bufp;
-		ccode = apply_patch(p);
-	}
+struct patch *p = (struct patch *)*bufp;
+ccode = apply_patch(p);
+}
 	
-	send_apply_response(fd, ccode);
-	return(ccode);
+send_apply_response(fd, ccode);
+return(ccode);
 }
 
 ssize_t dispatch_list(int fd, void **bufp)
 {
-	return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 } 
 
 
@@ -656,25 +605,22 @@ ssize_t dispatch_list(int fd, void **bufp)
 
 ssize_t dispatch_getbld(int fd, void **bufp)
 {
-        /* construct a string buffer with each data on a separate line */
+/* construct a string buffer with each data on a separate line */
 
-	char bldinfo[512];
-	memset(bldinfo, 0x00, 512);
-	snprintf(bldinfo, 512, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
+char bldinfo[512];
+memset(bldinfo, 0x00, 512);
+snprintf(bldinfo, 512, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
 		 get_git_revision(),
 		 get_git_revision(), get_compiled(), get_ccflags(),
 		 get_compiled_date(), get_tag(),
-		 get_major(), get_minor(), get_revision());
-
-	
-
-	
-	return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+		 get_major(), get_minor(), get_revision());	
+return(send_response_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
+				 0, 0));
 }
 
 ssize_t dummy(int fd, void **bufp)
 {
 
-	return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 	
 }
