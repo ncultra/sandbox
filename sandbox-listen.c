@@ -89,13 +89,11 @@ static inline ssize_t check_magic(uint8_t *magic)
 	return memcmp(magic, m, sizeof(m));
 }
 
+static ssize_t marshal_patch_data(int, void **);
 ssize_t dispatch_apply(int, void **);
 ssize_t dispatch_list(int, void **);
 ssize_t dispatch_getbld(int, void **);
 ssize_t dummy(int, void **);
-ssize_t send_response4b(int fd, uint16_t id, uint32_t errcode);
-ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
-			  uint32_t bufsize, uint8_t *buf);
 typedef ssize_t (*handler)(int, void **);
 
 handler dispatch[] =
@@ -388,14 +386,14 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	ccode = dispatch[*id](fd, &dispatch_buffer);
 	
 errout:	
-	return send_response4b(fd, SANDBOX_ERR_BAD_HDR,  ccode);
+	return send_response_buf(fd, SANDBOX_ERR_BAD_HDR,  ccode, 0, 0);
 	
 }
 
 
 
 
-ssize_t marshal_patch_data(int sock, void **bufp)
+static ssize_t marshal_patch_data(int sock, void **bufp)
 {
 	assert(bufp && *bufp == NULL);
 
@@ -466,7 +464,8 @@ ssize_t marshal_patch_data(int sock, void **bufp)
         /*  64 bytes starting at the jmp location (inclusively) */
 
 	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == sizeof(uintptr_t)) {
-		if (readn(sock, &new_patch->reloc_dest, sizeof(uintptr_t)) != sizeof(uintptr_t)) {
+		if (readn(sock, &new_patch->reloc_dest, sizeof(uintptr_t)) !=
+		    sizeof(uintptr_t)) {
 			return(SANDBOX_ERR_RW);
 		}	
 	}  else {
@@ -499,7 +498,7 @@ errout:
 		free(*bufp);
 	}
 	
-	return send_response4b(sock, SANDBOX_ERR_BAD_HDR, ccode);
+	return send_response_buf(sock, SANDBOX_ERR_BAD_HDR, ccode, 0, 0);
 	
 }
 
@@ -559,14 +558,6 @@ errout:
 	return(SANDBOX_ERR_RW);
 }
 
-/* TODO: WTF */
-static inline ssize_t send_apply_response(int fd, uint32_t errcode)
-{
-	return (send_response_buf(fd, SANDBOX_MSG_APPLYRSP, errcode, 0, 0));
-}
-
-
-
 /*****************************************************************
  * Dispatch functions: at this point socket's file pointer 
  * is at the first field
@@ -575,20 +566,20 @@ static inline ssize_t send_apply_response(int fd, uint32_t errcode)
 /* TODO - init message len field */
 ssize_t dispatch_apply(int fd, void ** bufp)
 {
-	ssize_t ccode = marshal_patch_data(fd, bufp);
+	uint32_t ccode = marshal_patch_data(fd, bufp);
 	if (ccode == SANDBOX_OK) {
 		
 		struct patch *p = (struct patch *)*bufp;
 		ccode = apply_patch(p);
 	}
 	
-	send_apply_response(fd, ccode);
+	send_response_buf(fd, SANDBOX_MSG_APPLYRSP, ccode, 0, 0);
 	return(ccode);
 }
 
 ssize_t dispatch_list(int fd, void **bufp)
 {
-	return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+	return send_response_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID, 0, 0);
 } 
 
 
@@ -615,5 +606,5 @@ ssize_t dispatch_getbld(int fd, void **bufp)
 
 ssize_t dummy(int fd, void **bufp)
 {
-	return(send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID));	
+	return(send_response_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID, 0, 0));	
 }
