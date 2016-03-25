@@ -513,20 +513,18 @@ ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
 	
 	/* magic header */
 	ccode = writen(fd, sand, sizeof(sand));
-	if (ccode != sizeof(sand)) {
+	if (ccode != sizeof(sand))
 		goto errout;
-	}
 
 	/* protocol version */
 	ccode = writen(fd, &pver, sizeof(pver));
-	if (ccode != sizeof(pver)) {
+	if (ccode != sizeof(pver))
 		goto errout;
-	}
+	
 	/* message id  */
 	ccode = writen(fd, &msgid, sizeof(msgid));
-	if (ccode != sizeof(msgid)) {
+	if (ccode != sizeof(msgid))
 		goto errout;
-	}
 
 	/* message len = header + buflen + bufsize */
 
@@ -534,30 +532,27 @@ ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
 		len = SANDBOX_MSG_HDRLEN + 4;
 	
 	ccode = writen(fd, &len, sizeof(len));
-	if (ccode != sizeof(len)) {
+	if (ccode != sizeof(len))
 		goto errout;
-	}
 			
 	
 	/* this message return code */
 	
-	if ((writen(fd, &errcode, sizeof(errcode))) != sizeof(errcode)){
+	if ((writen(fd, &errcode, sizeof(errcode))) != sizeof(errcode))
 		goto errout;
-	}
 
 	if (!bufsize)
 		return(SANDBOX_OK);
 	
 	/* bufsize */
-	if ((writen(fd, &bufsize, sizeof(bufsize))) != sizeof(bufsize)) {
+	if ((writen(fd, &bufsize, sizeof(bufsize))) != sizeof(bufsize))
 		goto errout;
-	}
 	
 	/* write the buffer */	
 
-	if (writen(fd, buf, bufsize) != bufsize) {
+	if (writen(fd, buf, bufsize) != bufsize)
 		goto errout;
-	}
+
 	return(SANDBOX_OK);
 	
 errout:
@@ -567,7 +562,7 @@ errout:
 /* TODO: WTF */
 static inline ssize_t send_apply_response(int fd, uint32_t errcode)
 {
-return (send_response_buf(fd, SANDBOX_MSG_APPLYRSP, errcode, 0, 0));
+	return (send_response_buf(fd, SANDBOX_MSG_APPLYRSP, errcode, 0, 0));
 }
 
 
@@ -580,20 +575,20 @@ return (send_response_buf(fd, SANDBOX_MSG_APPLYRSP, errcode, 0, 0));
 /* TODO - init message len field */
 ssize_t dispatch_apply(int fd, void ** bufp)
 {
-ssize_t ccode = marshal_patch_data(fd, bufp);
-if (ccode == SANDBOX_OK) {
+	ssize_t ccode = marshal_patch_data(fd, bufp);
+	if (ccode == SANDBOX_OK) {
 		
-struct patch *p = (struct patch *)*bufp;
-ccode = apply_patch(p);
-}
+		struct patch *p = (struct patch *)*bufp;
+		ccode = apply_patch(p);
+	}
 	
-send_apply_response(fd, ccode);
-return(ccode);
+	send_apply_response(fd, ccode);
+	return(ccode);
 }
 
 ssize_t dispatch_list(int fd, void **bufp)
 {
-return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+	return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
 } 
 
 
@@ -607,20 +602,18 @@ ssize_t dispatch_getbld(int fd, void **bufp)
 {
 /* construct a string buffer with each data on a separate line */
 
-char bldinfo[512];
-memset(bldinfo, 0x00, 512);
-snprintf(bldinfo, 512, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
+	char  bldinfo[512];
+	memset(bldinfo, 0x00, 512);
+	snprintf(bldinfo, 512, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
 		 get_git_revision(),
 		 get_git_revision(), get_compiled(), get_ccflags(),
 		 get_compiled_date(), get_tag(),
 		 get_major(), get_minor(), get_revision());	
-return(send_response_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
-				 0, 0));
+	return(send_response_buf(fd, SANDBOX_MSG_GET_BLDRSP, SANDBOX_OK,
+				 strlen(bldinfo), (uint8_t *)bldinfo));
 }
 
 ssize_t dummy(int fd, void **bufp)
 {
-
-return send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
-	
+	return(send_response4b(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID));	
 }
