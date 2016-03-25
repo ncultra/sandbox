@@ -112,12 +112,10 @@ int connect_to_sandbox(const char *sandbox_name)
 
 /* request message has only the header (including message id) */
 /* reply message has header, buflen, and buf */
-int get_sandbox_build_info(int fd, uint8_t **buf)
+inline int get_sandbox_build_info(int fd, uint8_t **buf)
 {
-	uint32_t ccode, len = SANDBOX_MSG_HDRLEN;
-	uint8_t sand[] = SANDBOX_MSG_MAGIC;
-	uint16_t pver = SANDBOX_MSG_VERSION;
-	uint16_t msgid = SANDBOX_MSG_GET_BLD;
+	write_sandbox_message_header(fd, SANDBOX_MSG_VERSION, SANDBOX_MSG_GET_BLD);
+	
 }
 
 
