@@ -117,15 +117,20 @@ handler dispatch[] =
 pthread_t *run_listener(char *sockname)
 {
 	int ccode;
+	DMSG("run_listener\n");
 	
 	pthread_t *thr = calloc(1, sizeof(pthread_t));
 	if (!thr)
 		goto errout;
 	
-	if ((ccode = pthread_create(thr, NULL, listen_thread, (void *)sockname)))
+	if ((ccode = pthread_create(thr, NULL, listen_thread, (void *)sockname))) {
+		DMSG("run_listener created thread %p\n", thr);
 		return thr;
+	}
+	
 	free(thr);		
 errout:
+	DMSG("run_listener_errout\n");
 	return NULL;
 }
 
