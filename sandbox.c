@@ -1,5 +1,5 @@
 #include "sandbox.h"
-static int test_flag;
+static int test_flag, server_flag, client_flag;
 
 struct patch *create_test_patch;
 extern uint64_t _start;
@@ -28,11 +28,15 @@ uint8_t patch_data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
 #endif
 
+char *sandbox_sock = "/var/run/sandbox/sandbox";
+
 
 int usage(void) 
 {
 	printf("\n sandbox [options]\n");
 	printf("\t --test: call into the sandbox\n");
+	printf("\t --server: run as a server\n");
+	printf("\t --client: run as a client\n");
 	printf("\t --help: display this usage information\n");
 	return 0;
 }
@@ -43,24 +47,25 @@ int main(int argc, char **argv)
 
 	while (1)
 	{
-		int c;
+		int cl;
 		static struct option long_options[] = {
 			{"test", no_argument, &test_flag, 1},
 			{"help", no_argument, NULL, 0},
 			{"symbols", no_argument, NULL, 0},
+			{"server", no_argument, &server_flag, 1},
+			{"client", no_argument, &client_flag, 1},
 			{0,0,0,0}
 		};
 		int option_index = 0;
-		c = getopt_long(argc, argv, "ths", long_options, &option_index);
-		if (c == -1)
+		cl = getopt_long(argc, argv, "thsc", long_options, &option_index);
+		if (cl == -1)
 		    break;
 
-		switch (c) {
+		switch (cl) {
 		case  't':
 			if (strstr(long_options[option_index].name, "test") ) {
 				test_flag = 1;
 			}
-			
 			break;
 		case 'h':
 			if (!strstr(long_options[option_index].name, "help")) {
@@ -68,7 +73,20 @@ int main(int argc, char **argv)
 				exit(1);	
 			}
 			break;
+		case 's':  printf("%s\n", long_options[option_index].name);
+			if (!strstr(long_options[option_index].name, "server")){
+				server_flag = 1;
+				printf("running as a server\n");
+			}
 			
+			break;
+		case 'c': printf("%s\n", long_options[option_index].name);
+			if (!strstr(long_options[option_index].name, "client")) {
+				client_flag = 1;
+				printf("running as a client\n");
+			}
+			
+			break;
 		default:
 			break;	
 		}
@@ -84,9 +102,27 @@ int main(int argc, char **argv)
 	
 	DMSG("pid: %i\n", getpid());
 
-	int ccode = listen_sandbox_sock("/var/run/qemu_sock");
-	DMSG("listen sandbox errcode: %d\n", ccode);
+	if (server_flag) {	
+		char c;
+		int ccode = listen_sandbox_sock(sandbox_sock);
+		DMSG("server sandbox file descriptor: %d\n", ccode);
+		
+		while( (c = getchar()) ) {
+			if (writen(ccode, &c, sizeof(c)) == sizeof(c))
+				printf(" %c", c);
+		}
+	}
 	
+	if(client_flag) {
+		char c;
+		int ccode = cli_conn(sandbox_sock);
+		DMSG("client file descriptor: %d\n", ccode);
+		while (1) {
+			readn(ccode, &c, sizeof(c));
+			if (writen(ccode, &c, sizeof(c)) == sizeof(c))
+				printf(" %c", c);
+		}
+	}
 	
 	if (test_flag) {
 		char *pname = strdup("pname");
@@ -123,14 +159,6 @@ int main(int argc, char **argv)
 		dump_sandbox(main + 0x758, 16);
 
 	}
-
-	
-	char c;
-	
-	while( (c = getchar()) ) {
-		sleep(10);
-	}
-	
 	__asm__("jmp patched_stub_entry");
 	
 	

@@ -217,6 +217,9 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_GET_BLD 5
 #define SANDBOX_MSG_GET_BLDRSP 6
 
+#define SANDBOX_TEST_REQ 0xfe
+#define SANDBOX_TEST_REP 0xff
+
 #define SANDBOX_OK 0
 #define SANDBOX_ERR_BAD_HDR -2
 #define SANDBOX_ERR_BAD_VER -3
@@ -299,6 +302,12 @@ uint64_t get_sandbox_end(void);
 // TODO: add pid to socket name
 #define SSANDBOX "/var/run/sandbox"
 
+struct sandbox_buf {
+	uint32_t size;
+	uint8_t *buf;
+};
+
+
 void *listen_thread(void *arg);
 int listen_sandbox_sock(const char *sock_name);
 ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr);
@@ -307,7 +316,6 @@ ssize_t	readn(int fd, void *vptr, size_t n);
 ssize_t writen(int fd, const void *vptr, size_t n);
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 				    uint16_t *id, uint32_t *len);
-ssize_t send_response_buf(int fd, uint16_t id, uint32_t errcode,
-			  uint32_t bufsize, uint8_t *buf);
+ssize_t send_rr_buf(int fd, uint16_t id, ...);
 int write_sandbox_message_header(int fd,
 				 uint16_t version, uint16_t id);
