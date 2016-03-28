@@ -301,7 +301,7 @@ uint64_t get_sandbox_end(void);
 
 // TODO: add pid to socket name
 #define SSANDBOX "/var/run/sandbox"
-
+#define SANDBOX_NO_ARGS -1
 struct sandbox_buf {
 	uint32_t size;
 	uint8_t *buf;

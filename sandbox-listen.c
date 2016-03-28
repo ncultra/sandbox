@@ -429,7 +429,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	ccode = dispatch[*id](fd, &dispatch_buffer);
 	
 errout:	
-	return send_rr_buf(fd, SANDBOX_ERR_BAD_HDR, ccode);
+	return send_rr_buf(fd, SANDBOX_ERR_BAD_HDR, sizeof(ccode), &ccode, SANDBOX_NO_ARGS);
 	
 }
 
@@ -541,20 +541,10 @@ errout:
 		free(*bufp);
 	}
 	
-	return send_rr_buf(sock, SANDBOX_ERR_BAD_HDR, ccode, 0, 0);
+	return send_rr_buf(sock, SANDBOX_ERR_BAD_HDR, sizeof(ccode), &ccode, SANDBOX_NO_ARGS);
 	
 }
 
-
-	
-//uint32_t bufsize, uint8_t *buf, ...)
-// terminate the varargs with an int -1
-
-
-	/* message len = header + buflen + bufsize 
-
-	if (!bufsize)
-	len = SANDBOX_MSG_HDRLEN + 4; */
 
 	
 ssize_t send_rr_buf(int fd, uint16_t id, ...)
@@ -571,7 +561,7 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	/* initialize the sandbox buf  structures, calc the total message size */
 	for (ccode = 0; ccode < 256; ccode++) {
 		bufs[ccode].size = va_arg(va, int);
-		if (bufs[ccode].size == -1)
+		if (bufs[ccode].size == SANDBOX_NO_ARGS)
 			break;
 		bufs[ccode].buf = va_arg(va, uint8_t *);
 		len += bufs[ccode].size;
@@ -602,7 +592,7 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	for (ccode = 0; ccode < 256; ccode++) {
 		int bytes_written;
 		
-		if (bufs[ccode].size == -1)
+		if (bufs[ccode].size == SANDBOX_NO_ARGS)
 			break;
 		bytes_written = writen(fd, &bufs[ccode].size, sizeof(uint32_t));
 		if (bytes_written != sizeof(uint32_t))
@@ -631,13 +621,14 @@ ssize_t dispatch_apply(int fd, void ** bufp)
 		ccode = apply_patch(p);
 	}
 	
-	send_rr_buf(fd, SANDBOX_MSG_APPLYRSP, sizeof(ccode), &ccode);
+	send_rr_buf(fd, SANDBOX_MSG_APPLYRSP, sizeof(ccode), &ccode, SANDBOX_NO_ARGS);
 	return(ccode);
 }
 
 ssize_t dispatch_list(int fd, void **bufp)
 {
-	return send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID);
+	return send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
+			   SANDBOX_NO_ARGS);
 } 
 
 
@@ -661,10 +652,11 @@ ssize_t dispatch_getbld(int fd, void **bufp)
 		 get_major(), get_minor(), get_revision());	
 	return(send_rr_buf(fd, SANDBOX_MSG_GET_BLDRSP,
 			   sizeof(uint32_t), &errcode,
-			   strlen(bldinfo), (uint8_t *)bldinfo));
+			   strlen(bldinfo), (uint8_t *)bldinfo), SANDBOX_NO_ARGS);
 }
 
 ssize_t dummy(int fd, void **bufp)
 {
-	return(send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID));	
+	return(send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
+			   SANDBOX_NO_ARGS));	
 }
