@@ -217,8 +217,8 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_GET_BLD 5
 #define SANDBOX_MSG_GET_BLDRSP 6
 
-#define SANDBOX_TEST_REQ 0xfe
-#define SANDBOX_TEST_REP 0xff
+#define SANDBOX_TEST_REQ 0xfd
+#define SANDBOX_TEST_REP 0xfe
 
 #define SANDBOX_OK 0
 #define SANDBOX_ERR_BAD_HDR -2
@@ -308,6 +308,7 @@ struct sandbox_buf {
 };
 
 
+pthread_t *run_listener(char *sock_name);
 void *listen_thread(void *arg);
 int listen_sandbox_sock(const char *sock_name);
 ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr);
@@ -319,3 +320,5 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 ssize_t send_rr_buf(int fd, uint16_t id, ...);
 int write_sandbox_message_header(int fd,
 				 uint16_t version, uint16_t id);
+ssize_t dispatch_test_req(int fd, void ** bufp);
+size_t dispatch_test_rep(int, void **);

@@ -96,7 +96,7 @@ ssize_t dispatch_getbld(int, void **);
 ssize_t dummy(int, void **);
 typedef ssize_t (*handler)(int, void **);
 
-handler dispatch[] =
+handler dispatch[0xff] =
 {
 	dispatch_apply,
 	dummy,
@@ -104,13 +104,13 @@ handler dispatch[] =
 	dummy,
 	dispatch_getbld,
 	dummy,
-	NULL
+	[SANDBOX_TEST_REQ] = dispatch_test_req,
+	[SANDBOX_TEST_REP] = NULL
 };
+
 
 #define QLEN 5 // depth of the listening queue
 #define STALE 30 // timout for client user id data
-
-
 
 
 
@@ -123,14 +123,14 @@ pthread_t *run_listener(char *sockname)
 	if (!thr)
 		goto errout;
 	
-	if ((ccode = pthread_create(thr, NULL, listen_thread, (void *)sockname))) {
+	if (!(ccode = pthread_create(thr, NULL, listen_thread, (void *)sockname))) {
 		DMSG("run_listener created thread %p\n", thr);
 		return thr;
 	}
 	
 	free(thr);		
 errout:
-	DMSG("run_listener_errout\n");
+	DMSG("run_listener_errout %d\n", ccode);
 	return NULL;
 }
 
@@ -358,8 +358,11 @@ ssize_t writen(int fd, const void *vptr, size_t n)
 		if ( (nwritten = write(fd, ptr, nleft)) <= 0) {
 			if (nwritten < 0 && (errno == EINTR || errno == EAGAIN))
 				nwritten = 0;   /* and call write() again */
-			else
+			else {
+				DMSG("errno: %d\n", errno);
 				return (-1);    /* error */
+			}
+			
 		}
 		
 		nleft -= nwritten;
@@ -429,8 +432,8 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	ccode = dispatch[*id](fd, &dispatch_buffer);
 	
 errout:	
-	return send_rr_buf(fd, SANDBOX_ERR_BAD_HDR, sizeof(ccode), &ccode, SANDBOX_NO_ARGS);
-	
+	return send_rr_buf(fd, SANDBOX_ERR_BAD_HDR, sizeof(ccode),
+			   &ccode, SANDBOX_NO_ARGS);
 }
 
 
@@ -654,6 +657,19 @@ ssize_t dispatch_getbld(int fd, void **bufp)
 			   sizeof(uint32_t), &errcode,
 			   strlen(bldinfo), (uint8_t *)bldinfo), SANDBOX_NO_ARGS);
 }
+
+ssize_t dispatch_test_req(int fd, void ** bufp)
+{
+	uint8_t c;
+
+	if (readn(fd, &c, sizeof(c)) != sizeof(c)) {
+		DMSG("error reading test message\n");
+		return SANDBOX_ERR_RW;
+	}
+	printf("%c\n", c);
+	return SANDBOX_OK;
+}
+
 
 ssize_t dummy(int fd, void **bufp)
 {

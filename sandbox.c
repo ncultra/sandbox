@@ -103,13 +103,14 @@ int main(int argc, char **argv)
 	DMSG("pid: %i\n", getpid());
 
 	if (server_flag) {	
-		char c;
+pthread_t *pt;
+		
 		int ccode = listen_sandbox_sock(sandbox_sock);
 		DMSG("server sandbox file descriptor: %d\n", ccode);
-		
-		while( (c = getchar()) ) {
-			if (writen(ccode, &c, sizeof(c)) == sizeof(c))
-				printf(" %c", c);
+		pt = run_listener(sandbox_sock);
+		DMSG("server thread: %p\n", pt);
+		while (1) {
+			sleep(1);
 		}
 	}
 	
@@ -117,12 +118,15 @@ int main(int argc, char **argv)
 		char c;
 		int ccode = cli_conn(sandbox_sock);
 		DMSG("client file descriptor: %d\n", ccode);
-		while (1) {
-			readn(ccode, &c, sizeof(c));
-			if (writen(ccode, &c, sizeof(c)) == sizeof(c))
-				printf(" %c", c);
+		while ((c = getchar())) {
+			send_rr_buf(ccode, SANDBOX_TEST_REQ, sizeof(c), &c, -1);
+			
 		}
+		
 	}
+	
+	
+
 	
 	if (test_flag) {
 		char *pname = strdup("pname");
