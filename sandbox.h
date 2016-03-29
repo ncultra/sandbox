@@ -6,6 +6,7 @@
 * Copyright 2015-16 Rackspace, Inc.
 ***************************************************************/
 #define _GNU_SOURCE
+#include <limits.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -300,15 +301,20 @@ uint64_t get_sandbox_end(void);
 */
 
 // TODO: add pid to socket name
-#define SSANDBOX "/var/run/sandbox"
+#define SSANDBOX "sandbox-sock"
 #define SANDBOX_NO_ARGS -1
 struct sandbox_buf {
 	uint32_t size;
 	uint8_t *buf;
 };
 
+struct listen 
+{
+	int sock;
+	void *arg;
+};
 
-pthread_t *run_listener(char *sock_name);
+pthread_t *run_listener(struct listen *l);
 void *listen_thread(void *arg);
 int listen_sandbox_sock(const char *sock_name);
 ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr);

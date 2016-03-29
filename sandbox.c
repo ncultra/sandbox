@@ -28,7 +28,7 @@ uint8_t patch_data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
 #endif
 
-char *sandbox_sock = "/var/run/sandbox/sandbox";
+char *sandbox_sock = "sandbox-sock";
 
 
 int usage(void) 
@@ -42,6 +42,8 @@ int usage(void)
 }
 
 
+char clsock[PATH_MAX];
+
 int main(int argc, char **argv)
 {
 
@@ -53,11 +55,11 @@ int main(int argc, char **argv)
 			{"help", no_argument, NULL, 0},
 			{"symbols", no_argument, NULL, 0},
 			{"server", no_argument, &server_flag, 1},
-			{"client", no_argument, &client_flag, 1},
+			{"client", required_argument, &client_flag, 1},
 			{0,0,0,0}
 		};
 		int option_index = 0;
-		cl = getopt_long(argc, argv, "thsc", long_options, &option_index);
+		cl = getopt_long(argc, argv, "thsc:", long_options, &option_index);
 		if (cl == -1)
 		    break;
 
@@ -84,6 +86,8 @@ int main(int argc, char **argv)
 			if (!strstr(long_options[option_index].name, "client")) {
 				client_flag = 1;
 				printf("running as a client\n");
+				snprintf(clsock, sizeof(clsock), "%s", optarg);
+				
 			}
 			
 			break;
@@ -103,11 +107,13 @@ int main(int argc, char **argv)
 	DMSG("pid: %i\n", getpid());
 
 	if (server_flag) {	
-pthread_t *pt;
+		pthread_t *pt;
+		struct listen l;
 		
 		int ccode = listen_sandbox_sock(sandbox_sock);
-		DMSG("server sandbox file descriptor: %d\n", ccode);
-		pt = run_listener(sandbox_sock);
+		l.sock = ccode;
+		l.arg = NULL;
+		pt = run_listener(&l);
 		DMSG("server thread: %p\n", pt);
 		while (1) {
 			sleep(1);
@@ -116,16 +122,18 @@ pthread_t *pt;
 	
 	if(client_flag) {
 		char c;
-		int ccode = cli_conn(sandbox_sock);
-		DMSG("client file descriptor: %d\n", ccode);
-		while ((c = getchar())) {
-			send_rr_buf(ccode, SANDBOX_TEST_REQ, sizeof(c), &c, -1);
-			
+		if (strlen(clsock)) 
+		{
+			DMSG("client connecting to %s\n", clsock);
+			int ccode = cli_conn(clsock);
+			DMSG("client file descriptor: %d\n", ccode);
+			while ((c = getchar())) {
+				send_rr_buf(ccode, SANDBOX_TEST_REQ, sizeof(c), &c, -1);
+				
+			}
 		}
-		
+			
 	}
-	
-	
 
 	
 	if (test_flag) {

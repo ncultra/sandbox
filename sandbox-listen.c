@@ -114,7 +114,7 @@ handler dispatch[0xff] =
 
 
 
-pthread_t *run_listener(char *sockname)
+pthread_t *run_listener(struct listen *l)
 {
 	int ccode;
 	DMSG("run_listener\n");
@@ -123,7 +123,8 @@ pthread_t *run_listener(char *sockname)
 	if (!thr)
 		goto errout;
 	
-	if (!(ccode = pthread_create(thr, NULL, listen_thread, (void *)sockname))) {
+	if (!(ccode =
+	      pthread_create(thr, NULL, listen_thread, (void *)l))) {
 		DMSG("run_listener created thread %p\n", thr);
 		return thr;
 	}
@@ -139,21 +140,29 @@ errout:
 
 void *listen_thread(void *arg)
 {
-	char *socket_name = (char *)arg;
+	struct listen *l  = (struct listen *)arg;
 	uint32_t quit = 0;
-	int listen_fd, client_fd;
+	int client_fd;
 	uid_t client_id;
+
+	DMSG("server_thread: listen.sock %d\n", l->sock);
+	
 	do {
-		listen_fd = listen_sandbox_sock(socket_name);
-		if (listen_fd > 0) {	
-			client_fd = accept_sandbox_sock(listen_fd, &client_id);
+		if (l->sock) {	
+			client_fd = accept_sandbox_sock(l->sock, &client_id);
 			if (client_fd > 0) {
 				uint16_t version, id;
 				uint32_t len;
-				quit   = read_sandbox_message_header(client_fd, &version, &id, &len);
+				quit   = read_sandbox_message_header(client_fd,
+								     &version,
+								     &id, &len);
+				/* REMEMBER to close the client fd */
 			}
-		}
-	} while (!quit && listen_fd > 0);
+		} else
+			DMSG("accept on %d failed\n", l->sock);
+		
+	} while (!quit && client_fd > 0);
+	close(client_fd);
 	return NULL;
 }
 
@@ -164,24 +173,30 @@ void *listen_thread(void *arg)
 // sock_name: full path of the socket e.g. /var/run/sandbox 
 int listen_sandbox_sock(const char *sock_name)
 {
-	ssize_t fd, len, err, ccode;
+	int fd, len, err, ccode;
 	struct sockaddr_un un;
 
-	if (strlen(sock_name) >= sizeof(un.sun_path)) {
+	char sn[PATH_MAX];	
+	
+	
+	if (strlen(sock_name) >= sizeof(un.sun_path) - 6 - 1) {
 		errno = ENAMETOOLONG;
 		return(-1);
 	}
 
+	sprintf(sn, "%s%d", sock_name, (int)getpid());
+	
+	
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
 		return(-2);
 	}
-
-	unlink(sock_name);
-
-	memset( &un, 0, sizeof(un));
+	unlink(sn);
+	DMSG("server socket %d: %s\n", fd, sn);
+	
+	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
-	strcpy(un.sun_path, sock_name);  // already checked the length
-	len = offsetof(struct sockaddr_un, sun_path) + strlen(sock_name);
+	strcpy(un.sun_path, sn);  // already checked the length
+	len = offsetof(struct sockaddr_un, sun_path) + strlen(sn);
 
 	if (bind(fd, (struct sockaddr *)&un, len) < 0) {
 		ccode = -3;
@@ -192,7 +207,8 @@ int listen_sandbox_sock(const char *sock_name)
 		ccode = -4;
 		goto errout;
 	}
-
+	DMSG("server now listening on %d %s\n", fd, sn);
+	
 	return fd;
 errout:
 	err = errno;
@@ -272,12 +288,12 @@ errout:
 
 
 #define CLI_PERM S_IRWXU
-int cli_conn(const char *sock_name) 
+int cli_conn(const char *sockpid) 
 {
 	int fd, len, err, rval;
 	struct sockaddr_un un, sun;
 	int do_unlink = 0;
-	if (strlen(sock_name) >= sizeof(un.sun_path)) {
+	if (strlen(sockpid) >= sizeof(un.sun_path) - 8) {
 		errno = ENAMETOOLONG;
 		return(-1);
 	}
@@ -287,7 +303,7 @@ int cli_conn(const char *sock_name)
 
 	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
-	sprintf(un.sun_path, "%s", sock_name);
+	sprintf(un.sun_path, "%s", sockpid);
 	len = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
 	unlink(un.sun_path);
 	if (bind(fd, (struct sockaddr *)&un, len) < 0) {
@@ -303,9 +319,12 @@ int cli_conn(const char *sock_name)
 	
 	memset(&sun, 0, sizeof(sun));
 	sun.sun_family = AF_UNIX;
-	strcpy(sun.sun_path, sock_name);
-	len = offsetof(struct sockaddr_un, sun_path);
+	strcpy(sun.sun_path, sockpid);
+	len = offsetof(struct sockaddr_un, sun_path) + strlen(sockpid);
+	DMSG("client connecting to %s\n", sockpid);
+	
 	if (connect(fd, (struct sockaddr *)&sun, len) < 0) {
+		perror(NULL);
 		rval = -4;
 		do_unlink = 1;
 	}
