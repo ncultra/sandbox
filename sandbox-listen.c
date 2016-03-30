@@ -218,7 +218,7 @@ errout:
 }
 
 
-ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr)
+int accept_sandbox_sock(int listenfd, uid_t *uidptr)
 {
 	int clifd, err, ccode;
 	socklen_t len;
@@ -232,7 +232,8 @@ ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr)
 	}
 	
 	len = sizeof(un);
-	do { clifd = accept(listenfd, (struct sockaddr *)&un, &len);
+	do {
+		clifd = accept(listenfd, (struct sockaddr *)&un, &len);
 	} while (errno == EINTR || errno == EAGAIN);
 
 	if (clifd < 0) {
@@ -284,6 +285,64 @@ errout:
 	free(name);
 	errno = err;
 	return ccode;
+}
+
+
+int client_func(void *p)
+{
+	DMSG("client %d\n", getpid());
+
+	char *spath = (char *)p;
+	int s, len;
+	int should_unlink = 0;
+	
+	struct sockaddr_un un, sun;
+	char cpath[PATH_MAX];
+	memset(cpath, 0, sizeof(cpath));
+	sprintf(cpath, "%d", getpid());
+
+	if ((s = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+		DMSG("unable to get a socket\n");
+			return SANDBOX_ERR_BAD_FD;
+	}
+	should_unlink = 1;
+	memset(&un, 0, sizeof(un));
+	un.sun_family = AF_UNIX;
+	sprintf(un.sun_path, cpath);
+
+	len = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
+	unlink(un.sun_path);
+	if (bind(s, (struct sockaddr *)&un, len) < 0) {
+		DMSG("bind failed (client) %s\n", cpath);
+		perror(NULL);
+		goto errout;
+	}
+
+	if (chmod(un.sun_path, S_IRWXU) < 0) {
+		DMSG("failed to set permissions %s\n", un.sun_path);
+		perror(NULL);
+		goto errout;	
+	}
+	
+	memset(&sun, 0, sizeof(sun));
+	sun.sun_family = AF_UNIX;
+	strncpy(sun.sun_path, spath, sizeof(sun.sun_path));
+	len = offsetof(struct sockaddr_un, sun_path) + strlen(spath);
+	DMSG("client connecting to %s\n", spath);
+	if (connect(s, (struct sockaddr *)&sun, len) < 0) {
+		unlink(un.sun_path);
+		DMSG("connect from %s failed\n", un.sun_path);
+		perror(NULL);
+		goto errout;
+	}
+	DMSG("connected\n");
+	return s;
+errout:
+	if (should_unlink && (strlen(cpath) > 0)) {
+		unlink(cpath);
+	}
+	
+	return SANDBOX_ERR_BAD_FD;
 }
 
 

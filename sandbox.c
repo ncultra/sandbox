@@ -107,15 +107,21 @@ int main(int argc, char **argv)
 	DMSG("pid: %i\n", getpid());
 
 	if (server_flag) {	
-		pthread_t *pt;
+		//	pthread_t *pt;
+		uid_t client_id;	
 		struct listen l;
 		
-		int ccode = listen_sandbox_sock(sandbox_sock);
+		int sockfd, ccode;
+		sockfd = listen_sandbox_sock(sandbox_sock);
+		DMSG("listening socket: %d\n", sockfd);		
+		ccode = accept_sandbox_sock(sockfd, &client_id);
+
 		l.sock = ccode;
 		l.arg = NULL;
-		pt = run_listener(&l);
-		DMSG("server thread: %p\n", pt);
+		//	pt = run_listener(&l);
+		//	DMSG("server thread: %p\n", pt);
 		while (1) {
+			listen_thread(&l);
 			sleep(1);
 		}
 	}
@@ -125,7 +131,7 @@ int main(int argc, char **argv)
 		if (strlen(clsock)) 
 		{
 			DMSG("client connecting to %s\n", clsock);
-			int ccode = cli_conn(clsock);
+			int ccode = client_func(clsock);
 			DMSG("client file descriptor: %d\n", ccode);
 			while ((c = getchar())) {
 				send_rr_buf(ccode, SANDBOX_TEST_REQ, sizeof(c), &c, -1);

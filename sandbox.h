@@ -317,7 +317,7 @@ struct listen
 pthread_t *run_listener(struct listen *l);
 void *listen_thread(void *arg);
 int listen_sandbox_sock(const char *sock_name);
-ssize_t accept_sandbox_sock(int listenfd, uid_t *uidptr);
+int accept_sandbox_sock(int listenfd, uid_t *uidptr);
 int cli_conn(const char *sock_name);
 ssize_t	readn(int fd, void *vptr, size_t n);
 ssize_t writen(int fd, const void *vptr, size_t n);
@@ -328,3 +328,6 @@ int write_sandbox_message_header(int fd,
 				 uint16_t version, uint16_t id);
 ssize_t dispatch_test_req(int fd, void ** bufp);
 size_t dispatch_test_rep(int, void **);
+
+/* **** test functions **** */
+int client_func(void *p);
