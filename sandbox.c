@@ -108,30 +108,34 @@ int main(int argc, char **argv)
 
 	if (server_flag) {	
 		//	pthread_t *pt;
-		uid_t client_id;	
 		struct listen l;
-		
-		int sockfd, ccode;
+		pthread_t *pt;
+		int sockfd;
+
 		sockfd = listen_sandbox_sock(sandbox_sock);
 		DMSG("listening socket: %d\n", sockfd);		
-		ccode = accept_sandbox_sock(sockfd, &client_id);
+		//	ccode = accept_sandbox_sock(sockfd, &client_id);
 
-		l.sock = ccode;
+		l.sock = sockfd;
 		l.arg = NULL;
-		//	pt = run_listener(&l);
-		//	DMSG("server thread: %p\n", pt);
+		pt = run_listener(&l);
+		DMSG("server thread: %p\n", pt);
 		while (1) {
-			listen_thread(&l);
+//		listen_thread(&l);
 			sleep(1);
 		}
 	}
 	
 	if(client_flag) {
 		char c;
+		int ccode;
+		
 		if (strlen(clsock)) 
 		{
 			DMSG("client connecting to %s\n", clsock);
-			int ccode = client_func(clsock);
+			ccode = client_func(clsock);
+//			int ccode = cli_conn(clsock);
+			
 			DMSG("client file descriptor: %d\n", ccode);
 			while ((c = getchar())) {
 				send_rr_buf(ccode, SANDBOX_TEST_REQ, sizeof(c), &c, -1);

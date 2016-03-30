@@ -156,7 +156,6 @@ void *listen_thread(void *arg)
 				quit   = read_sandbox_message_header(client_fd,
 								     &version,
 								     &id, &len);
-				/* REMEMBER to close the client fd */
 			}
 		} else
 			DMSG("accept on %d failed\n", l->sock);
@@ -370,7 +369,7 @@ int cli_conn(const char *sockpid)
 		goto errout;
 	}
 	
-	if (chmod(un.sun_path, CLI_PERM) < 0) {
+	if (chmod(un.sun_path, S_IRWXU) < 0) {
 		rval = -3;
 		do_unlink = 1;
 		goto errout;
@@ -378,15 +377,19 @@ int cli_conn(const char *sockpid)
 	
 	memset(&sun, 0, sizeof(sun));
 	sun.sun_family = AF_UNIX;
-	strcpy(sun.sun_path, sockpid);
+	strncpy(sun.sun_path, sockpid, sizeof(sun.sun_path));
 	len = offsetof(struct sockaddr_un, sun_path) + strlen(sockpid);
 	DMSG("client connecting to %s\n", sockpid);
 	
 	if (connect(fd, (struct sockaddr *)&sun, len) < 0) {
+		DMSG("connect failure %s\n", sun.sun_path);
 		perror(NULL);
 		rval = -4;
 		do_unlink = 1;
+		goto errout;
+		
 	}
+	DMSG("connected...\n");
 	return(fd);
 errout:
 	err = errno;
@@ -438,6 +441,7 @@ ssize_t writen(int fd, const void *vptr, size_t n)
 				nwritten = 0;   /* and call write() again */
 			else {
 				DMSG("errno: %d\n", errno);
+				perror(NULL);
 				return (-1);    /* error */
 			}
 			
