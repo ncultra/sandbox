@@ -203,6 +203,7 @@ uint64_t get_sandbox_end(void);
 
 // from sandbox-listen.h
 #define SANDBOX_MSG_HDRLEN 0x00000010
+#define SANDBOX_MSG_BUFLEN 0x00000014
 #define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
 #define SANDBOX_MSG_VERSION (uint16_t)0x0001				      
 #define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 4))

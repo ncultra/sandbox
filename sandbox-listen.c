@@ -453,8 +453,7 @@ ssize_t writen(int fd, const void *vptr, size_t n)
 	return (n);
 }
 
-int write_sandbox_message_header(int fd,
-				     uint16_t version, uint16_t id)
+int write_sandbox_message_header(int fd, uint16_t version, uint16_t id)
 {
 	uint8_t magic[] = SANDBOX_MSG_MAGIC;
 	uint32_t len = SANDBOX_MSG_HDRLEN;
@@ -484,23 +483,29 @@ errout:
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 				    uint16_t *id, uint32_t *len)
 {
-	uint8_t hbuf[0x60];
+	uint8_t hbuf[SANDBOX_MSG_BUFLEN];
 	uint32_t ccode = 0;
 	void *dispatch_buffer = NULL;
+
+	DMSG("reading sandbox messsge header...\n");
+	DMSG("reading %d bytes from %d into %p\n", SANDBOX_MSG_HDRLEN, fd, hbuf);
 	
-	if ((ccode = readn(fd, &hbuf, sizeof(hbuf))) != sizeof(hbuf)) {
+	if ((ccode = readn(fd, hbuf, SANDBOX_MSG_HDRLEN)) != SANDBOX_MSG_HDRLEN) {
 		goto errout;
 	}
+	DMSG("checking magic ...\n");
 	if (check_magic(hbuf)) {
 		ccode = SANDBOX_ERR_BAD_HDR;
 		goto errout;
 	}
+		DMSG("checking version...\n");
 	if (SANDBOX_MSG_VERSION != (*version = SANDBOX_MSG_GET_VER(hbuf))) {
 		ccode = SANDBOX_ERR_BAD_VER;
 		goto errout;
 	}
 
 	*id = SANDBOX_MSG_GET_VER(hbuf);
+	DMSG("reading message type: %d\n", *id);
 	
 	if (*id < SANDBOX_MSG_APPLY || *id > SANDBOX_MSG_GET_BLDRSP) {
 		ccode = SANDBOX_ERR_BAD_MSGID;
@@ -511,6 +516,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 		ccode = SANDBOX_ERR_BAD_LEN;
 		goto errout;
 	}
+		DMSG("dispatchig...\n");
 	ccode = dispatch[*id](fd, &dispatch_buffer);
 	
 errout:	
@@ -649,6 +655,8 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 		if (bufs[ccode].size == SANDBOX_NO_ARGS)
 			break;
 		bufs[ccode].buf = va_arg(va, uint8_t *);
+		DMSG("send rr buf %d, %p\n", bufs[ccode].size, bufs[ccode].buf);
+		
 		len += bufs[ccode].size;
 	}
 	va_end(va);
@@ -682,6 +690,9 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 		bytes_written = writen(fd, &bufs[ccode].size, sizeof(uint32_t));
 		if (bytes_written != sizeof(uint32_t))
 			goto errout;
+		DMSG("send_rr_buf: writing %d bytes from %p to %d\n",
+		     bufs[ccode].size, bufs[ccode].buf, fd);
+		
 		bytes_written = writen(fd, bufs[ccode].buf, bufs[ccode].size);
 		if (bytes_written != bufs[ccode].size)
 			goto errout;

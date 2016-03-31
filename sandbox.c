@@ -107,7 +107,6 @@ int main(int argc, char **argv)
 	DMSG("pid: %i\n", getpid());
 
 	if (server_flag) {	
-		//	pthread_t *pt;
 		struct listen l;
 		pthread_t *pt;
 		int sockfd;
@@ -121,7 +120,6 @@ int main(int argc, char **argv)
 		pt = run_listener(&l);
 		DMSG("server thread: %p\n", pt);
 		while (1) {
-//		listen_thread(&l);
 			sleep(1);
 		}
 	}
@@ -134,13 +132,11 @@ int main(int argc, char **argv)
 		{
 			DMSG("client connecting to %s\n", clsock);
 			ccode = client_func(clsock);
-//			int ccode = cli_conn(clsock);
 			
 			DMSG("client file descriptor: %d\n", ccode);
-			while ((c = getchar())) {
-				send_rr_buf(ccode, SANDBOX_TEST_REQ, sizeof(c), &c, -1);
-				
-			}
+			send_rr_buf(ccode, SANDBOX_TEST_REQ, sizeof(c), &c, -1);
+			while (1) sleep(1);
+			
 		}
 			
 	}
