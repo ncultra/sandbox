@@ -182,9 +182,9 @@ int listen_sandbox_sock(const char *sock_name)
 		errno = ENAMETOOLONG;
 		return(-1);
 	}
-
-	sprintf(sn, "%s%d", sock_name, (int)getpid());
-	
+// use the short socket name during testing
+//	sprintf(sn, "%s%d", sock_name, (int)getpid());
+	sprintf(sn, "%s", sock_name);
 	
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
 		return(-2);
@@ -483,7 +483,10 @@ errout:
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 				    uint16_t *id, uint32_t *len)
 {
-	uint8_t hbuf[SANDBOX_MSG_BUFLEN];
+
+/* TODO: reconsider buffer handling for this function. &len or len? */
+/* allocate dispatch buffer or not? */
+	uint8_t hbuf[SANDBOX_MSG_HBUFLEN];
 	uint32_t ccode = 0;
 	void *dispatch_buffer = NULL;
 
@@ -493,30 +496,36 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	if ((ccode = readn(fd, hbuf, SANDBOX_MSG_HDRLEN)) != SANDBOX_MSG_HDRLEN) {
 		goto errout;
 	}
+	dump_sandbox(hbuf, SANDBOX_MSG_HDRLEN + 0x0f);
+	
 	DMSG("checking magic ...\n");
 	if (check_magic(hbuf)) {
 		ccode = SANDBOX_ERR_BAD_HDR;
 		goto errout;
 	}
-		DMSG("checking version...\n");
+	DMSG("checking protocol version...%d\n", SANDBOX_MSG_GET_VER(hbuf));
 	if (SANDBOX_MSG_VERSION != (*version = SANDBOX_MSG_GET_VER(hbuf))) {
 		ccode = SANDBOX_ERR_BAD_VER;
 		goto errout;
 	}
 
-	*id = SANDBOX_MSG_GET_VER(hbuf);
+	*id = SANDBOX_MSG_GET_ID(hbuf);
 	DMSG("reading message type: %d\n", *id);
 	
-	if (*id < SANDBOX_MSG_APPLY || *id > SANDBOX_MSG_GET_BLDRSP) {
+	if (*id < SANDBOX_MSG_APPLY || *id > SANDBOX_TEST_REQ) {
 		ccode = SANDBOX_ERR_BAD_MSGID;
 		goto errout;
 	}
 
- 	if (SANDBOX_MSG_MAX_LEN > (*len = SANDBOX_MSG_GET_LEN(hbuf))) {
+	DMSG("read header: msglen %d\n", SANDBOX_MSG_GET_LEN(hbuf));
+	dump_sandbox(hbuf + 8, 4);
+	
+ 	if (SANDBOX_MSG_MAX_LEN < (*len = SANDBOX_MSG_GET_LEN(hbuf))) {
+		DMSG("max length: %d; this length:%d\n", SANDBOX_MSG_MAX_LEN, *len);
 		ccode = SANDBOX_ERR_BAD_LEN;
 		goto errout;
 	}
-		DMSG("dispatchig...\n");
+	DMSG("dispatching...type %d\n",*id);
 	ccode = dispatch[*id](fd, &dispatch_buffer);
 	
 errout:	
@@ -656,8 +665,11 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 			break;
 		bufs[ccode].buf = va_arg(va, uint8_t *);
 		DMSG("send rr buf %d, %p\n", bufs[ccode].size, bufs[ccode].buf);
+		dump_sandbox(bufs[ccode].buf, bufs[ccode].size);
 		
 		len += bufs[ccode].size;
+		DMSG("len increased to %d bytes\n", len);
+		
 	}
 	va_end(va);
 	
@@ -673,13 +685,17 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	
 	/* message id  */
 	ccode = writen(fd, &msgid, sizeof(msgid));
+	DMSG("send_rr_buf: message id %d\n", msgid);
+	
 	if (ccode != sizeof(msgid))
 		goto errout;
 	
 	ccode = writen(fd, &len, sizeof(len));
 	if (ccode != sizeof(len))
 		goto errout;
-			
+
+	DMSG("msg len at send time: %d\n", *&len);
+	
 /* go through the buf descriptors, this time write the values */
 
 	for (ccode = 0; ccode < 256; ccode++) {
@@ -710,6 +726,8 @@ errout:
 /* TODO - init message len field */
 ssize_t dispatch_apply(int fd, void ** bufp)
 {
+	DMSG("apply patch dispatcher\n");
+	
 	uint32_t ccode = marshal_patch_data(fd, bufp);
 	if (ccode == SANDBOX_OK) {
 		
@@ -723,6 +741,7 @@ ssize_t dispatch_apply(int fd, void ** bufp)
 
 ssize_t dispatch_list(int fd, void **bufp)
 {
+	DMSG("patch list dispatcher\n");
 	return send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
 			   SANDBOX_NO_ARGS);
 } 
@@ -738,7 +757,7 @@ ssize_t dispatch_getbld(int fd, void **bufp)
 {
 /* construct a string buffer with each data on a separate line */
 	uint32_t errcode = SANDBOX_OK;
-	
+	DMSG("get bld info dispatcher\n");
 	char  bldinfo[512];
 	memset(bldinfo, 0x00, 512);
 	snprintf(bldinfo, 512, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
@@ -753,19 +772,20 @@ ssize_t dispatch_getbld(int fd, void **bufp)
 
 ssize_t dispatch_test_req(int fd, void ** bufp)
 {
-	uint8_t c;
-
+	int c;
+	DMSG("test req dispatcher\n");
 	if (readn(fd, &c, sizeof(c)) != sizeof(c)) {
 		DMSG("error reading test message\n");
 		return SANDBOX_ERR_RW;
 	}
-	printf("%c\n", c);
+	printf("test code: %d\n", c);
 	return SANDBOX_OK;
 }
 
 
 ssize_t dummy(int fd, void **bufp)
 {
+	DMSG("dummy dispatcher\n");
 	return(send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
 			   SANDBOX_NO_ARGS));	
 }

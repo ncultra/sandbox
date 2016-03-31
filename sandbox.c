@@ -125,8 +125,7 @@ int main(int argc, char **argv)
 	}
 	
 	if(client_flag) {
-		char c;
-		int ccode;
+		int c = 4, ccode;
 		
 		if (strlen(clsock)) 
 		{
@@ -134,6 +133,8 @@ int main(int argc, char **argv)
 			ccode = client_func(clsock);
 			
 			DMSG("client file descriptor: %d\n", ccode);
+			DMSG("sending test req message: ccode %d\n", c);
+			
 			send_rr_buf(ccode, SANDBOX_TEST_REQ, sizeof(c), &c, -1);
 			while (1) sleep(1);
 			

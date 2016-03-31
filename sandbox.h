@@ -200,17 +200,17 @@ static inline uint64_t get_sandbox_free(void)
 
 uint64_t get_sandbox_start(void);
 uint64_t get_sandbox_end(void);
-
+// TODO: add a msg nonce (transaction id)
 // from sandbox-listen.h
-#define SANDBOX_MSG_HDRLEN 0x00000010
-#define SANDBOX_MSG_BUFLEN 0x00000014
+#define SANDBOX_MSG_HDRLEN 0x0c
+#define SANDBOX_MSG_HBUFLEN 0x10
 #define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
 #define SANDBOX_MSG_VERSION (uint16_t)0x0001				      
 #define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 4))
 #define SANDBOX_MSG_GET_ID(b) (*(uint16_t *)((uint8_t *)b + 6))
 #define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
-#define SANDBOX_MSG_GET_LEN(b) (*(uint32_t *)((uint8_t *)b + 7))
-#define SANDBOX_MSG_PUT_LEN(b, l) ((*(uint32_t *)((uint8_t *)b + 7)) = (uint32_t)l)
+#define SANDBOX_MSG_GET_LEN(b) (*(uint32_t *)((uint8_t *)b + 8))
+#define SANDBOX_MSG_PUT_LEN(b, l) ((*(uint32_t *)((uint8_t *)b + 8)) = (uint32_t)l)
 
 #define SANDBOX_MSG_APPLY 1
 #define SANDBOX_MSG_APPLYRSP 2
@@ -245,8 +245,8 @@ uint64_t get_sandbox_end(void);
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      | overall message length                                        |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-/*      |    4 bytes field 1 length                                     |*/
-/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ <------- hdr ends here */
+/*      |    4 bytes field 1 length                                     |<------- hdr ends here */
+/*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      |    field  1                  ...                              |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      |    4 bytes field n length                                     |*/
