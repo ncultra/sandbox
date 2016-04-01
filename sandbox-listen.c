@@ -89,12 +89,17 @@ static inline ssize_t check_magic(uint8_t *magic)
 	return memcmp(magic, m, sizeof(m));
 }
 
-static ssize_t marshal_patch_data(int, void **);
-ssize_t dispatch_apply(int, void **);
-ssize_t dispatch_list(int, void **);
-ssize_t dispatch_getbld(int, void **);
-ssize_t dummy(int, void **);
-typedef ssize_t (*handler)(int, void **);
+static ssize_t marshal_patch_data(int, int, void **);
+ssize_t dispatch_apply(int, int, void **);
+ssize_t dispatch_list(int, int, void **);
+ssize_t dispatch_getbld(int, int, void **);
+ssize_t dummy(int, int, void **);
+ssize_t dispatch_getbld_res(int fd, int len, void **);
+ssize_t dispatch_test_req(int fd, int len, void ** bufp);
+ssize_t dispatch_test_rep(int, int len, void **);
+
+
+typedef ssize_t (*handler)(int, int, void **);
 
 handler dispatch[0xff] =
 {
@@ -103,7 +108,7 @@ handler dispatch[0xff] =
 	dispatch_list,
 	dummy,
 	dispatch_getbld,
-	dummy,
+	dispatch_getbld_res,
 	[SANDBOX_TEST_REQ] = dispatch_test_req,
 	[SANDBOX_TEST_REP] = dispatch_test_rep
 };
@@ -144,6 +149,8 @@ void *listen_thread(void *arg)
 	uint32_t quit = 0;
 	int client_fd;
 	uid_t client_id;
+	char *listen_buf;
+	
 
 	DMSG("server_thread: listen.sock %d\n", l->sock);
 	
@@ -155,7 +162,8 @@ void *listen_thread(void *arg)
 				uint32_t len;
 				quit   = read_sandbox_message_header(client_fd,
 								     &version,
-								     &id, &len);
+								     &id, &len,
+								     (void **)&listen_buf);
 			}
 		} else
 			DMSG("accept on %d failed\n", l->sock);
@@ -480,16 +488,17 @@ errout:
  */
 /* if this function returns ERR, ptr parameters are undefined */
 /* if it returns 0, ptr parameters will have correct values */
+/* void **buf is for the dispatch function to place data for the caller. */
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
-				    uint16_t *id, uint32_t *len)
+				    uint16_t *id, uint32_t *len,
+				    void **buf)
 {
 
 /* TODO: reconsider buffer handling for this function. &len or len? */
 /* allocate dispatch buffer or not? */
 	uint8_t hbuf[SANDBOX_MSG_HBUFLEN];
 	uint32_t ccode = 0;
-	void *dispatch_buffer = NULL;
-
+	
 	DMSG("reading sandbox messsge header...\n");
 	DMSG("reading %d bytes from %d into %p\n", SANDBOX_MSG_HDRLEN, fd, hbuf);
 	
@@ -525,8 +534,9 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 		ccode = SANDBOX_ERR_BAD_LEN;
 		goto errout;
 	}
+	
 	DMSG("dispatching...type %d\n",*id);
-	ccode = dispatch[*id](fd, &dispatch_buffer);
+	ccode = dispatch[*id](fd, SANDBOX_MSG_GET_LEN(hbuf), buf);
 	if (ccode == SANDBOX_OK)
 		return ccode;
 	
@@ -541,7 +551,7 @@ errout:
 
 
 
-static ssize_t marshal_patch_data(int sock, void **bufp)
+static ssize_t marshal_patch_data(int sock, int msg_len, void **bufp)
 {
 	assert(bufp && *bufp == NULL);
 
@@ -646,7 +656,7 @@ errout:
 		free(*bufp);
 	}
 	
-	return send_rr_buf(sock, SANDBOX_ERR_BAD_HDR, sizeof(ccode), &ccode, SANDBOX_NO_ARGS);
+	return send_rr_buf(sock, SANDBOX_ERR_BAD_HDR, sizeof(ccode), &ccode, SANDBOX_LAST_ARG);
 	
 }
 
@@ -667,7 +677,7 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	/* initialize the sandbox buf  structures, calc the total message size */
 	for (ccode = 0; ccode < 256; ccode++) {
 		bufs[ccode].size = va_arg(va, int);
-		if (bufs[ccode].size == SANDBOX_NO_ARGS)
+		if (bufs[ccode].size == SANDBOX_LAST_ARG)
 			break;
 		bufs[ccode].buf = va_arg(va, uint8_t *);
 		DMSG("send_rr_buf va arg: size %d, buf %p\n", bufs[ccode].size, bufs[ccode].buf);
@@ -707,7 +717,7 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	for (ccode = 0; ccode < 256; ccode++) {
 		int bytes_written;
 		
-		if (bufs[ccode].size == SANDBOX_NO_ARGS)
+		if (bufs[ccode].size == SANDBOX_LAST_ARG)
 			break;
 		bytes_written = writen(fd, &bufs[ccode].size, sizeof(uint32_t));
 		if (bytes_written != sizeof(uint32_t))
@@ -730,26 +740,26 @@ errout:
  *
  *****************************************************************/
 /* TODO - init message len field */
-ssize_t dispatch_apply(int fd, void ** bufp)
+ssize_t dispatch_apply(int fd, int len, void ** bufp)
 {
 	DMSG("apply patch dispatcher\n");
 	
-	uint32_t ccode = marshal_patch_data(fd, bufp);
+	uint32_t ccode = marshal_patch_data(fd, len, bufp);
 	if (ccode == SANDBOX_OK) {
 		
 		struct patch *p = (struct patch *)*bufp;
 		ccode = apply_patch(p);
 	}
 	
-	send_rr_buf(fd, SANDBOX_MSG_APPLYRSP, sizeof(ccode), &ccode, SANDBOX_NO_ARGS);
+	send_rr_buf(fd, SANDBOX_MSG_APPLYRSP, sizeof(ccode), &ccode, SANDBOX_LAST_ARG);
 	return(ccode);
 }
 
-ssize_t dispatch_list(int fd, void **bufp)
+ssize_t dispatch_list(int fd, int len, void **bufp)
 {
 	DMSG("patch list dispatcher\n");
 	return send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
-			   SANDBOX_NO_ARGS);
+			   SANDBOX_LAST_ARG);
 } 
 
 
@@ -759,27 +769,37 @@ ssize_t dispatch_list(int fd, void **bufp)
  *
  *****************************************************************/
 
-ssize_t dispatch_getbld(int fd, void **bufp)
+ssize_t dispatch_getbld(int fd, int len, void **bufp)
 {
 /* construct a string buffer with each data on a separate line */
 	uint32_t errcode = SANDBOX_OK;
 	DMSG("get bld info dispatcher\n");
-	char  bldinfo[512];
+	char *bldinfo = *bufp;
+	
 	memset(bldinfo, 0x00, 512);
-	snprintf(bldinfo, 512, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
+	snprintf(bldinfo, SANDBOX_MSG_MAX_LEN, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
 		 get_git_revision(),
 		 get_git_revision(), get_compiled(), get_ccflags(),
 		 get_compiled_date(), get_tag(),
 		 get_major(), get_minor(), get_revision());	
 	return(send_rr_buf(fd, SANDBOX_MSG_GET_BLDRSP,
 			   sizeof(uint32_t), &errcode,
-			   strlen(bldinfo), (uint8_t *)bldinfo), SANDBOX_NO_ARGS);
+			   strlen(bldinfo), bldinfo, SANDBOX_LAST_ARG));
 }
 
-// TODO this is used for both a test request and a test reply
-// a request requires a response, but a response should not
-// also generate a response.
-ssize_t dispatch_test_req(int fd, void ** bufp)
+
+ssize_t dispatch_getbld_res(int fd, int len, void **bufp)
+{
+	
+	DMSG("dispatch_getbld_res\n");
+// TODO fix this - to read one bytes at a time
+	readn(fd, *bufp, SANDBOX_MSG_MAX_LEN);
+	return SANDBOX_OK;	
+}
+
+
+
+ssize_t dispatch_test_req(int fd, int len, void ** bufp)
 {
 	int c;
 	DMSG("test req dispatcher\n");
@@ -790,10 +810,10 @@ ssize_t dispatch_test_req(int fd, void ** bufp)
 	printf("test code: %d\n", c);
 
 	/* send a test response */
-	return send_rr_buf(fd, SANDBOX_TEST_REP, sizeof(c), &c, -1);
+	return send_rr_buf(fd, SANDBOX_TEST_REP, sizeof(c), &c, SANDBOX_LAST_ARG);
 }
 
-ssize_t dispatch_test_rep(int fd, void **bufp)
+ssize_t dispatch_test_rep(int fd, int len, void **bufp)
 {
 	int c;
 	DMSG("received a test response\n");
@@ -806,9 +826,22 @@ ssize_t dispatch_test_rep(int fd, void **bufp)
 }
 
 
-ssize_t dummy(int fd, void **bufp)
+ssize_t dummy(int fd, int len, void **bufp)
 {
 	DMSG("dummy dispatcher\n");
 	return(send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
-			   SANDBOX_NO_ARGS));	
+			   SANDBOX_LAST_ARG));	
+}
+
+
+char *get_sandbox_build_info(int fd)
+{
+	uint16_t version, id;
+	uint32_t len;
+	char **listen_buf = NULL;
+	
+	send_rr_buf(fd, SANDBOX_MSG_GET_BLD, SANDBOX_LAST_ARG);
+	read_sandbox_message_header(fd, &version, &id, &len, (void **)listen_buf);
+	return strndup((char *)*listen_buf, SANDBOX_MSG_MAX_LEN);
+	
 }

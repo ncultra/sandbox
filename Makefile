@@ -3,7 +3,7 @@ CFLAGS =  -g -Wall -fPIC -std=gnu11 -mcmodel=large -ffunction-sections -pthread
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
-LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o gitsha.o
+LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o
 LIBELF=/usr/lib64/libelf.a
 CLEAN=@-rm -f sandbox raxlpqemu *o *a *so gitsha.txt platform.h \
 	gitsha.h &>/dev/null

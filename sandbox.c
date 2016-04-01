@@ -144,7 +144,7 @@ int main(int argc, char **argv)
 				uint32_t len;
 			
 				ccode = read_sandbox_message_header(fd, &version,
-								    &id, &len);
+								    &id, &len, NULL);
 				sleep(1);
 			}
 			

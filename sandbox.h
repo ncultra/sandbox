@@ -28,7 +28,6 @@
 #include <libgen.h>
 #include <openssl/sha.h>
 #include "platform.h"
-
 // TODO: remove move this def to the makefile
 #ifndef __DEBUG__
 #define __DEBUG__ 1
@@ -303,7 +302,7 @@ uint64_t get_sandbox_end(void);
 
 // TODO: add pid to socket name
 #define SSANDBOX "sandbox-sock"
-#define SANDBOX_NO_ARGS -1
+
 struct sandbox_buf {
 	uint32_t size;
 	uint8_t *buf;
@@ -323,12 +322,9 @@ int cli_conn(const char *sock_name);
 ssize_t	readn(int fd, void *vptr, size_t n);
 ssize_t writen(int fd, const void *vptr, size_t n);
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
-				    uint16_t *id, uint32_t *len);
+				    uint16_t *id, uint32_t *len, void **buf);
 ssize_t send_rr_buf(int fd, uint16_t id, ...);
 int write_sandbox_message_header(int fd,
 				 uint16_t version, uint16_t id);
-ssize_t dispatch_test_req(int fd, void ** bufp);
-ssize_t dispatch_test_rep(int, void **);
-
 /* **** test functions **** */
 int client_func(void *p);
