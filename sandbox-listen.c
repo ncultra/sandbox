@@ -105,7 +105,7 @@ handler dispatch[0xff] =
 	dispatch_getbld,
 	dummy,
 	[SANDBOX_TEST_REQ] = dispatch_test_req,
-	[SANDBOX_TEST_REP] = NULL
+	[SANDBOX_TEST_REP] = dispatch_test_rep
 };
 
 
@@ -496,7 +496,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	if ((ccode = readn(fd, hbuf, SANDBOX_MSG_HDRLEN)) != SANDBOX_MSG_HDRLEN) {
 		goto errout;
 	}
-	dump_sandbox(hbuf, SANDBOX_MSG_HDRLEN + 0x0f);
+	dump_sandbox(hbuf, SANDBOX_MSG_HDRLEN);
 	
 	DMSG("checking magic ...\n");
 	if (check_magic(hbuf)) {
@@ -512,7 +512,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	*id = SANDBOX_MSG_GET_ID(hbuf);
 	DMSG("reading message type: %d\n", *id);
 	
-	if (*id < SANDBOX_MSG_APPLY || *id > SANDBOX_TEST_REQ) {
+	if (*id < SANDBOX_MSG_APPLY || *id > SANDBOX_TEST_REP) {
 		ccode = SANDBOX_ERR_BAD_MSGID;
 		goto errout;
 	}
@@ -527,10 +527,15 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	}
 	DMSG("dispatching...type %d\n",*id);
 	ccode = dispatch[*id](fd, &dispatch_buffer);
+	if (ccode == SANDBOX_OK)
+		return ccode;
 	
-errout:	
-	return send_rr_buf(fd, SANDBOX_ERR_BAD_HDR, sizeof(ccode),
-			   &ccode, SANDBOX_NO_ARGS);
+errout:
+	DMSG("read a bad sandbox header\nb");
+	
+	return SANDBOX_ERR_BAD_HDR;
+	
+	
 }
 
 
@@ -656,7 +661,8 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	struct sandbox_buf bufs[255];
 	va_list va;
 
-
+	DMSG("send_rr_buf fd %d id %d\n", fd, id);
+	
 	va_start(va, id);
 	/* initialize the sandbox buf  structures, calc the total message size */
 	for (ccode = 0; ccode < 256; ccode++) {
@@ -664,7 +670,7 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 		if (bufs[ccode].size == SANDBOX_NO_ARGS)
 			break;
 		bufs[ccode].buf = va_arg(va, uint8_t *);
-		DMSG("send rr buf %d, %p\n", bufs[ccode].size, bufs[ccode].buf);
+		DMSG("send_rr_buf va arg: size %d, buf %p\n", bufs[ccode].size, bufs[ccode].buf);
 		dump_sandbox(bufs[ccode].buf, bufs[ccode].size);
 		
 		len += bufs[ccode].size;
@@ -770,6 +776,9 @@ ssize_t dispatch_getbld(int fd, void **bufp)
 			   strlen(bldinfo), (uint8_t *)bldinfo), SANDBOX_NO_ARGS);
 }
 
+// TODO this is used for both a test request and a test reply
+// a request requires a response, but a response should not
+// also generate a response.
 ssize_t dispatch_test_req(int fd, void ** bufp)
 {
 	int c;
@@ -779,6 +788,20 @@ ssize_t dispatch_test_req(int fd, void ** bufp)
 		return SANDBOX_ERR_RW;
 	}
 	printf("test code: %d\n", c);
+
+	/* send a test response */
+	return send_rr_buf(fd, SANDBOX_TEST_REP, sizeof(c), &c, -1);
+}
+
+ssize_t dispatch_test_rep(int fd, void **bufp)
+{
+	int c;
+	DMSG("received a test response\n");
+	if (readn(fd, &c, sizeof(c)) != sizeof(c)) {
+		DMSG("error reading test message\n");
+		return SANDBOX_ERR_RW;
+	}
+	printf("response code: %d\n", c);
 	return SANDBOX_OK;
 }
 

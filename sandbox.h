@@ -218,7 +218,7 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_LISTRSP 4
 #define SANDBOX_MSG_GET_BLD 5
 #define SANDBOX_MSG_GET_BLDRSP 6
-
+#define SANDBOX_LAST_ARG -1
 #define SANDBOX_TEST_REQ 0xfd
 #define SANDBOX_TEST_REP 0xfe
 
@@ -328,7 +328,7 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...);
 int write_sandbox_message_header(int fd,
 				 uint16_t version, uint16_t id);
 ssize_t dispatch_test_req(int fd, void ** bufp);
-size_t dispatch_test_rep(int, void **);
+ssize_t dispatch_test_rep(int, void **);
 
 /* **** test functions **** */
 int client_func(void *p);

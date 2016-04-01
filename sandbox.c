@@ -1,5 +1,5 @@
 #include "sandbox.h"
-static int test_flag, server_flag, client_flag;
+static int test_flag = 0, server_flag = 0, client_flag = 0;
 
 struct patch *create_test_patch;
 extern uint64_t _start;
@@ -125,18 +125,28 @@ int main(int argc, char **argv)
 	}
 	
 	if(client_flag) {
-		int c = 4, ccode;
+		int c = 4, fd, ccode = SANDBOX_OK;;
 		
 		if (strlen(clsock)) 
 		{
 			DMSG("client connecting to %s\n", clsock);
-			ccode = client_func(clsock);
+			fd = client_func(clsock);
 			
-			DMSG("client file descriptor: %d\n", ccode);
+			DMSG("client file descriptor: %d\n", fd);
 			DMSG("sending test req message: ccode %d\n", c);
 			
-			send_rr_buf(ccode, SANDBOX_TEST_REQ, sizeof(c), &c, -1);
-			while (1) sleep(1);
+			ccode = send_rr_buf(fd, SANDBOX_TEST_REQ, sizeof(c),
+				    &c, SANDBOX_LAST_ARG);
+			DMSG("send_rr_buf returned: %d\n", ccode);
+			
+			if (ccode == SANDBOX_OK) {
+				uint16_t version, id;
+				uint32_t len;
+			
+				ccode = read_sandbox_message_header(fd, &version,
+								    &id, &len);
+				sleep(1);
+			}
 			
 		}
 			
@@ -191,4 +201,6 @@ void patched_stub(void)
 	
 	static int count = 0;
 	printf("executing inside the patched code, count: %i\n", ++count);
+	exit(0);
+	
 }
