@@ -89,6 +89,11 @@ static inline ssize_t check_magic(uint8_t *magic)
 	return memcmp(magic, m, sizeof(m));
 }
 
+
+
+/* dispatch functions need to drain the socket buy reading all the bytes
+ * in the message that follow the header */
+
 static ssize_t marshal_patch_data(int, int, void **);
 ssize_t dispatch_apply(int, int, void **);
 ssize_t dispatch_list(int, int, void **);
@@ -149,36 +154,50 @@ void *listen_thread(void *arg)
 	uint32_t quit = 0;
 	int client_fd;
 	uid_t client_id;
-	char *listen_buf;
-	
+	char *listen_buf = NULL;
+
+	/* TODO - need an inner loop to use the same socket with multiple messages. */
 
 	DMSG("server_thread: listen.sock %d\n", l->sock);
 	
 	do {
-		if (l->sock) {	
+		if (l->sock > 0) {	
 			client_fd = accept_sandbox_sock(l->sock, &client_id);
-			if (client_fd > 0) {
+			if (client_fd < 0) {
+				DMSG("accept on %d failed\n", l->sock);
+			}
+			
+			while (client_fd > 0) {
 				uint16_t version, id;
 				uint32_t len;
 				quit   = read_sandbox_message_header(client_fd,
 								     &version,
 								     &id, &len,
 								     (void **)&listen_buf);
-			}
-		} else
-			DMSG("accept on %d failed\n", l->sock);
-		
+				if (listen_buf != NULL) {
+					free(listen_buf);
+				}
+			} 
+			
+		} else {
+			DMSG("bad socket value in listen thread\n");
+			return NULL;
+		}
 	} while (!quit && client_fd > 0);
+		
 	close(client_fd);
 	return NULL;
 }
 
 
+
+
 // WRS
 // create and listen on a unix domain socket.
 // connect, peek at the incoming data. 
-// sock_name: full path of the socket e.g. /var/run/sandbox 
-int listen_sandbox_sock(const char *sock_name)
+// sock_name: full path of the socket e.g. /var/run/SANDBOX_ERR_BAD_HDR
+
+	int listen_sandbox_sock(const char *sock_name)
 {
 	int fd, len, err, ccode;
 	struct sockaddr_un un;
@@ -432,11 +451,11 @@ errout:
 /* if this function returns ERR, ptr parameters are undefined */
 /* if it returns 0, ptr parameters will have correct values */
 /* void **buf is for the dispatch function to place data for the caller. */
+/*  buf points to a pointer to null (*(void **)buf == NULL) */
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 				    uint16_t *id, uint32_t *len,
 				    void **buf)
 {
-
 /* TODO: reconsider buffer handling for this function. &len or len? */
 /* allocate dispatch buffer or not? */
 	uint8_t hbuf[SANDBOX_MSG_HBUFLEN];
@@ -619,14 +638,18 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	va_start(va, id);
 	/* initialize the sandbox buf  structures, calc the total message size */
 	for (ccode = 0; ccode < 256; ccode++) {
-		bufs[ccode].size = va_arg(va, int);
+		bufs[ccode].size = (uint32_t)va_arg(va, int32_t);
 		if (bufs[ccode].size == SANDBOX_LAST_ARG)
 			break;
 		bufs[ccode].buf = va_arg(va, uint8_t *);
 		DMSG("send_rr_buf va arg: size %d, buf %p\n", bufs[ccode].size, bufs[ccode].buf);
 		dump_sandbox(bufs[ccode].buf, bufs[ccode].size);
+
+		/* the fist size dword is already calculated in the header size */
+		len += bufs[ccode].size; 
+		if (ccode > 0)
+			len +=  sizeof(bufs[ccode].size);
 		
-		len += bufs[ccode].size;
 		DMSG("len increased to %d bytes\n", len);
 		
 	}
@@ -638,19 +661,19 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 		goto errout;
 	
 	/* protocol version */
-	ccode = writen(fd, &pver, sizeof(pver));
-	if (ccode != sizeof(pver))
+	ccode = writen(fd, &pver, sizeof(uint16_t));
+	if (ccode != sizeof(uint16_t))
 		goto errout;
 	
 	/* message id  */
-	ccode = writen(fd, &msgid, sizeof(msgid));
+	ccode = writen(fd, &msgid, sizeof(uint16_t));
 	DMSG("send_rr_buf: message id %d\n", msgid);
 	
-	if (ccode != sizeof(msgid))
+	if (ccode != sizeof(uint16_t))
 		goto errout;
 	
-	ccode = writen(fd, &len, sizeof(len));
-	if (ccode != sizeof(len))
+	ccode = writen(fd, &len, sizeof(uint32_t));
+	if (ccode != sizeof(uint32_t))
 		goto errout;
 
 	DMSG("msg len at send time: %d\n", *&len);
@@ -665,10 +688,15 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 		bytes_written = writen(fd, &bufs[ccode].size, sizeof(uint32_t));
 		if (bytes_written != sizeof(uint32_t))
 			goto errout;
+		DMSG("wrote message field size: %d\n", bufs[ccode].size);
+		
 		DMSG("send_rr_buf: writing %d bytes from %p to %d\n",
 		     bufs[ccode].size, bufs[ccode].buf, fd);
+
+		dump_sandbox(bufs[ccode].buf, bufs[ccode].size);
 		
 		bytes_written = writen(fd, bufs[ccode].buf, bufs[ccode].size);
+		
 		if (bytes_written != bufs[ccode].size)
 			goto errout;
 	}
@@ -683,9 +711,12 @@ errout:
  *
  *****************************************************************/
 /* TODO - init message len field */
-ssize_t dispatch_apply(int fd, int len, void ** bufp)
+ssize_t dispatch_apply(int fd, int len, void **bufp)
 {
 	DMSG("apply patch dispatcher\n");
+
+/* allocate bufp and read the remainder of the message */
+
 	
 	uint32_t ccode = marshal_patch_data(fd, len, bufp);
 	if (ccode == SANDBOX_OK) {
@@ -716,18 +747,27 @@ ssize_t dispatch_getbld(int fd, int len, void **bufp)
 {
 /* construct a string buffer with each data on a separate line */
 	uint32_t errcode = SANDBOX_OK;
-	DMSG("get bld info dispatcher\n");
-	char *bldinfo = *bufp;
+	int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
+	DMSG("get bld info dispatcher: remaining bytes %d\n", remaining_bytes);
+
+/* drain the request message from the socket */
+
+
 	
-	memset(bldinfo, 0x00, 512);
-	snprintf(bldinfo, SANDBOX_MSG_MAX_LEN, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
+	*bufp = calloc(sizeof(uint8_t), SANDBOX_MSG_BLD_BUFSIZE);
+	if (*bufp  == NULL) {
+		DMSG("error allocating buffer for build info\n");
+		return SANDBOX_ERR_NOMEM;
+	}
+	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
 		 get_git_revision(),
 		 get_git_revision(), get_compiled(), get_ccflags(),
 		 get_compiled_date(), get_tag(),
 		 get_major(), get_minor(), get_revision());	
+
 	return(send_rr_buf(fd, SANDBOX_MSG_GET_BLDRSP,
 			   sizeof(uint32_t), &errcode,
-			   strlen(bldinfo), bldinfo, SANDBOX_LAST_ARG));
+			   SANDBOX_MSG_BLD_BUFSIZE, *bufp, SANDBOX_LAST_ARG));
 }
 
 
@@ -744,23 +784,31 @@ ssize_t dispatch_getbld_res(int fd, int len, void **bufp)
 
 ssize_t dispatch_test_req(int fd, int len, void ** bufp)
 {
-	int c;
-	DMSG("test req dispatcher\n");
-	if (readn(fd, &c, sizeof(c)) != sizeof(c)) {
+	int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
+	DMSG("test req dispatcher: remaining bytes = %d\n", remaining_bytes);
+        /* message should be 4 byte test code (len of first field 
+	   has already be read)*/
+
+	uint32_t code;
+
+	if (readn(fd, &code, sizeof(uint32_t)) != sizeof(uint32_t)) {
 		DMSG("error reading test message\n");
 		return SANDBOX_ERR_RW;
 	}
-	printf("test code: %d\n", c);
+	DMSG("%08x ", code);	
+	dump_sandbox(&code, sizeof(code));
+	printf("test code: %d\n", code);
 
 	/* send a test response */
-	return send_rr_buf(fd, SANDBOX_TEST_REP, sizeof(c), &c, SANDBOX_LAST_ARG);
+	return send_rr_buf(fd, SANDBOX_TEST_REP, sizeof(uint32_t),
+			   &code, SANDBOX_LAST_ARG);
 }
 
 ssize_t dispatch_test_rep(int fd, int len, void **bufp)
 {
-	int c;
-	DMSG("received a test response\n");
-	if (readn(fd, &c, sizeof(c)) != sizeof(c)) {
+	uint32_t c = 0xffffffff;
+	DMSG("received a test response - remaining bytes = %d\n", len - SANDBOX_MSG_HDRLEN);
+	if (readn(fd, &c, sizeof(uint32_t)) != sizeof(uint32_t)) {
 		DMSG("error reading test message\n");
 		return SANDBOX_ERR_RW;
 	}
@@ -781,10 +829,13 @@ char *get_sandbox_build_info(int fd)
 {
 	uint16_t version, id;
 	uint32_t len;
-	char **listen_buf = NULL;
+	char *listen_buf = NULL, *info = NULL;
 	
 	send_rr_buf(fd, SANDBOX_MSG_GET_BLD, SANDBOX_LAST_ARG);
-	read_sandbox_message_header(fd, &version, &id, &len, (void **)listen_buf);
-	return strndup((char *)*listen_buf, SANDBOX_MSG_MAX_LEN);
-	
+	read_sandbox_message_header(fd, &version, &id, &len, (void **)&listen_buf);
+	if (listen_buf != NULL) {
+		info =  strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
+		free(listen_buf);
+	}
+	return info;
 }

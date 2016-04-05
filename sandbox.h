@@ -201,8 +201,8 @@ uint64_t get_sandbox_start(void);
 uint64_t get_sandbox_end(void);
 // TODO: add a msg nonce (transaction id)
 // from sandbox-listen.h
-#define SANDBOX_MSG_HDRLEN 0x0c
-#define SANDBOX_MSG_HBUFLEN 0x10
+#define SANDBOX_MSG_HDRLEN 0x10
+#define SANDBOX_MSG_HBUFLEN 0x18
 #define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
 #define SANDBOX_MSG_VERSION (uint16_t)0x0001				      
 #define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 4))
@@ -215,8 +215,11 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_APPLYRSP 2
 #define SANDBOX_MSG_LIST 3
 #define SANDBOX_MSG_LISTRSP 4
+#define SANDBOX_MSG_BLD_BUFSIZE 512
 #define SANDBOX_MSG_GET_BLD 5
 #define SANDBOX_MSG_GET_BLDRSP 6
+
+
 #define SANDBOX_LAST_ARG -1
 #define SANDBOX_TEST_REQ 0xfd
 #define SANDBOX_TEST_REP 0xfe
@@ -327,4 +330,5 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...);
 int write_sandbox_message_header(int fd,
 				 uint16_t version, uint16_t id);
 /* **** test functions **** */
+char *get_sandbox_build_info(int fd);
 int client_func(void *p);

@@ -125,7 +125,8 @@ int main(int argc, char **argv)
 	}
 	
 	if(client_flag) {
-		int c = 4, fd, ccode = SANDBOX_OK;;
+		int c = 0xff, fd, ccode = SANDBOX_OK;;
+		char *info;
 		
 		if (strlen(clsock)) 
 		{
@@ -146,6 +147,12 @@ int main(int argc, char **argv)
 				ccode = read_sandbox_message_header(fd, &version,
 								    &id, &len, NULL);
 				sleep(1);
+
+				info = get_sandbox_build_info(fd);
+				if (info != NULL) {
+					DMSG("%s\n", info);
+					free(info);
+				}
 			}
 			
 		}
