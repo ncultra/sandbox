@@ -175,10 +175,7 @@ void *listen_thread(void *arg)
 								     &version,
 								     &id, &len,
 								     (void **)&listen_buf);
-				if (listen_buf != NULL) {
-					free(listen_buf);
-				}
-			} 
+			}
 			
 		} else {
 			DMSG("bad socket value in listen thread\n");
@@ -653,14 +650,19 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 		bufs[index].buf = va_arg(va, uint8_t *);
 		if (bufs[index].buf <= 0)
 			break;
-		len += sizeof(uint32_t) + bufs[index].size;
+		if (index > 0) {
+			/* the first length field is included in the header, 
+			   don't count it but do count 1...n */
+			len += sizeof(uint32_t);
+		}
+		len +=  bufs[index].size;
 		
 		index++;
 	} while (index < 255);
 	
 	va_end(va);
 
-	DMSG("last va arg index: %d\n", lastbuf);
+	DMSG("last va arg index: %d, size %d\n", lastbuf, bufs[lastbuf].size);
 
 	/* the length of the first bufsize is already calculated in 
 	   the header length. Further bufsizes (1...n) add the the 
@@ -701,15 +703,19 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 				DMSG("writing null size to the message header, no varargs\n");
 				writen(fd, &nullsize, sizeof(uint32_t));
 			}
-			break;
+			break;			
 		}
 		DMSG("writing vararg to fd size %d address %p\n",
 		     bufs[index].size, bufs[index].buf);
 		dump_sandbox(bufs[index].buf, bufs[index].size);
 		
 		writen(fd, &bufs[index].size, sizeof(uint32_t));
+		DMSG("wrote var field size %d\n", bufs[index].size);
 		writen(fd, bufs[index].buf, bufs[index].size);
+		DMSG("wrote var field value\n");
+		
 	}
+	
 	return(SANDBOX_OK);
 errout:
 	return(SANDBOX_ERR_RW);
@@ -756,12 +762,8 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 ssize_t dispatch_getbld(int fd, int len, void **bufp)
 {
 /* construct a string buffer with each data on a separate line */
-	uint32_t errcode = SANDBOX_OK;
 	int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
 	DMSG("get bld info dispatcher: remaining bytes %d\n", remaining_bytes);
-
-/* drain the request message from the socket */
-
 
 	
 	*bufp = calloc(sizeof(uint8_t), SANDBOX_MSG_BLD_BUFSIZE);
@@ -775,18 +777,41 @@ ssize_t dispatch_getbld(int fd, int len, void **bufp)
 		 get_compiled_date(), get_tag(),
 		 get_major(), get_minor(), get_revision());	
 
+	uint32_t reply_buf_length = strnlen(*bufp, SANDBOX_MSG_BLD_BUFSIZE);
+	DMSG("sending buildinfo reply %d bytes\n", reply_buf_length);
+	
 	return(send_rr_buf(fd, SANDBOX_MSG_GET_BLDRSP,
-			   sizeof(uint32_t), &errcode,
-			   SANDBOX_MSG_BLD_BUFSIZE, *bufp, SANDBOX_LAST_ARG));
+			   reply_buf_length, *bufp, SANDBOX_LAST_ARG));
 }
 
 
+/*** get build response msg
+     HEADER
+     uint32 first field size - length of buildinfo string
+     uint8 *buildinfo
+ ***/
 ssize_t dispatch_getbld_res(int fd, int len, void **bufp)
 {
+	int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
 	
-	DMSG("dispatch_getbld_res\n");
-// TODO fix this -  read the message size
-	readn(fd, *bufp, SANDBOX_MSG_MAX_LEN);
+	DMSG("buildinfo response: remaining bytes = %d\n", remaining_bytes);
+        /* get the buildinfo size */
+
+	DMSG("field one size: %d, allocating\n", remaining_bytes);
+	
+	/* allocate a buffer to hold the buildinfo */
+	*bufp = calloc(remaining_bytes + 1, sizeof(uint8_t));
+	if (*bufp == NULL )
+		return SANDBOX_ERR_NOMEM;
+
+        /* read the buildinfo string into *bufp */
+
+	if (readn(fd, *bufp, remaining_bytes) != remaining_bytes) {
+		DMSG("buildinfo buffer unexpected size\n");
+		return SANDBOX_ERR_RW;
+	}
+	
+	dump_sandbox(*bufp, remaining_bytes);
 	return SANDBOX_OK;	
 }
 
@@ -846,6 +871,7 @@ char *get_sandbox_build_info(int fd)
 	if (listen_buf != NULL) {
 		info =  strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
 		free(listen_buf);
+		DMSG("%s\n", info);
 	}
 	return info;
 }

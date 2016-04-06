@@ -293,14 +293,11 @@ uint64_t get_sandbox_end(void);
 /* Message ID 5: get build info ********************************************/
 
 /* Fields:
-   1) header (msg id 3)
+   1) header (msg id 5)
 
    reply msg ID 6:
    1) header
-   2) uint64_t 0L "OK, or error code.
-   3) 20-bytes sha1 git HEAD of the running binary
-   4) $CC at build time (string)
-   5) $CFLAGS at build time (string)
+   2) buildinfo contents 
 */
 
 // TODO: add pid to socket name
