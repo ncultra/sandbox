@@ -108,6 +108,7 @@ typedef ssize_t (*handler)(int, int, void **);
 
 handler dispatch[0xff] =
 {
+	dummy, /* message ids are indexed starting at 1*/
 	dispatch_apply,
 	dummy,
 	dispatch_list,
@@ -463,10 +464,14 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	
 	DMSG("reading sandbox messsge header...\n");
 	DMSG("reading %d bytes from %d into %p\n", SANDBOX_MSG_HDRLEN, fd, hbuf);
-	
-	if ((ccode = readn(fd, hbuf, SANDBOX_MSG_HDRLEN)) != SANDBOX_MSG_HDRLEN) {
-		goto errout;
-	}
+
+	for (int i = 0; i < SANDBOX_MSG_HDRLEN; i++) {
+		if ((ccode = readn(fd, &hbuf[i], 1)) != 1) {
+			DMSG("error reading msg header\n");
+			goto errout;
+		}
+		DMSG("%02x ", hbuf[i]);
+	}	
 	dump_sandbox(hbuf, SANDBOX_MSG_HDRLEN);
 	
 	DMSG("checking magic ...\n");
@@ -626,79 +631,84 @@ errout:
 	
 ssize_t send_rr_buf(int fd, uint16_t id, ...)
 {
-	uint32_t ccode, len = SANDBOX_MSG_HDRLEN;
+	uint32_t len = SANDBOX_MSG_HDRLEN;
 	uint8_t sand[] = SANDBOX_MSG_MAGIC;
 	uint16_t pver = SANDBOX_MSG_VERSION;
-	uint16_t msgid = id;
 	struct sandbox_buf bufs[255];
 	va_list va;
-
-	DMSG("send_rr_buf fd %d id %d\n", fd, id);
+	uint32_t nullsize = 0;
 	
-	va_start(va, id);
-	/* initialize the sandbox buf  structures, calc the total message size */
-	for (ccode = 0; ccode < 256; ccode++) {
-		bufs[ccode].size = (uint32_t)va_arg(va, int32_t);
-		if (bufs[ccode].size == SANDBOX_LAST_ARG)
-			break;
-		bufs[ccode].buf = va_arg(va, uint8_t *);
-		DMSG("send_rr_buf va arg: size %d, buf %p\n", bufs[ccode].size, bufs[ccode].buf);
-		dump_sandbox(bufs[ccode].buf, bufs[ccode].size);
+	int index = 0, lastbuf = 0;
+	
+	DMSG("send_rr_buf fd %d id %d\n", fd, id);
 
-		/* the fist size dword is already calculated in the header size */
-		len += bufs[ccode].size; 
-		if (ccode > 0)
-			len +=  sizeof(bufs[ccode].size);
+	va_start(va, id);
+	do {
+		bufs[index].size = va_arg(va, int);
+		if (bufs[index].size == SANDBOX_LAST_ARG) {
+			lastbuf = index;
+			bufs[index].buf = (uint8_t *)&nullsize; 
+			break;
+		}
+		bufs[index].buf = va_arg(va, uint8_t *);
+		if (bufs[index].buf <= 0)
+			break;
+		len += sizeof(uint32_t) + bufs[index].size;
 		
-		DMSG("len increased to %d bytes\n", len);
-		
-	}
+		index++;
+	} while (index < 255);
+	
 	va_end(va);
+
+	DMSG("last va arg index: %d\n", lastbuf);
+
+	/* the length of the first bufsize is already calculated in 
+	   the header length. Further bufsizes (1...n) add the the 
+	   message length */
+	
+	DMSG("message length estimated to be %d bytes\n", len);	
+
+	if (len > SANDBOX_MSG_MAX_LEN) {
+		DMSG("message calculated to exceed the maximum size\n");
+		goto errout;
+	}
 	
 	/* magic header */
-	ccode = writen(fd, sand, sizeof(sand));
-	if (ccode != sizeof(sand))
-		goto errout;
-	
+	if (writen(fd, sand, sizeof(sand)) != sizeof(sand))
+			goto errout;
+
 	/* protocol version */
-	ccode = writen(fd, &pver, sizeof(uint16_t));
-	if (ccode != sizeof(uint16_t))
+	if (writen(fd, &pver, sizeof(uint16_t)) != sizeof(uint16_t))
 		goto errout;
 	
 	/* message id  */
-	ccode = writen(fd, &msgid, sizeof(uint16_t));
-	DMSG("send_rr_buf: message id %d\n", msgid);
-	
-	if (ccode != sizeof(uint16_t))
+	if (writen(fd, &id, sizeof(uint16_t)) != sizeof(uint16_t))
 		goto errout;
-	
-	ccode = writen(fd, &len, sizeof(uint32_t));
-	if (ccode != sizeof(uint32_t))
+
+	/* msg length */
+	if (writen(fd, &len, sizeof(uint32_t)) != sizeof(uint32_t))
 		goto errout;
 
 	DMSG("msg len at send time: %d\n", *&len);
 	
 /* go through the buf descriptors, this time write the values */
-
-	for (ccode = 0; ccode < 256; ccode++) {
-		int bytes_written;
-		
-		if (bufs[ccode].size == SANDBOX_LAST_ARG)
+	
+	for (index = 0; index < 255; index++) {
+		if (bufs[index].size == SANDBOX_LAST_ARG) {
+			assert(index == lastbuf);
+			if (index == 0) {
+				/* write for bytes of zero to complete the header */
+				DMSG("writing null size to the message header, no varargs\n");
+				writen(fd, &nullsize, sizeof(uint32_t));
+			}
 			break;
-		bytes_written = writen(fd, &bufs[ccode].size, sizeof(uint32_t));
-		if (bytes_written != sizeof(uint32_t))
-			goto errout;
-		DMSG("wrote message field size: %d\n", bufs[ccode].size);
+		}
+		DMSG("writing vararg to fd size %d address %p\n",
+		     bufs[index].size, bufs[index].buf);
+		dump_sandbox(bufs[index].buf, bufs[index].size);
 		
-		DMSG("send_rr_buf: writing %d bytes from %p to %d\n",
-		     bufs[ccode].size, bufs[ccode].buf, fd);
-
-		dump_sandbox(bufs[ccode].buf, bufs[ccode].size);
-		
-		bytes_written = writen(fd, bufs[ccode].buf, bufs[ccode].size);
-		
-		if (bytes_written != bufs[ccode].size)
-			goto errout;
+		writen(fd, &bufs[index].size, sizeof(uint32_t));
+		writen(fd, bufs[index].buf, bufs[index].size);
 	}
 	return(SANDBOX_OK);
 errout:
@@ -775,7 +785,7 @@ ssize_t dispatch_getbld_res(int fd, int len, void **bufp)
 {
 	
 	DMSG("dispatch_getbld_res\n");
-// TODO fix this - to read one bytes at a time
+// TODO fix this -  read the message size
 	readn(fd, *bufp, SANDBOX_MSG_MAX_LEN);
 	return SANDBOX_OK;	
 }
