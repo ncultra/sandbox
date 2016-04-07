@@ -465,10 +465,6 @@ int main(int argc, char **argv)
 				usage();			
 			}
 		case 1:
-		{
-			// move this out of option processing
-			break;
-		}
 		
 		case 2:
 			DMSG("selected option %s\n", long_options[option_index].name);
