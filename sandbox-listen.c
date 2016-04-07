@@ -175,13 +175,16 @@ void *listen_thread(void *arg)
 								     &version,
 								     &id, &len,
 								     (void **)&listen_buf);
-				DMSG("listener: read_sandbox_header returned %d\n",  quit);
-
-				if (quit < 0) {
+				if (quit == SANDBOX_ERR_CLOSED) {
 					DMSG("client closed socket %d\n", client_fd);
 					close(client_fd);
 					client_fd = -1;
 				}
+				
+				else if (quit < 0) {
+					DMSG("error reading header %d\n", quit);
+				}
+
 			}
 		} else {
 			DMSG("bad socket value in listen thread\n");
@@ -471,7 +474,9 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 
 	for (int i = 0; i < SANDBOX_MSG_HDRLEN; i++) {
 		if ((ccode = readn(fd, &hbuf[i], 1)) != 1) {
-			DMSG("error reading msg header\n");
+			if (ccode == 0) {	
+				return SANDBOX_ERR_CLOSED;
+			}
 			goto errout;
 		}
 	}	
@@ -511,7 +516,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 		return ccode;
 	
 errout:
-	DMSG("read a bad sandbox header\n");
+	DMSG("read a bad or incomplete sandbox header\n");
 	
 	return SANDBOX_ERR_BAD_HDR;
 	

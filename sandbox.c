@@ -132,7 +132,6 @@ int main(int argc, char **argv)
 		{
 			DMSG("client connecting to %s\n", clsock);
 			fd = client_func(clsock);
-			
 			DMSG("client file descriptor: %d\n", fd);
 			DMSG("sending test req message: ccode %d\n", c);
 			
@@ -153,11 +152,13 @@ int main(int argc, char **argv)
 					DMSG("%s\n", info);
 					free(info);
 				}
-			}
-			
+			}			
+			close(fd);
 		}
-			
+		
 	}
+			
+
 
 	
 	if (test_flag) {
