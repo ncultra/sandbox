@@ -134,7 +134,7 @@ int cmd_apply(int argc, char *argv[])
 
     /* basename() can modify its argument, so make a copy */
     strncpy(filepath, path, sizeof(filepath) - 1);
-    filepath[sizeof(filepath) - 1] = 0;
+    filepath[sizeof(filepath) - d1] = 0;
     char *filename = basename(filepath);
 
     int fd = connect_to_sandbox(path);
@@ -399,20 +399,95 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
     return 0;
 }
 
+char sockname[PATH_MAX];
+int sockfd;
 
-char *get_info(int fd)
+
+#define COUNT_INFO_STRINGS 6
+#define INFO_STRING_LEN 255
+#define INFO_SHA_INDEX 0
+#define INFO_COMPILE_INDEX 1
+#define INFO_FLAGS_INDEX 2
+#define INFO_DATE_INDEX 3
+#define INFO_TAG_INDEX 4
+#define INFO_VER_INDEX 5
+char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
+
+#define INFO_CHECK()				\
+	if (info_strings[0][0] == '0')		\
+		get_info_strings(sockfd);
+
+
+int get_info_strings(int fd)
 {
+	char *info_buf, *info_buf_save, *p;
+	int index = 0;
+	
 	if (fd < 0) {
 		DMSG("get_info was passed a bad socket\n");
-		return NULL;
+		return SANDBOX_ERR_BAD_FD;
 	}
 	
-	return get_sandbox_build_info(fd);	
+	info_buf =  get_sandbox_build_info(fd);
+	if (info_buf == NULL) {
+		DMSG("unable to get info strings\n");
+		return SANDBOX_ERR_RW;
+	}
+
+	/* split the long string into separate strings*/
+	p = strtok_r(info_buf, "\n", &info_buf_save);
+	for (index = 0; index < COUNT_INFO_STRINGS && p != NULL; index++) {	
+		strncpy(info_strings[index], p, INFO_STRING_LEN);
+		p = strtok_r(NULL, "\n", &info_buf_save);
+	}
+	if (index <  COUNT_INFO_STRINGS - 1) {
+		DMSG("error parsing info strings, index: %d\n", index);
+		return SANDBOX_ERR_PARSE;
+	}
+	
+	return SANDBOX_OK;
 }
 
 
-char sockname[PATH_MAX];
+static inline char * get_qemu_sha(void)
+{
+	INFO_CHECK();
+	return info_strings[INFO_SHA_INDEX];
+}
 
+
+static inline char * get_qemu_compile(void)
+{
+	INFO_CHECK();
+	return info_strings[INFO_COMPILE_INDEX];
+}
+
+static inline char * get_qemu_flags(void)
+{
+	INFO_CHECK();
+	return info_strings[INFO_FLAGS_INDEX];
+}
+
+static inline char * get_qemu_date(void)
+{
+	INFO_CHECK();
+	return info_strings[INFO_DATE_INDEX];	
+}
+
+static inline char * get_qemu_tag(void)
+{
+	INFO_CHECK();
+	return info_strings[INFO_TAG_INDEX];
+}
+
+
+static inline char *get_qemu_version(void) 
+{
+	INFO_CHECK();
+	return info_strings[INFO_VER_INDEX];
+}
+
+		
 int main(int argc, char **argv)
 {
 	
@@ -513,15 +588,13 @@ int main(int argc, char **argv)
 
 
 	if (info_flag > 0) {
-		int sockfd = connect_to_sandbox(sockname);
-		char *info = get_info(sockfd);
-		if (info == NULL)  {	
+		sockfd = connect_to_sandbox(sockname);
+		int info = get_info_strings(sockfd);
+		if (info != SANDBOX_OK)  {	
 			DMSG("error getting build info\n");
-		} else { 
-			DMSG("%s\n", info);
-		}
+		} 
 	}
+	printf("bye\n");
+	return SANDBOX_OK;
 	
-	
-	printf("bye\n");	
 }
