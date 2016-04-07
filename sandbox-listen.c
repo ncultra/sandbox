@@ -152,7 +152,7 @@ errout:
 void *listen_thread(void *arg)
 {
 	struct listen *l  = (struct listen *)arg;
-	uint32_t quit = 0;
+	int quit = 0;
 	int client_fd;
 	uid_t client_id;
 	char *listen_buf = NULL;
@@ -160,7 +160,7 @@ void *listen_thread(void *arg)
 	/* TODO - need an inner loop to use the same socket with multiple messages. */
 
 	DMSG("server_thread: listen.sock %d\n", l->sock);
-	
+
 	do {
 		if (l->sock > 0) {	
 			client_fd = accept_sandbox_sock(l->sock, &client_id);
@@ -175,15 +175,22 @@ void *listen_thread(void *arg)
 								     &version,
 								     &id, &len,
 								     (void **)&listen_buf);
+				DMSG("listener: read_sandbox_header returned %d\n",  quit);
+
+				if (quit < 0) {
+					DMSG("client closed socket %d\n", client_fd);
+					close(client_fd);
+					client_fd = -1;
+				}
 			}
-			
 		} else {
 			DMSG("bad socket value in listen thread\n");
 			return NULL;
 		}
-	} while (!quit && client_fd > 0);
-		
-	close(client_fd);
+	} while (1);
+	if (client_fd >= 0)
+		close(client_fd);
+	
 	return NULL;
 }
 
@@ -467,7 +474,6 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 			DMSG("error reading msg header\n");
 			goto errout;
 		}
-		DMSG("%02x ", hbuf[i]);
 	}	
 	dump_sandbox(hbuf, SANDBOX_MSG_HDRLEN);
 	
@@ -505,10 +511,9 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 		return ccode;
 	
 errout:
-	DMSG("read a bad sandbox header\nb");
+	DMSG("read a bad sandbox header\n");
 	
 	return SANDBOX_ERR_BAD_HDR;
-	
 	
 }
 
@@ -811,7 +816,6 @@ ssize_t dispatch_getbld_res(int fd, int len, void **bufp)
 		return SANDBOX_ERR_RW;
 	}
 	
-	dump_sandbox(*bufp, remaining_bytes);
 	return SANDBOX_OK;	
 }
 
@@ -871,7 +875,7 @@ char *get_sandbox_build_info(int fd)
 	if (listen_buf != NULL) {
 		info =  strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
 		free(listen_buf);
-		DMSG("%s\n", info);
+		/* DMSG("%s\n", info); */
 	}
 	return info;
 }
