@@ -781,9 +781,9 @@ ssize_t dispatch_getbld(int fd, int len, void **bufp)
 		DMSG("error allocating buffer for build info\n");
 		return SANDBOX_ERR_NOMEM;
 	}
-	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
+	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
 		 get_git_revision(),
-		 get_git_revision(), get_compiled(), get_ccflags(),
+		 get_compiled(), get_ccflags(),
 		 get_compiled_date(), get_tag(),
 		 get_major(), get_minor(), get_revision());	
 
@@ -869,6 +869,7 @@ ssize_t dummy(int fd, int len, void **bufp)
 }
 
 
+/* info is returned as one string, with each field on a separate line */
 char *get_sandbox_build_info(int fd)
 {
 	uint16_t version, id;
@@ -880,7 +881,6 @@ char *get_sandbox_build_info(int fd)
 	if (listen_buf != NULL) {
 		info =  strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
 		free(listen_buf);
-		/* DMSG("%s\n", info); */
 	}
 	return info;
 }
