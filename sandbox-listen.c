@@ -875,9 +875,10 @@ char *get_sandbox_build_info(int fd)
 	uint16_t version, id;
 	uint32_t len;
 	char *listen_buf = NULL, *info = NULL;
-	
+
 	send_rr_buf(fd, SANDBOX_MSG_GET_BLD, SANDBOX_LAST_ARG);
 	read_sandbox_message_header(fd, &version, &id, &len, (void **)&listen_buf);
+		
 	if (listen_buf != NULL) {
 		info =  strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
 		free(listen_buf);

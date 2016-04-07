@@ -400,8 +400,18 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
 }
 
 
-char sockname[PATH_MAX];
+char *get_info(int fd)
+{
+	if (fd < 0) {
+		DMSG("get_info was passed a bad socket\n");
+		return NULL;
+	}
+	
+	return get_sandbox_build_info(fd);	
+}
 
+
+char sockname[PATH_MAX];
 
 int main(int argc, char **argv)
 {
@@ -456,13 +466,7 @@ int main(int argc, char **argv)
 			}
 		case 1:
 		{
-			int sockfd = client_func(sockname);
-			char *info = get_sandbox_build_info(sockfd);
-			if (info != NULL)  {	
-				DMSG("error getting build info\n");
-			} else { 
-                                DMSG("%s\n", info);
-			}
+			// move this out of option processing
 			break;
 		}
 		
@@ -500,8 +504,8 @@ int main(int argc, char **argv)
 			memset(sockname, 0x00, PATH_MAX);
 			strncpy(sockname, optarg, PATH_MAX);
 			DMSG("socket: %s\n", sockname);
-			int sockfd = client_func(sockname);
-			DMSG("socket destriptor: %d\n", sockfd);
+//			int sockfd = client_func(sockname);
+//			DMSG("socket destriptor: %d\n", sockfd);
 			
 			
 			break;
@@ -513,5 +517,18 @@ int main(int argc, char **argv)
 			break;
 		}
 	}
+
+
+	if (info_flag > 0) {
+		int sockfd = connect_to_sandbox(sockname);
+		char *info = get_info(sockfd);
+		if (info == NULL)  {	
+			DMSG("error getting build info\n");
+		} else { 
+			DMSG("%s\n", info);
+		}
+	}
+	
+	
 	printf("bye\n");	
 }
