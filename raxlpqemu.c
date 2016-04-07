@@ -106,17 +106,19 @@ static void bin2hex(unsigned char *bin, size_t binlen, char *buf,
 
 /* use a wrapper function so we can eventually support other media beyond */
 /* a domain socket, eg sysfs file */
-int connect_to_sandbox(const char *sandbox_name)
+int connect_to_sandbox(char *sandbox_name)
 {
-	return cli_conn(sandbox_name);	
+	return client_func(sandbox_name);	
 }
 
 /* request message has only the header (including message id) */
 /* reply message has header, buflen, and buf */
-inline int get_sandbox_build_info(int fd, uint8_t **buf)
+inline char * get_sandbox_build(int fd)
 {
-	write_sandbox_message_header(fd, SANDBOX_MSG_VERSION, SANDBOX_MSG_GET_BLD);
-	
+	char  *info = get_sandbox_build_info(fd);
+	if (info != NULL)
+		DMSG("%s\n", info);
+	return info;
 }
 
 
@@ -127,7 +129,7 @@ int cmd_apply(int argc, char *argv[])
         usage();
 
       
-    const char *path = argv[2];
+    char *path = argv[2];
     char filepath[PATH_MAX];
 
     /* basename() can modify its argument, so make a copy */
@@ -453,6 +455,17 @@ int main(int argc, char **argv)
 				usage();			
 			}
 		case 1:
+		{
+			int sockfd = client_func(sockname);
+			char *info = get_sandbox_build_info(sockfd);
+			if (info != NULL)  {	
+				DMSG("error getting build info\n");
+			} else { 
+                                DMSG("%s\n", info);
+			}
+			break;
+		}
+		
 		case 2:
 			DMSG("selected option %s\n", long_options[option_index].name);
 			break;
@@ -487,7 +500,7 @@ int main(int argc, char **argv)
 			memset(sockname, 0x00, PATH_MAX);
 			strncpy(sockname, optarg, PATH_MAX);
 			DMSG("socket: %s\n", sockname);
-			int sockfd = cli_conn(sockname);
+			int sockfd = client_func(sockname);
 			DMSG("socket destriptor: %d\n", sockfd);
 			
 			

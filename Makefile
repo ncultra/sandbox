@@ -9,10 +9,10 @@ CLEAN=@-rm -f sandbox raxlpqemu *o *a *so gitsha.txt platform.h \
 	gitsha.h &>/dev/null
 
 .PHONY: gitsha
-gitsha: gitsha.txt libsandbox.o
+gitsha: gitsha.txt gitsha.h libsandbox.o
 	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 
-sandbox: clean sandbox.o libsandbox.a
+sandbox: sandbox.o libsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
 # any target that requires libsandbox will pull in gitsha.txt automatically
@@ -36,14 +36,16 @@ platform.h:
 	$(shell $(BUILD_ROOT)config.sh)
 
 .PHONY: raxlpqemu
-raxlpqemu: clean raxlpqemu.o util.o libsandbox.a platform.h
+raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
 	$(CC) $(CFLAGS) -c raxlpqemu.c util.c
 #TODO: might need to link libraries statically (probably not)
 	$(CC) $(CFLAGS) -o raxlpqemu -lz -lelf -lcrypto -lpthread -ldl raxlpqemu.o util.o libsandbox.a
 
+.PHONY: gitsha.txt
+
 # use the git tag as the version number
 # tag should be in the format v0.0.0
-gitsha.txt: .git/HEAD .git/index
+gitsha.txt:
 	@echo  "generating .buildinfo elf section..."
 	@echo -n "SANDBOXBUILDINFOSTART" > $@
 	@echo -n "{" >> $@
@@ -55,7 +57,9 @@ gitsha.txt: .git/HEAD .git/index
 	@echo  "}" >> $@
 	@echo -n "SANDBOXBUILDINFOEND" >> $@
 
-gitsha.h: .git/HEAD .git/index
+.PHONY: gitsha.h
+
+gitsha.h:
 	@echo "generating gitsha.h...."
 	@echo "/* this file is generated automatically in the Makefile */" >$@
 	@echo "const char *git_revision=\"$(shell git rev-parse HEAD)\";" >> $@
@@ -76,15 +80,15 @@ gitsha.h: .git/HEAD .git/index
 	@echo "static inline const int get_revision(void){return revision;}" >> $@
 
 .PHONY: shared
-shared: clean libsandbox.so
+shared: libsandbox.so
 
-libsandbox.so: gitsha.txt $(LIB_FILES)
+libsandbox.so: gitsha $(LIB_FILES)
 	$(CC) -fPIC -shared -o $@ $(LIB_FILES)
 	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 
 
 .PHONY: static
-static: clean libsandbox.a
+static: libsandbox.a
 
 .PHONY: all
 all: static shared sandbox raxl
