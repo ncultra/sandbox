@@ -22,6 +22,7 @@
 static int info_flag, list_flag, apply_flag, remove_flag;
 static char filepath[PATH_MAX];
 static char patch_basename[PATH_MAX];
+
 static inline char *get_patch_name(char *path)
 {
 	
@@ -122,19 +123,23 @@ inline char * get_sandbox_build(int fd)
 }
 
 
-#if 0
+int load_patch_file(int fd, char *filename, struct xpatch *patch);
+static inline char *get_qemu_version(void);
+static inline char * get_qemu_date(void);
+
 int cmd_apply(int argc, char *argv[])
 {
     if (argc < 3)
         usage();
 
+//    save the file path in an option variable
       
     char *path = argv[2];
-    char filepath[PATH_MAX];
+  
 
     /* basename() can modify its argument, so make a copy */
     strncpy(filepath, path, sizeof(filepath) - 1);
-    filepath[sizeof(filepath) - d1] = 0;
+    filepath[sizeof(filepath) - 1] = 0;
     char *filename = basename(filepath);
 
     int fd = connect_to_sandbox(path);
@@ -143,29 +148,36 @@ int cmd_apply(int argc, char *argv[])
         return -1;
     }
 
+    //   int pfd = open_patch_file(filepath);
+    
+    
     struct xpatch patch;
     if (load_patch_file(fd, filename, &patch) < 0)
         return -1;
 
-    /* Make sure this patch applies to this version of Xen */
-    char rxenversion[255];
-    char rxencompiledate[255];
+    DMSG("Getting QEMU/sandbox info\n");
+    
+    char *qemu_version = get_qemu_version();
+    char *qemu_compile_date = get_qemu_date();
+    if (!strlen(qemu_version) || !strlen(qemu_compile_date)) {
+	    DMSG("error getting version and complilation data\n");
+	    return -1;	    
+    }
 
-    if (get_xen_version(rxenversion, sizeof(rxenversion)) < 0)
-        return -1;
-    if (get_xen_compile_date(rxencompiledate, sizeof(rxencompiledate)) < 0)
-        return -1;
-
-    printf("Running Xen Information:\n");
-    printf("  Hypervisor Version: %s\n", rxenversion);
-    printf("  Hypervisor Compile Date: %s\n", rxencompiledate);
+ 
+    printf("  QEMU Version: %s\n", qemu_version);
+    printf("  QEMU Compile Date: %s\n", qemu_compile_date);
 
     printf("\n");
     printf("Patch Applies To:\n");
-    printf("  Hypervisor Version: %s\n", patch.xenversion);
-    printf("  Hypervisor Compile Date: %s\n", patch.xencompiledate);
+    printf("  QEMU Version: %s\n", patch.xenversion);
+    printf("  QEMU  Compile Date: %s\n", patch.xencompiledate);
     printf("\n");
 
+    return SANDBOX_OK;
+}
+
+#if 0
     if (strcmp(rxenversion, patch.xenversion) != 0 ||
         strcmp(rxencompiledate, patch.xencompiledate) != 0) {
         fprintf(stderr, "error: patch does not match hypervisor build\n");
@@ -546,23 +558,25 @@ int main(int argc, char **argv)
 			break;
 		case 3:
 		{	
-			int pfd;
-			char *fdname;
-			struct xpatch patch;
+			/* save patch apply flag and patch path to global vars */
+			/* move this code into cmd_apply */
+			/* int pfd; */
+			/* char *fdname; */
+			/* struct xpatch patch; */
 			
-			DMSG("selected option %s with arg %s\n",
-			     long_options[option_index].name, optarg);
+			/* DMSG("selected option %s with arg %s\n", */
+			/*      long_options[option_index].name, optarg); */
 
-			fdname  = get_patch_name(optarg);
-			DMSG("patch file name: %s\n", fdname);			
-			if ((pfd = open_patch_file(optarg)) == SANDBOX_ERR_BAD_FD)
-				exit(0);
-			DMSG("patch file fd %d\n", pfd);
+			/* fdname  = get_patch_name(optarg); */
+			/* DMSG("patch file name: %s\n", fdname);			 */
+			/* if ((pfd = open_patch_file(optarg)) == SANDBOX_ERR_BAD_FD) */
+			/* 	exit(0); */
+			/* DMSG("patch file fd %d\n", pfd); */
 
-			if (load_patch_file(pfd, fdname, &patch) < 0) {
-				return SANDBOX_ERR_BAD_FD;
-			}			
-			DMSG("patch file is loaded\n");
+			/* if (load_patch_file(pfd, fdname, &patch) < 0) { */
+			/* 	return SANDBOX_ERR_BAD_FD; */
+			/* }			 */
+			/* DMSG("patch file is loaded\n"); */
 
 			break;
 		}
