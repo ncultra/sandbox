@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 			
 				ccode = read_sandbox_message_header(fd, &version,
 								    &id, &len, NULL);
-				sleep(1);
+			
 
 				info = get_sandbox_build_info(fd);
 				if (info != NULL) {
