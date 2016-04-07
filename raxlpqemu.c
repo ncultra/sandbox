@@ -500,9 +500,6 @@ int main(int argc, char **argv)
 			memset(sockname, 0x00, PATH_MAX);
 			strncpy(sockname, optarg, PATH_MAX);
 			DMSG("socket: %s\n", sockname);
-//			int sockfd = client_func(sockname);
-//			DMSG("socket destriptor: %d\n", sockfd);
-			
 			
 			break;
 		}
