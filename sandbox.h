@@ -130,7 +130,10 @@ struct table_patch {
     unsigned char *data;
 };
 
-
+/* TODO  make a containing list header for xpatch */
+/* (our struct patch already contains a list pointer) */
+/* use linux/include/linux/list.h */
+/* put linux list_head in xpatch at the end, use container_of to get the patch */
 struct xpatch {
     unsigned char sha1[20];
 

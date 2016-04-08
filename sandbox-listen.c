@@ -887,6 +887,7 @@ char *get_sandbox_build_info(int fd)
 }
 
 
+/* work with struct xpatch (from xen live-patching) */ 
 int sandbox_list_patches(int fd) 
 {
 	return SANDBOX_OK;
