@@ -885,3 +885,9 @@ char *get_sandbox_build_info(int fd)
 	}
 	return info;
 }
+
+
+int sandbox_list_patches(int fd) 
+{
+	return SANDBOX_OK;
+}

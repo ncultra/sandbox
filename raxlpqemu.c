@@ -26,6 +26,32 @@ static char patch_basename[PATH_MAX];
 static char sockname[PATH_MAX];
 static int sockfd;
 
+#define COUNT_INFO_STRINGS 6
+#define INFO_STRING_LEN 255
+#define INFO_SHA_INDEX 0
+#define INFO_COMPILE_INDEX 1
+#define INFO_FLAGS_INDEX 2
+#define INFO_DATE_INDEX 3
+#define INFO_TAG_INDEX 4
+#define INFO_VER_INDEX 5
+char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
+
+#define INFO_CHECK()				\
+	if (strnlen(info_strings[0], INFO_STRING_LEN) < 1)	\
+		get_info_strings(sockfd, 0);
+
+int find_patch(int fd, unsigned char *sha1, size_t sha1_size,
+	       struct xenlp_patch_info **patch )
+
+{
+//	struct xenlp_list list = { .skippatches = 0 };
+
+	int ccode = sandbox_list_patches(fd);
+	
+
+	return ccode;
+}
+
 static inline char *get_patch_name(char *path)
 {
 	
@@ -173,42 +199,30 @@ int cmd_apply(int fd)
     printf("\n");
 
     return SANDBOX_OK;
-}
 
-#if 0
-    if (strcmp(rxenversion, patch.xenversion) != 0 ||
-        strcmp(rxencompiledate, patch.xencompiledate) != 0) {
-        fprintf(stderr, "error: patch does not match hypervisor build\n");
-        return -1;
-    }
 
-    /* Perform some sanity checks */
-    if (patch.crowbarabs != 0) {
-        fprintf(stderr, "error: cannot handle crowbar style patches\n");
-        return -1;
-    }
 
-    if (patch.numchecks > 0) {
-        fprintf(stderr, "error: cannot handle prechecks\n");
-        return -1;
+    if (strncmp(qemu_version, patch.xenversion, INFO_STRING_LEN) != 0 ||
+	strncmp(qemu_compile_date, patch.xencompiledate, INFO_STRING_LEN) != 0) {
+	    DMSG("error: patch does not match QEMU build\n");
+	    return SANDBOX_ERR_BAD_VER;
     }
+    
 
-    /* FIXME: Handle hypercall table writes too */
-    if (patch.numtables > 0) {
-        fprintf(stderr, "error: cannot handle table writes, yet\n");
-        return -1;
-    }
 
     struct xenlp_patch_info *info = NULL;
     /* Do a list first and make sure patch isn't already applied yet */
-    if (find_patch(xch, patch.sha1, sizeof(patch.sha1), &info) < 0) {
-        fprintf(stderr, "error: could not search for patches\n");
-        return -1;
+    if (find_patch(fd, patch.sha1, sizeof(patch.sha1), &info) < 0) {
+        DMSG("error: could not search for patches\n");
+        return SANDBOX_ERR_RW;
     }
     if (info) {
         printf("Patch already applied, skipping\n");
         return 0;
     }
+}
+
+#if 0
 
     /* Convert into a series of writes for the live patch functionality */
     uint32_t numwrites = patch.numfuncs;
@@ -409,19 +423,6 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
     return 0;
 }
 
-#define COUNT_INFO_STRINGS 6
-#define INFO_STRING_LEN 255
-#define INFO_SHA_INDEX 0
-#define INFO_COMPILE_INDEX 1
-#define INFO_FLAGS_INDEX 2
-#define INFO_DATE_INDEX 3
-#define INFO_TAG_INDEX 4
-#define INFO_VER_INDEX 5
-char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
-
-#define INFO_CHECK()				\
-	if (strnlen(info_strings[0], INFO_STRING_LEN) < 1)	\
-		get_info_strings(sockfd, 0);
 
 
 /* when display is set print the info strings */

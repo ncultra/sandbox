@@ -330,3 +330,5 @@ int write_sandbox_message_header(int fd,
 /* **** test functions **** */
 char *get_sandbox_build_info(int fd);
 int client_func(void *p);
+int sandbox_list_patches(int fd);
+
