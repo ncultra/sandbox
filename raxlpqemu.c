@@ -23,6 +23,9 @@ static int info_flag, list_flag, apply_flag, remove_flag;
 static char filepath[PATH_MAX];
 static char patch_basename[PATH_MAX];
 
+static char sockname[PATH_MAX];
+static int sockfd;
+
 static inline char *get_patch_name(char *path)
 {
 	
@@ -40,12 +43,16 @@ void usage(void)
 int open_patch_file(char *path)
 {
 	int patchfd;
+
+	if (!strlen(path)) {
+		DMSG("filepath is not initialized\n");
+		return SANDBOX_ERR_BAD_FD;
+	}	
 	patchfd = open(path, O_RDONLY);
 	if (patchfd < 0) {
 		DMSG("error: open(%s): %m\n", path);
 		return SANDBOX_ERR_BAD_FD;
 	}
-	strncpy(filepath, path, PATH_MAX -1);
 	return patchfd;
 }
 
@@ -125,43 +132,34 @@ inline char * get_sandbox_build(int fd)
 
 int load_patch_file(int fd, char *filename, struct xpatch *patch);
 static inline char *get_qemu_version(void);
-static inline char * get_qemu_date(void);
+static inline char *get_qemu_date(void);
 
-int cmd_apply(int argc, char *argv[])
+int cmd_apply(int fd)
 {
-    if (argc < 3)
-        usage();
-
-//    save the file path in an option variable
-      
-    char *path = argv[2];
-  
-
-    /* basename() can modify its argument, so make a copy */
-    strncpy(filepath, path, sizeof(filepath) - 1);
-    filepath[sizeof(filepath) - 1] = 0;
-    char *filename = basename(filepath);
-
-    int fd = connect_to_sandbox(path);
-    if (fd < 0) {
-        fprintf(stderr, "error: open(%s): %m\n", path);
-        return -1;
-    }
-
-    //   int pfd = open_patch_file(filepath);
-    
-    
+    int pfd;
+    char *filename;
     struct xpatch patch;
-    if (load_patch_file(fd, filename, &patch) < 0)
-        return -1;
 
+    filename = get_patch_name(filepath);
+    
+    pfd = open_patch_file(filepath);
+    if (pfd < 0) {
+	    DMSG("error opening patch file %s\n", filepath);
+	    return SANDBOX_ERR_BAD_FD;
+    }
+    
+    if (load_patch_file(pfd, filename, &patch) < 0) {
+	    DMSG("error parsing patch file %s\n", filename);
+	    return SANDBOX_ERR_PARSE;;
+    }
+    
     DMSG("Getting QEMU/sandbox info\n");
     
     char *qemu_version = get_qemu_version();
     char *qemu_compile_date = get_qemu_date();
     if (!strlen(qemu_version) || !strlen(qemu_compile_date)) {
 	    DMSG("error getting version and complilation data\n");
-	    return -1;	    
+	    return SANDBOX_ERR_RW;	    
     }
 
  
@@ -411,10 +409,6 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
     return 0;
 }
 
-char sockname[PATH_MAX];
-int sockfd;
-
-
 #define COUNT_INFO_STRINGS 6
 #define INFO_STRING_LEN 255
 #define INFO_SHA_INDEX 0
@@ -426,11 +420,12 @@ int sockfd;
 char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
 
 #define INFO_CHECK()				\
-	if (info_strings[0][0] == '0')		\
-		get_info_strings(sockfd);
+	if (strnlen(info_strings[0], INFO_STRING_LEN) < 1)	\
+		get_info_strings(sockfd, 0);
 
 
-int get_info_strings(int fd)
+/* when display is set print the info strings */
+int get_info_strings(int fd, int display)
 {
 	char *info_buf, *info_buf_save, *p;
 	int index = 0;
@@ -450,6 +445,9 @@ int get_info_strings(int fd)
 	p = strtok_r(info_buf, "\n", &info_buf_save);
 	for (index = 0; index < COUNT_INFO_STRINGS && p != NULL; index++) {	
 		strncpy(info_strings[index], p, INFO_STRING_LEN);
+		if (display)
+			printf("%s\n", info_strings[index]);
+		
 		p = strtok_r(NULL, "\n", &info_buf_save);
 	}
 	if (index <  COUNT_INFO_STRINGS - 1) {
@@ -498,7 +496,6 @@ static inline char *get_qemu_version(void)
 	INFO_CHECK();
 	return info_strings[INFO_VER_INDEX];
 }
-
 		
 int main(int argc, char **argv)
 {
@@ -551,13 +548,21 @@ int main(int argc, char **argv)
 				break;
 				usage();			
 			}
-		case 1:
-		
-		case 2:
 			DMSG("selected option %s\n", long_options[option_index].name);
+		case 1:
 			break;
+			
+		case 2:
+			break;
+			
 		case 3:
-		{	
+		{
+			printf("%s\n", optarg);
+			
+			strncpy(filepath, optarg, sizeof(filepath) - 1);
+			DMSG("stored path of the patch file: %s\n", filepath);
+			
+
 			/* save patch apply flag and patch path to global vars */
 			/* move this code into cmd_apply */
 			/* int pfd; */
@@ -586,7 +591,6 @@ int main(int argc, char **argv)
 		case 5: 
 		{
 			
-			memset(sockname, 0x00, PATH_MAX);
 			strncpy(sockname, optarg, PATH_MAX);
 			DMSG("socket: %s\n", sockname);
 			
@@ -600,14 +604,47 @@ int main(int argc, char **argv)
 		}
 	}
 
-
+// TODO: un-globalize sockname, sockfd, filepath etc.
 	if (info_flag > 0) {
-		sockfd = connect_to_sandbox(sockname);
-		int info = get_info_strings(sockfd);
+		if ((sockfd = connect_to_sandbox(sockname)) < 0) {
+			DMSG("error connecting to sandbox server\n");
+			return SANDBOX_ERR_RW;
+		}
+		
+		int info = get_info_strings(sockfd, 1);
 		if (info != SANDBOX_OK)  {	
 			DMSG("error getting build info\n");
-		} 
+		}
+		if (sockfd > 0) {
+			close(sockfd);
+			sockfd = -1;
+		}
+		
+		
 	}
+	
+
+	if (apply_flag > 0) {
+
+		int ccode;
+		
+		if ((sockfd = connect_to_sandbox(sockname)) < 0) {
+			DMSG("error connecting to sandbox server\n");
+			return SANDBOX_ERR_RW;
+		}	
+
+		if ((ccode = cmd_apply(sockfd)) < 0)
+			DMSG("error applying patch %d\n", ccode);
+		close(sockfd);
+		return ccode;
+		
+	}
+	
+	
+	
+	if (sockfd > 0)
+		close(sockfd);
+	
 	printf("bye\n");
 	return SANDBOX_OK;
 	
