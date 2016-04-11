@@ -47,7 +47,7 @@ __asm__("retq");
 __asm__("blr");
 #endif
 
-struct patch *patch_list;
+struct list_head patch_list;
 
 uint8_t *patch_cursor = NULL;
 
@@ -102,7 +102,9 @@ int apply_patch(struct patch *new_patch)
 		dump_sandbox((void *)new_patch->patch_buf, 16);
 	
 	new_patch->flags |= PATCH_APPLIED;
-	link_struct_patch(new_patch);
+
+	//TODO: use list macros
+//	link_struct_patch(new_patch);
 	
 	return 0;
 }

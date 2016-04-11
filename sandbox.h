@@ -63,7 +63,6 @@ struct list_head
 
 #define LIST_HEAD_INIT(name) { { &name.n, &name.n } }
 
-
 #define LIST_HEAD(name) \
 	struct list_head name = LIST_HEAD_INIT(name)
 
@@ -108,19 +107,7 @@ static inline void list_del(struct list_node *n)
 	n->prev->next = n->next;
 }
 
-
 #define list_entry(n, type, member) container_of(n, type, member)
-
-
-
-
-
-
-
-
-
-
-
 
 
 // must be page-aligned.
@@ -154,7 +141,6 @@ typedef uint8_t * reloc_ptr_t;
 #define PATCH_PAD 0
 
 struct patch {
-	struct patch *next;
 	unsigned int flags;
 	char  name[0x40];
 	uint8_t SHA1[20];
@@ -166,6 +152,7 @@ struct patch {
 	uint8_t reloc_size;
 	uintptr_t patch_buf;  /* address of data to be patched */
 	uint64_t patch_size;
+	struct list_node l;
 	uint8_t pad[(PATCH_PAD)];
 };
 
@@ -195,28 +182,23 @@ struct table_patch {
 /* use linux/include/linux/list.h */
 /* put linux list_head in xpatch at the end, use container_of to get the patch */
 struct xpatch {
-    unsigned char sha1[20];
-
-    char xenversion[32];
-    char xencompiledate[32];
-
-    uint64_t crowbarabs;
-    uint64_t refabs;
-
-    uint32_t bloblen;
-    unsigned char *blob;
-
-    uint16_t numrelocs;
-    uint32_t *relocs;
-
-    uint16_t numchecks;
-    struct check *checks;
-
-    uint16_t numfuncs;
-    struct function_patch *funcs;
-
-    uint16_t numtables;
-    struct table_patch *tables;
+	unsigned char sha1[20];
+	
+	char xenversion[32];
+	char xencompiledate[32];	
+	uint64_t crowbarabs;
+	uint64_t refabs;
+	uint32_t bloblen;
+	unsigned char *blob;
+	uint16_t numrelocs;
+	uint32_t *relocs;
+	uint16_t numchecks;
+	struct check *checks;
+	uint16_t numfuncs;
+	struct function_patch *funcs;
+	uint16_t numtables;
+	struct table_patch *tables;
+	struct list_node l;
 };
 
 
@@ -225,7 +207,8 @@ struct xpatch {
 extern const char *gitversion, *cc, *cflags;
 extern uintptr_t patch_sandbox_start, patch_sandbox_end;
 extern uint8_t *patch_cursor;
-extern struct patch *patch_list;
+
+extern struct list_head patch_list;
 
 uint8_t *make_sandbox_writeable(void);
 struct patch *alloc_patch(char *name, uint64_t size);
@@ -248,11 +231,6 @@ static inline uint8_t *update_patch_cursor(uint64_t offset)
 	return (patch_cursor += offset);
 }
 
-static inline void link_struct_patch(struct patch *p) 
-{
-	p->next = patch_list;
-	patch_list = p;
-};
 
 static inline uint64_t get_sandbox_free(void)
 {
