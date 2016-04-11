@@ -28,7 +28,11 @@
 #include <libgen.h>
 #include <openssl/sha.h>
 #include "platform.h"
+
+
+
 // TODO: remove move this def to the makefile
+// TODO: incorporate a log level so this macro can log as well as diagnose bugs
 #ifndef __DEBUG__
 #define __DEBUG__ 1
 #endif
@@ -41,6 +45,84 @@
 #define DMSG(...) do { } while( 0 )
 #endif
 
+/* list macros */
+
+#define container_of(ptr, type, member) ({ \
+                const typeof( ((type *)0)->member ) *__mptr = (ptr);  \
+		(type *)( (char *)__mptr - offsetof(type,member) );})
+
+struct list_node
+{
+	struct list_node *next, *prev;
+};
+
+struct list_head
+{
+	struct list_node n;
+};
+
+#define LIST_HEAD_INIT(name) { { &name.n, &name.n } }
+
+
+#define LIST_HEAD(name) \
+	struct list_head name = LIST_HEAD_INIT(name)
+
+static inline void list_head_init(struct list_head *h)
+{
+	h->n.next = h->n.prev = &h->n;
+}
+
+
+static inline void list_node_init(struct list_node *n)
+{
+	n->next = n->prev = n;
+}
+
+static inline void list_add_after(struct list_head *h,
+				   struct list_node *p,
+				  struct list_node *n)
+
+{
+	n->next = p->next;
+	n->prev = p;
+	p->next->prev = n;
+	p->next = n;
+}
+
+
+static inline void list_add(struct list_head *h,
+			    struct list_node *n)
+
+{
+	list_add_after(h, &h->n, n);
+}
+
+static inline int list_empty_(const struct list_head *h)
+{
+	return h->n.next == &h->n;
+}
+
+static inline void list_del(struct list_node *n)
+{
+	n->next->prev = n->prev;
+	n->prev->next = n->next;
+}
+
+
+#define list_entry(n, type, member) container_of(n, type, member)
+
+
+
+
+
+
+
+
+
+
+
+
+
 // must be page-aligned.
 #define SANDBOX_ALLOC_SIZE PLATFORM_PAGE_SIZE
 
@@ -51,8 +133,7 @@
 #ifdef PPC64LE
 #define smp_mb() {__asm__ __volatile__ ("sync" : : : "memory");}
 #endif
-typedef uint8_t * reloc_ptr_t;;
-
+typedef uint8_t * reloc_ptr_t;
 
 
 /* flags for patch list */
@@ -72,27 +153,6 @@ typedef uint8_t * reloc_ptr_t;;
 /* TODO: align members on cache lines */
 #define PATCH_PAD 0
 
-/*****************************************************************
- *   STRUCT PATCH Members
- *  
- *  name: human-readable name for the patch
- *  SHA1: cryptographic signature of the patch data
- *  canary: an array of bytes that must match decoded instructions in 
- *         the patch target of the running binary.
- *  build_id: id of the binary to which this patch applies. This is intended
- *            to be a git commit # for the head of the repository when the 
- *            binary is built. 
- *  patch_dest: address of the patch once applied - a pointer 
- *              into the sandbox.
- *  reloc_dest: absolute address where the jump record, or trampoline, 
- *              is written.
- *  reloc_size: size in bytes of the jump record
- *  patch_buf: buffer containing patch bytes to be written to the sandbox.
- *  patch_size: the number of bytes in the patch, also the number 
- *              of bytes to be written to the sandbox, and the 
- *              size of the patch buffer.
- *  pad: empty bytes if needed for alignment purposes.
- ****************************************************************/
 struct patch {
 	struct patch *next;
 	unsigned int flags;
