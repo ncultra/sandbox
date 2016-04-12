@@ -125,9 +125,7 @@ static int xenlp_apply(void *arg)
     int32_t relocrel = 0;
     char sha1[41];
 
-    if (copy_from_guest(&apply, arg, 1))
-        return -EFAULT;
-
+    
     /* FIXME: Manipulating arg.p seems a bit ugly */
 
     /* Skip over struct xenlp_apply */
@@ -161,9 +159,7 @@ static int xenlp_apply(void *arg)
 
         /* FIXME: Memory allocated for blob can leak in case of error */
 
-        /* Copy blob to hypervisor */
-        if (copy_from_guest(blob, arg, apply.bloblen))
-            return -EFAULT;
+        /* Copy blob to hypervisor was copy from guest */
 
         /* Skip over blob */
         arg.p = (unsigned char *)arg.p + apply.bloblen;
@@ -180,8 +176,7 @@ static int xenlp_apply(void *arg)
         if (!relocs)
             return -ENOMEM;
 
-        if (copy_from_guest(relocs, arg, apply.numrelocs))
-            return -EFAULT;
+	/* was copy from guest */
 
         arg.p = (unsigned char *)arg.p + (apply.numrelocs * sizeof(relocs[0]));
 
@@ -204,8 +199,7 @@ static int xenlp_apply(void *arg)
     if (!writes)
         return -ENOMEM;
 
-    if (copy_from_guest(writes, arg, apply.numwrites))
-        return -EFAULT;
+    /* was copy from guest */
 
     /* Move over all of the writes */
     arg.p = (unsigned char *)arg.p + (apply.numwrites * sizeof(writes[0]));
