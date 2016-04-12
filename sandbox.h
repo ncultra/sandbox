@@ -109,6 +109,17 @@ static inline void list_del(struct list_node *n)
 
 #define list_entry(n, type, member) container_of(n, type, member)
 
+#define list_first_entry(ptr, type, member) \
+	list_entry((ptr)->next, type, member)
+
+#define list_next_entry(pos, member)			\
+	list_entry((pos)->member.next, typeof(*(pos)), member)
+
+#define list_for_each_entry(pos, head, member)                          \
+         for (pos = list_first_entry(head, typeof(*pos), member);        \
+              &pos->member != (head);                                    \
+              pos = list_next_entry(pos, member))
+
 
 // must be page-aligned.
 #define SANDBOX_ALLOC_SIZE PLATFORM_PAGE_SIZE
