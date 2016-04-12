@@ -151,22 +151,7 @@ typedef uint8_t * reloc_ptr_t;
 /* TODO: align members on cache lines */
 #define PATCH_PAD 0
 
-struct patch {
-	unsigned int flags;
-	char  name[0x40];
-	uint8_t SHA1[20];
-	uint8_t canary[32];
-	uint8_t build_id[20]; /* sha1 of git head when built */	
-	uint8_t *patch_dest; /* absolute addr within the sandbox */
-	uintptr_t reloc_dest; /* absolutre addr of the relocation */
-	uint8_t reloc_data[PLATFORM_RELOC_SIZE]; /* max single instruction size is 15 */
-	uint8_t reloc_size;
-	uintptr_t patch_buf;  /* address of data to be patched */
-	uint64_t patch_size;
-	struct list_node l;
-	uint8_t pad[(PATCH_PAD)];
-};
-
+#define INFO_STRING_LEN 255
 
 
 struct check {
@@ -190,31 +175,52 @@ struct table_patch {
     unsigned char *data;
 };
 
+struct xenlp_apply {
+    unsigned char sha1[20];	/* SHA1 of patch file (binary) */
+    char __pad0[4];
+    uint32_t bloblen;		/* Length of blob */
+    uint32_t numrelocs;		/* Number of relocations */
+    uint32_t numwrites;		/* Number of writes */
+    char __pad1[4];
+    uint64_t refabs;		/* Reference address for relocations */
+};
 
 
-
-/* use linux/include/linux/list.h */
-/* put linux list_head in xpatch at the end, use container_of to get the patch */
 struct xpatch {
-	unsigned char sha1[20];
-	
-	char xenversion[32];
-	char xencompiledate[32];	
-	uint64_t crowbarabs;
-	uint64_t refabs;
+	unsigned char sha1[20];	
+	char xenversion[INFO_STRING_LEN]; /* qemu version, compiledate, etc */
+	char xencompiledate[INFO_STRING_LEN]; 
+	uint64_t crowbarabs; /* don't need this */
+	uint64_t refabs; /* qemu start of .txt */
 	uint32_t bloblen;
 	unsigned char *blob;
 	uint16_t numrelocs;
 	uint32_t *relocs;
-	uint16_t numchecks;
-	struct check *checks;
+	uint16_t numchecks;  /*  not currently used */
+	struct check *checks; /* same purpose as the canary in the classic patch struct */
 	uint16_t numfuncs;
 	struct function_patch *funcs;
 	uint16_t numtables;
 	struct table_patch *tables;
-	struct list_node l;
+	struct list_node l; /* list handle */
 };
 
+/* this is the original QEMU patch format prior to converting to the raxlp tools. */
+struct patch {
+	unsigned int flags;
+	char  name[0x40];
+	uint8_t SHA1[20];
+	uint8_t canary[32];
+	uint8_t build_id[20]; /* sha1 of git head when built */	
+	uint8_t *patch_dest; /* absolute addr within the sandbox */
+	uintptr_t reloc_dest; /* absolutre addr of the relocation */
+	uint8_t reloc_data[PLATFORM_RELOC_SIZE]; /* max single instruction size is 15 */
+	uint8_t reloc_size;
+	uintptr_t patch_buf;  /* address of data to be patched */
+	uint64_t patch_size;
+	struct list_node l;
+	uint8_t pad[(PATCH_PAD)];
+};
 
 
 // these const strings contain information generated at build time.

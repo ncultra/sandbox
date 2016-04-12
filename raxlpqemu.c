@@ -3,7 +3,7 @@
  *
  * listen on a unix domain socket for incoming patches
  ****************************************************************/
-/* these are not used by any other obj, so keep the #includes here */
+/* these are not used by any otherx obj, so keep the #includes here */
 
 #include <zlib.h>
 #include <libelf.h>
@@ -27,7 +27,7 @@ static char sockname[PATH_MAX];
 static int sockfd;
 
 #define COUNT_INFO_STRINGS 6
-#define INFO_STRING_LEN 255
+
 #define INFO_SHA_INDEX 0
 #define INFO_COMPILE_INDEX 1
 #define INFO_FLAGS_INDEX 2

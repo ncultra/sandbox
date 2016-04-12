@@ -115,6 +115,159 @@ err_exit:
 }
 
 
+static int xenlp_apply(void *arg)
+{
+    struct xenlp_apply apply;
+    unsigned char *blob = NULL;
+    struct xenlp_patch_write *writes;
+    size_t i;
+    struct applied_patch *patch;
+    int32_t relocrel = 0;
+    char sha1[41];
+
+    if (copy_from_guest(&apply, arg, 1))
+        return -EFAULT;
+
+    /* FIXME: Manipulating arg.p seems a bit ugly */
+
+    /* Skip over struct xenlp_apply */
+    arg.p = (unsigned char *)arg.p + sizeof(apply);
+
+    /* Do some initial sanity checking */
+    if (apply.bloblen > MAX_PATCH_SIZE) {
+        printk("live patch size %u is too large\n", apply.bloblen);
+        return -EINVAL;
+    }
+
+    if (apply.numwrites == 0) {
+        printk("need at least one patch\n");
+        return -EINVAL;
+    }
+
+    patch = xmalloc(struct applied_patch);
+    if (!patch)
+        return -ENOMEM;
+
+    /* FIXME: Memory allocated for patch can leak in case of error */
+
+    /* Blobs are optional */
+    if (apply.bloblen) {
+        unsigned int pageorder;
+
+        pageorder = get_order_from_bytes(apply.bloblen);
+        blob = allocate_map_mem(pageorder);
+        if (!blob)
+            return -ENOMEM;
+
+        /* FIXME: Memory allocated for blob can leak in case of error */
+
+        /* Copy blob to hypervisor */
+        if (copy_from_guest(blob, arg, apply.bloblen))
+            return -EFAULT;
+
+        /* Skip over blob */
+        arg.p = (unsigned char *)arg.p + apply.bloblen;
+
+        /* Calculate offset of relocations */
+        relocrel = (uint64_t)blob - apply.refabs;
+    }
+
+    /* Read relocs */
+    if (apply.numrelocs) {
+        uint32_t *relocs;
+
+        relocs = xmalloc_array(uint32_t, apply.numrelocs);
+        if (!relocs)
+            return -ENOMEM;
+
+        if (copy_from_guest(relocs, arg, apply.numrelocs))
+            return -EFAULT;
+
+        arg.p = (unsigned char *)arg.p + (apply.numrelocs * sizeof(relocs[0]));
+
+        for (i = 0; i < apply.numrelocs; i++) {
+            uint32_t off = relocs[i];
+            if (off > apply.bloblen - sizeof(int32_t)) {
+                printk("invalid off value %d\n", off);
+                return -EINVAL;
+            }
+
+            /* blob -> HV .text */
+            *((int32_t *)(blob + off)) -= relocrel;
+        }
+
+        xfree(relocs);
+    }
+
+    /* Read writes */
+    writes = xmalloc_array(struct xenlp_patch_write, apply.numwrites);
+    if (!writes)
+        return -ENOMEM;
+
+    if (copy_from_guest(writes, arg, apply.numwrites))
+        return -EFAULT;
+
+    /* Move over all of the writes */
+    arg.p = (unsigned char *)arg.p + (apply.numwrites * sizeof(writes[0]));
+
+    /* Verify writes and apply any relocations in writes */
+    for (i = 0; i < apply.numwrites; i++) {
+        struct xenlp_patch_write *pw = &writes[i];
+        char off = pw->dataoff;
+
+        if (pw->hvabs < (uint64_t)_start || pw->hvabs >= lp_tail) {
+            printk("invalid hvabs value %lx\n", pw->hvabs);
+            return -EINVAL;
+        }
+
+        if (off < 0)
+            continue;
+
+        /* HV .text -> blob */
+        switch (pw->reloctype) {
+        case XENLP_RELOC_UINT64:
+            if (off > sizeof(pw->data) - sizeof(uint64_t)) {
+                printk("invalid dataoff value %d\n", off);
+                return -EINVAL;
+            }
+
+            *((uint64_t *)(pw->data + off)) += relocrel;
+            break;
+        case XENLP_RELOC_INT32:
+            if (off > sizeof(pw->data) - sizeof(int32_t)) {
+                printk("invalid dataoff value %d\n", off);
+                return -EINVAL;
+            }
+
+            *((int32_t *)(pw->data + off)) += relocrel;
+            break;
+        default:
+            printk("unknown reloctype value %u\n", pw->reloctype);
+            return -EINVAL;
+        }
+    }
+
+    /* Nothing should be possible to fail now, so do all of the writes */
+    swap_trampolines(writes, apply.numwrites);
+
+    /* Record applied patch */
+    patch->blob = blob;
+    memcpy(patch->sha1, apply.sha1, sizeof(patch->sha1));
+    patch->numwrites = apply.numwrites;
+    patch->writes = writes;
+    patch->next = NULL;
+    if (!lp_patch_head)
+        lp_patch_head = patch;
+    if (lp_patch_tail)
+        lp_patch_tail->next = patch;
+    lp_patch_tail = patch;
+
+    bin2hex(apply.sha1, sizeof(apply.sha1), sha1, sizeof(sha1));
+    printk("successfully applied patch %s\n", sha1);
+
+    return 0;
+}
+
 struct patch *alloc_patch(char  *name, uint64_t size)
 {
 	uint64_t avail = get_sandbox_free();
