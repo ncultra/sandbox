@@ -156,9 +156,53 @@ inline char * get_sandbox_build(int fd)
 }
 
 
+/* TODO: this is stubbed out */
+int do_lp_apply(int fd, void *buf, size_t buflen)
+{
+	return SANDBOX_OK;
+}
+
 int load_patch_file(int fd, char *filename, struct xpatch *patch);
 static inline char *get_qemu_version(void);
 static inline char *get_qemu_date(void);
+
+size_t fill_patch_buf(unsigned char *buf, struct xpatch *patch,
+                      uint32_t numwrites, struct xenlp_patch_write *writes)
+{
+    unsigned char *ptr = buf;
+    struct xenlp_apply apply = {
+        bloblen: patch->bloblen,
+
+        numrelocs: patch->numrelocs,
+        numwrites: numwrites,
+
+        refabs: patch->refabs,
+    };
+
+    size_t buflen = sizeof(apply) + patch->bloblen +
+                    (patch->numrelocs * sizeof(patch->relocs[0])) +
+                    (numwrites * sizeof(writes[0]));
+
+    if (buf == NULL)
+        return buflen;
+
+    memcpy(apply.sha1, patch->sha1, sizeof(apply.sha1));
+
+#define ADR(d, s)	do { memcpy(ptr, d, s); ptr += s; } while (0)
+#define AD(d)		ADR(&d, sizeof(d))
+#define ADA(d, n)	ADR(d, sizeof(d[0]) * n)
+
+    AD(apply);				/* struct xenlp_apply */
+    if (patch->bloblen > 0)
+        ADR(patch->blob, patch->bloblen);	/* blob */
+    if (patch->numrelocs > 0)
+        ADA(patch->relocs, patch->numrelocs);	/* relocs */
+    if (numwrites > 0)
+        ADA(writes, numwrites);		/* writes */
+
+    return (ptr - buf);
+}
+
 
 int cmd_apply(int fd)
 {
@@ -220,9 +264,6 @@ int cmd_apply(int fd)
         printf("Patch already applied, skipping\n");
         return 0;
     }
-}
-
-#if 0
 
     /* Convert into a series of writes for the live patch functionality */
     uint32_t numwrites = patch.numfuncs;
@@ -247,14 +288,15 @@ int cmd_apply(int fd)
         pw->reloctype = XENLP_RELOC_INT32;
         pw->dataoff = 1;
 
-        printf("Patching function %s @ %llx\n", func->funcname, func->oldabs);
+        printf("Patching function %s @ %llx\n", func->funcname,
+	       (long long unsigned int)func->oldabs);
     }
 
     size_t buflen = fill_patch_buf(NULL, &patch, numwrites, writes);
     unsigned char *buf = _zalloc(buflen);
     buflen = fill_patch_buf(buf, &patch, numwrites, writes);
 
-    int ret = do_lp_apply(xch, buf, buflen);
+    int ret = do_lp_apply(fd, buf, buflen);
     if (ret < 0) {
         fprintf(stderr, "failed to patch hypervisor: %m\n");
         return -1;
@@ -265,7 +307,7 @@ int cmd_apply(int fd)
     printf("\nSuccessfully applied patch %s\n", sha1str);
     return 0;
 }
-#endif
+
 
 
 int load_patch_file(int fd, char *filename, struct xpatch *patch)

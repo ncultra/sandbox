@@ -167,6 +167,8 @@ struct patch {
 	uint8_t pad[(PATCH_PAD)];
 };
 
+
+
 struct check {
     uint64_t hvabs;
     uint16_t datalen;
@@ -187,6 +189,8 @@ struct table_patch {
     uint16_t datalen;
     unsigned char *data;
 };
+
+
 
 
 /* use linux/include/linux/list.h */
@@ -382,4 +386,5 @@ int write_sandbox_message_header(int fd,
 char *get_sandbox_build_info(int fd);
 int client_func(void *p);
 int sandbox_list_patches(int fd);
+int do_lp_apply(int fd, void *buf, size_t buflen);
 
