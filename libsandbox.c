@@ -47,7 +47,8 @@ __asm__("retq");
 __asm__("blr");
 #endif
 
-struct list_head patch_list;
+LIST_HEAD(patch_list);
+
 
 uint8_t *patch_cursor = NULL;
 
@@ -89,9 +90,10 @@ int apply_patch(struct patch *new_patch)
 			assert(0);
 			goto err_exit;
 	}
-		// the reloc value should be a near jump "e9 0xaaaaaaaa"
-		// OR the first 3 bytes of the current value of the dest into the reloc_data 
-		// TODO: add some awareness of the data size to be written and the read mask
+
+// the reloc value should be a near jump "e9 0xaaaaaaaa"
+// OR the first 3 bytes of the current value of the dest into the reloc_data
+// TODO: add some awareness of the data size to be written and the read mask
 		
 		smp_mb();
 
@@ -103,9 +105,7 @@ int apply_patch(struct patch *new_patch)
 	
 	new_patch->flags |= PATCH_APPLIED;
 
-	//TODO: use list macros
-//	link_struct_patch(new_patch);
-	
+	list_add(&patch_list, &new_patch->l);
 	return 0;
 }
 
