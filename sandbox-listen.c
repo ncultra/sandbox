@@ -50,15 +50,18 @@
 /* Message ID 3: list patch ********************************************/
 /* Fields:
    1) header
-   2) patch name (string, wild cards ok)
-   3) sha1 of the patch (corresponding to field 5 of message ID 1),
-      20-byte buffer
+   2) msg id (3) sha1 of the patch (corresponding to field 5 of message ID 1),
+      ...
 
    reply msg ID 4:
    1) header
-   2) uint64_t 0L "OK, or error code.
-   3) patch name (if found)
-   4) sha1 of the patch
+   1..n
+      20-byte buffer
+      ...
+      len 20
+      sha1
+
+   3) sha1 of the patch
 */
 
 /* Message ID 5: get build info ********************************************/
@@ -886,9 +889,9 @@ char *get_sandbox_build_info(int fd)
 	return info;
 }
 
-
-/* work with struct xpatch (from xen live-patching) */ 
-
+/* server will return with a block of sha1's that describes all the patches applied */
+/* only need the sha1 of each patch */
+/* work with struct xpatch (from xen live-patching) */
 int sandbox_list_patches(int fd) 
 {
 	return SANDBOX_OK;
