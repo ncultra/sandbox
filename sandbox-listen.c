@@ -896,3 +896,31 @@ int sandbox_list_patches(int fd)
 {
 	return SANDBOX_OK;
 }
+
+
+/* from xen-livepatch hypercall buffer
+ * layout in memory: 
+ *
+ * struct xenlp_apply
+ * blob (bloblen)
+ * relocs (numrelocs * uint32_t)
+ * writes (numwrites * struct xenlp_patch_write)
+ * struct xenlp_apply {
+ *   unsigned char sha1[20];	SHA1 of patch file (binary)
+ *   char __pad0[4];
+ *   uint32_t bloblen;		Length of blob
+ *   uint32_t numrelocs;		Number of relocations
+ *   uint32_t numwrites;		Number of writes
+ *   char __pad1[4];
+ *   uint64_t refabs;		Reference address for relocations
+ * };
+ * 
+ * this is an analogue to the apply-patch hypercall for xen live patching.
+*/
+
+int write_xspatch_to_socket(int fd, struct xpatch *patch, uint32_t numwrites,
+			    struct xenlp_patch_write *writes)
+{
+	return SANDBOX_OK;
+}
+

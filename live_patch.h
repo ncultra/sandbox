@@ -85,17 +85,11 @@ struct xenlp_patch_write {
  * writes (numwrites * struct xenlp_patch_write) */
 struct xenlp_apply {
     unsigned char sha1[20];	/* SHA1 of patch file (binary) */
-
     char __pad0[4];
-
     uint32_t bloblen;		/* Length of blob */
-
     uint32_t numrelocs;		/* Number of relocations */
-
     uint32_t numwrites;		/* Number of writes */
-
     char __pad1[4];
-
     uint64_t refabs;		/* Reference address for relocations */
 };
 

@@ -152,7 +152,7 @@ typedef uint8_t * reloc_ptr_t;
 #define PATCH_PAD 0
 
 #define INFO_STRING_LEN 255
-
+#define MAX_LIST_PATCHES 255
 
 struct check {
     uint64_t hvabs;
@@ -175,6 +175,15 @@ struct table_patch {
     unsigned char *data;
 };
 
+
+/*
+ *
+ * XENLP_apply (cmd 11)
+ *
+ */
+#define XENLP_RELOC_UINT64	0	/* function dispatch tables, etc */
+#define XENLP_RELOC_INT32	1	/* jmp instructions, etc */
+
 struct xenlp_apply {
     unsigned char sha1[20];	/* SHA1 of patch file (binary) */
     char __pad0[4];
@@ -183,6 +192,32 @@ struct xenlp_apply {
     uint32_t numwrites;		/* Number of writes */
     char __pad1[4];
     uint64_t refabs;		/* Reference address for relocations */
+};
+
+struct xenlp_patch_write {
+    uint64_t hvabs;		/* Absolute address in HV to apply patch */
+
+    unsigned char data[8];	/* 8-bytes of data to write at location */
+
+    uint8_t reloctype;		/* XENLP_RELOC_ABS, XENLP_RELOC_REL */
+    char dataoff;		/* Offset into data to apply relocation */
+
+    char __pad[6];
+};
+
+
+struct xenlp_patch_info {
+    uint64_t hvaddr;		/* virtual address in hypervisor memory */
+    unsigned char sha1[20];	/* binary encoded */
+    char __pad[4];
+};
+
+
+struct xenlp_list {
+    uint16_t skippatches;	/* input, number of patches to skip */
+    uint16_t numpatches;	/* output, number of patches returned */
+    char __pad[4];
+    struct xenlp_patch_info patches[MAX_LIST_PATCHES];	/* output */
 };
 
 

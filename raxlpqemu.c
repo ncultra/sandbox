@@ -12,7 +12,6 @@
 #include <sys/un.h>
 #include <errno.h>
 
-#include "live_patch.h"
 #include "util.h"
 
 #include "sandbox.h"
