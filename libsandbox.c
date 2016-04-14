@@ -13,7 +13,8 @@
  * .align 8 on X86 is equal to .align 3 on PPC (2^3 = 8.)
  *
  ************************************************************/
-
+/* TODO: configure option for building with a tiny sandbox. Client applications */
+/* can use the library without wasting space in the sandbox */
 uint64_t fill = PLATFORM_ALLOC_SIZE;
 __asm__(".text");
 
@@ -50,17 +51,17 @@ __asm__("blr");
 
 /* TODO: merge with sandbox struct patch */
 struct applied_patch {
-    void *blob;
-    unsigned char sha1[20];		/* binary encoded */
-    uint32_t numwrites;
-    struct xenlp_patch_write *writes;
-    struct applied_patch *next;
+	void *blob;
+	unsigned char sha1[20];		/* binary encoded */
+	uint32_t numwrites;
+	struct xenlp_patch_write *writes;
+	struct list_node l;
 };
 
 LIST_HEAD(patch_list);
 /* Linked list of applied patches */
 /* TODO: normalize to patch_list */
-static struct applied_patch *lp_patch_head = NULL, *lp_patch_tail = NULL;
+LIST_HEAD(applied_patch);
 
 uint8_t *patch_cursor = NULL;
 
@@ -119,7 +120,7 @@ int apply_patch(struct patch *new_patch)
 
 	list_add(&patch_list, &new_patch->l);
 	return 0;
-}
+	}
 
 err_exit:
 	DMSG("Unable to write relocation record @ %p\n", (void *)new_patch->reloc_dest);
@@ -291,13 +292,7 @@ int xenlp_apply(struct xenlp_apply *arg)
     memcpy(patch->sha1, apply->sha1, sizeof(patch->sha1));
     patch->numwrites = apply->numwrites;
     patch->writes = writes;
-    patch->next = NULL;
-    if (!lp_patch_head)
-        lp_patch_head = patch;
-    if (lp_patch_tail)
-        lp_patch_tail->next = patch;
-    lp_patch_tail = patch;
-
+    list_add(&applied_patch, &patch->l);
     bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
     DMSG("successfully applied patch %s\n", sha1);
 
