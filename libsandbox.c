@@ -174,8 +174,9 @@ void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
         struct xenlp_patch_write *pw = &writes[i];
 
         uint64_t old_data;
-        memcpy(&old_data, (void *)pw->hvabs, sizeof(pw->data));
-        memcpy((void *)pw->hvabs, pw->data, sizeof(pw->data));
+	memcpy(&old_data, (void *)pw->hvabs, sizeof(pw->data));
+	smp_mb();
+	memcpy((void *)pw->hvabs, pw->data, sizeof(pw->data));
         memcpy(pw->data, &old_data, sizeof(pw->data));
     }
 }
