@@ -77,6 +77,26 @@ uint64_t get_sandbox_end(void)
 	
 }
 
+static void *get_sandbox_memory(int size)
+{
+	uint8_t *p = NULL;
+	
+	assert(get_sandbox_free() > size);
+        assert(size < MAX_PATCH_SIZE);
+        
+	patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor,
+						PLATFORM_CACHE_LINE_SIZE);
+	p = patch_cursor;
+	
+	/* paranoid, be certain there are no code fragments wondering around 
+	   in the sandbox. */
+	memset(p, size, sizeof(uint8_t));	
+	patch_cursor += size;
+	patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor,
+						PLATFORM_CACHE_LINE_SIZE);
+	return p;
+}
+
 
 int apply_patch(struct patch *new_patch)
 {
@@ -162,7 +182,7 @@ void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 
 /* server-side apply function */
 /* corresponds to do_lp_apply on the raxl side */
-int xenlp_apply(struct xenlp_apply *arg)
+int xenlp_apply(struct xenlp_apply *arg, void *blob_patch)
 {
     struct xenlp_apply *apply = arg;
     unsigned char *blob = NULL;
@@ -196,27 +216,29 @@ int xenlp_apply(struct xenlp_apply *arg)
     /* FIXME: Memory allocated for patch can leak in case of error */
 
     /* Blobs are optional */
-    if (apply->bloblen) {
-       
-	blob = calloc(apply->bloblen, sizeof(unsigned char));
-        if (!blob)
-            return SANDBOX_ERR_NOMEM;
 
-        /* FIXME: Memory allocated for blob can leak in case of error */
+    /* use sandbox memory */
+    blob = get_sandbox_memory(apply->bloblen);
+    if (!blob)
+	    return SANDBOX_ERR_NOMEM;
+    
+    /* FIXME: Memory allocated for blob can leak in case of error */
+    
+    /* Copy blob to hypervisor was copy from guest */
+    memcpy(blob, blob_patch, apply->bloblen);
+    
+    /* Skip over blob */
+    p += apply->bloblen;
+    
+    /* Calculate offset of relocations */
+    relocrel = (uint64_t)blob - apply->refabs;
 
-        /* Copy blob to hypervisor was copy from guest */
 
-        /* Skip over blob */
-        p += apply->bloblen;
 
-        /* Calculate offset of relocations */
-        relocrel = (uint64_t)blob - apply->refabs;
-    }
-
-    /* Read relocs */
+/* Read relocs */
     if (apply->numrelocs) {
         uint32_t *relocs;
-
+	
         relocs = calloc(apply->numrelocs, sizeof(uint32_t));
 
         if (!relocs)
@@ -298,6 +320,7 @@ int xenlp_apply(struct xenlp_apply *arg)
 
     return 0;
 }
+
 
 struct patch *alloc_patch(char  *name, uint64_t size)
 {

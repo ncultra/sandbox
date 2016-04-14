@@ -918,6 +918,8 @@ int sandbox_list_patches(int fd)
  * this is an analogue to the apply-patch hypercall for xen live patching.
 */
 
+/* TODO: unwind the buffer and get a pointer to the blob */
+
 int write_xspatch_to_socket(int fd, struct xpatch *patch, uint32_t numwrites,
 			    struct xenlp_patch_write *writes)
 {

@@ -274,6 +274,9 @@ void dump_sandbox(const void* data, size_t size);
 
 static inline uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
 {
+	if (! p % offset)
+		return p;
+	
 	p += (offset - 1);
 	p &= ~(offset - 1);
 	return p;
