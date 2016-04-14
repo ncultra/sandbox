@@ -180,6 +180,29 @@ void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
     }
 }
 
+
+/* unlike the xen kernel, there is a good chance that the .text is not writeable. 
+ * So, make the text page that will host the trampoline writeable.
+ */
+static void make_text_writeable(struct xenlp_patch_write *writes,
+				uint32_t numwrites)
+{
+	int i;
+	for (i = 0; i < numwrites; i++) {
+		struct xenlp_patch_write *pw = &writes[i];
+		uint64_t p = (uint64_t)pw->hvabs;
+		p &= PLATFORM_PAGE_MASK;
+		if (mprotect((void *)p , PLATFORM_PAGE_SIZE,
+			     PROT_READ|PROT_EXEC|PROT_WRITE)){			
+			perror("err: ");
+			assert(0);
+		}	
+	}
+}
+
+
+
+
 /* server-side apply function */
 /* corresponds to do_lp_apply on the raxl side */
 int xenlp_apply(struct xenlp_apply *arg, void *blob_patch)
@@ -306,6 +329,9 @@ int xenlp_apply(struct xenlp_apply *arg, void *blob_patch)
         }
     }
 
+
+    make_text_writeable(writes, apply->numwrites);
+    
     /* Nothing should be possible to fail now, so do all of the writes */
     swap_trampolines(writes, apply->numwrites);
 
@@ -404,8 +430,7 @@ void init_sandbox(void)
 int reflect(struct dl_phdr_info *info,
 	    int (*cb)(struct dl_phdr_info *i, size_t s, void *data))
 {
-	dl_iterate_phdr(cb, NULL);
-	
+	dl_iterate_phdr(cb, NULL);	
 	return 0;
 
 }
