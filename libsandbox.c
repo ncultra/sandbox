@@ -169,16 +169,15 @@ static void bin2hex(unsigned char *bin, size_t binlen, char *buf,
 }
 void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 {
-    int i;
-    for (i = 0; i < numwrites; i++) {
-        struct xenlp_patch_write *pw = &writes[i];
-
-        uint64_t old_data;
-	memcpy(&old_data, (void *)pw->hvabs, sizeof(pw->data));
-	smp_mb();
-	memcpy((void *)pw->hvabs, pw->data, sizeof(pw->data));
-        memcpy(pw->data, &old_data, sizeof(pw->data));
-    }
+	int i;
+	for (i = 0; i < numwrites; i++) {
+	    struct xenlp_patch_write *pw = &writes[i];
+	
+	    uint64_t old_data = __sync_lock_test_and_set((uint64_t *)pw->hvabs,
+							 *(uint64_t *)pw->data);
+	    __sync_val_compare_and_swap((uint64_t *)pw->data,
+					*(uint64_t *)pw->hvabs, *(uint64_t *)old_data);   
+	}
 }
 
 
