@@ -28,8 +28,11 @@
 #include <libgen.h>
 #include <openssl/sha.h>
 #include "platform.h"
+#include "atomic.h"
 
 
+#ifndef __SANDBOX_H
+#define __SANDBOX_H 1
 
 // TODO: remove move this def to the makefile
 // TODO: incorporate a log level so this macro can log as well as diagnose bugs
@@ -123,10 +126,6 @@ static inline void list_del(struct list_node *n)
 
 // must be page-aligned.
 #define SANDBOX_ALLOC_SIZE PLATFORM_PAGE_SIZE
-
-#ifdef X86_64
-#define smp_mb()    ({ asm volatile("mfence" ::: "memory"); (void)0; })
-#endif
 
 #ifdef PPC64LE
 #define smp_mb() {__asm__ __volatile__ ("sync" : : : "memory");}
@@ -432,3 +431,4 @@ int client_func(void *p);
 int sandbox_list_patches(int fd);
 int do_lp_apply(int fd, void *buf, size_t buflen);
 
+#endif /* __SANDBOX_H */

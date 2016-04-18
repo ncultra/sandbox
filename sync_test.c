@@ -1,6 +1,7 @@
 #include <memory.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include "atomic.h"
 
 
 //  sudo numactl --physcpubind=1 perf stat ./a.out 10 1
