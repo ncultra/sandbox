@@ -88,7 +88,7 @@
 #define atomic_mb_set(ptr, i)  do {                     \
     typeof(*ptr) _val = (i);                            \
     smp_wmb();                                          \
-    __atomic_store(ptr, &_val, __ATOMIC_RELAXED);       \
+    __atomic_store(ptr, &_val, __ATOMIC_RELAXED);  b     \
     smp_mb();                                           \
 } while(0)
 #else
@@ -109,9 +109,7 @@
 /* All the remaining operations are fully sequentially consistent */
 
 #define atomic_xchg(ptr, i)    ({                           \
-    typeof(*ptr) _new = (i), _old;                          \
-    __atomic_exchange(ptr, &_new, &_old, __ATOMIC_SEQ_CST); \
-    _old;                                                   \
+    __atomic_exchange(ptr, i, i, __ATOMIC_SEQ_CST);       \
 })
 
 /* Returns the eventual value, failed or not */
@@ -172,12 +170,9 @@
 #define smp_wmb()   barrier()
 #define smp_rmb()   barrier()
 
-/*
- * __sync_lock_test_and_set() is documented to be an acquire barrier only,
- * but it is a full barrier at the hardware level.  Add a compiler barrier
- * to make it a full barrier also at the compiler level.
- */
-#define atomic_xchg(ptr, i)    (barrier(), __sync_lock_test_and_set(ptr, i))
+#define atomic_xchg(ptr, i)    ({                         \
+    __atomic_exchange(ptr, i, i, __ATOMIC_SEQ_CST);       \
+})
 
 /*
  * Load/store with Java volatile semantics.

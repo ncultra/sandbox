@@ -174,12 +174,11 @@ void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 	
 	for (i = 0; i < numwrites; i++) {
 		struct xenlp_patch_write *pw = &writes[i];
-		
-	    __atomic_exchange((uint64_t *)pw->hvabs,
-			      (uint64_t *)pw->data,
-			      (uint64_t *)pw->data,
-			      __ATOMIC_SEQ_CST);
 
+	    atomic_xchg((uint64_t *)pw->hvabs,
+			(uint64_t *)pw->data);
+	    
+	
 	}
 }
 
