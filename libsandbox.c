@@ -58,10 +58,11 @@ struct applied_patch {
 	struct list_node l;
 };
 
+/* this is the 'new'patch struct */
 LIST_HEAD(patch_list);
 /* Linked list of applied patches */
-/* TODO: normalize to patch_list */
-LIST_HEAD(applied_patch);
+
+LIST_HEAD(applied_list);
 
 uint8_t *patch_cursor = NULL;
 
@@ -342,7 +343,7 @@ int xenlp_apply(struct xenlp_apply *arg, void *blob_patch)
     memcpy(patch->sha1, apply->sha1, sizeof(patch->sha1));
     patch->numwrites = apply->numwrites;
     patch->writes = writes;
-    list_add(&applied_patch, &patch->l);
+    list_add(&applied_list, &patch->l);
     bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
     DMSG("successfully applied patch %s\n", sha1);
 

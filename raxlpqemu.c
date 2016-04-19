@@ -156,8 +156,10 @@ inline char * get_sandbox_build(int fd)
 
 
 /* TODO: this is stubbed out */
+/* client-side counterpart to xenlp_apply */
 int do_lp_apply(int fd, void *buf, size_t buflen)
 {
+// fill buffer, write it to the socket 
 	return SANDBOX_OK;
 }
 
@@ -240,9 +242,6 @@ int cmd_apply(int fd)
     printf("  QEMU Version: %s\n", patch.xenversion);
     printf("  QEMU  Compile Date: %s\n", patch.xencompiledate);
     printf("\n");
-
-    return SANDBOX_OK;
-
 
 
     if (strncmp(qemu_version, patch.xenversion, INFO_STRING_LEN) != 0 ||

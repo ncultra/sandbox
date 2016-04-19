@@ -55,13 +55,9 @@
 
    reply msg ID 4:
    1) header
-   1..n
-      20-byte buffer
-      ...
-      len 20
-      sha1
 
-   3) sha1 of the patch
+   2...n a tuple for each patch on the list containing sha1 and patch name 
+
 */
 
 /* Message ID 5: get build info ********************************************/
@@ -108,25 +104,29 @@ ssize_t dispatch_test_rep(int, int len, void **);
 
 
 typedef ssize_t (*handler)(int, int, void **);
-
-handler dispatch[0xff] =
+// TODO: shrink this down and make the test message a canonical msg. 
+handler dispatch[] =
 {
 	dummy, /* message ids are indexed starting at 1*/
 	dispatch_apply,
 	dummy,
 	dispatch_list,
-	dummy,
+	dispatch_list_response,
 	dispatch_getbld,
 	dispatch_getbld_res,
-	[SANDBOX_TEST_REQ] = dispatch_test_req,
-	[SANDBOX_TEST_REP] = dispatch_test_rep
+	dispatch_test_req,
+	dispatch_test_rep,
+	dummy, dummy
 };
+
+static inline int get_handler_count(void) 
+{
+	return sizeof(dispatch) / sizeof(handler);	
+}
 
 
 #define QLEN 5 // depth of the listening queue
 #define STALE 30 // timout for client user id data
-
-
 
 pthread_t *run_listener(struct listen *l)
 {
@@ -638,7 +638,7 @@ errout:
 }
 
 
-	
+//todo normalize return types to int	
 ssize_t send_rr_buf(int fd, uint16_t id, ...)
 {
 	uint32_t len = SANDBOX_MSG_HDRLEN;
@@ -760,12 +760,77 @@ ssize_t dispatch_apply(int fd, int len, void **bufp)
 
 ssize_t dispatch_list(int fd, int len, void **bufp)
 {
+	int ccode = SANDBOX_ERR_PARSE, remaining_bytes = len - SANDBOX_MSG_HDRLEN;
 	DMSG("patch list dispatcher\n");
-	return send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
-			   SANDBOX_LAST_ARG);
+
+/*	count the number of patches, then allocate list_response array
+	struct list_response[];
+*/
+	struct list_response *r;
+	struct list_node l;
+	struct xpatch *xp;
+	int count = 1, current  = 0;
+	
+	if (! list_empty(&applied_list))  {
+//		list_for_each(xp->l, &applied_list->n) {
+//			count++;
+//		}
+
+		r = = calloc(sizeof(struct list_response), count + 1);
+		if (r == NULL) {
+			DMSG("server out of memory processing patch list\n");
+			return SANDBOX_ERR_NOMEM;
+		}
+		
+		list_for_each_entry(applied_list, xp, l) {
+			memcpy(&r[current].sha1, xp->sha1, sizeof(xp->sha1));
+			current++;
+			if (current == count)
+				break;
+			//TODO: add patch name to xpath and return it here
+		}
+		ccode = send_rr_buf(fd, SANDBOX_MSG_LISTRSP,
+				   sizeof(r), r,
+				   SANDBOX_LAST_ARG);
+		free(r;
+		
+	}
+	
+	return ccode;
 } 
 
 
+
+	/* allocates a response buffer using the clients double pointer */
+	/* buffer will contain an array of struct list_response or NULL */
+ssize_t dispatch_list_response(inf fd, int len, void **bufp)
+{
+	struct list_response *r = NULL;
+	int ccode, remaining_bytes = len - SANDBOX_MSG_HDRLEN;
+	DMSG("patch list responder\n");
+
+	*bufp = calloc(sizeof(uint8_t), remaining_bytes + sizeof(struct list_response));
+	if (*bufp  == NULL) {
+		DMSG("error allocating buffer for patch list\n");
+		return SANDBOX_ERR_NOMEM;
+	}
+
+	/* read the array of struct list_response into the buffer */
+	/* terminated by a NULL entry */
+	if (ccode = readn(fd, *bufp, remaining_bytes) != remaining_bytes)  {
+		DMSG("error reading list response buffer\n");
+		/* safe way to free a buffer without checking for null */
+		realloc(*bufp, 0);
+		*bufp = NULL;
+		ccode = SANDBOX_ERR_PARSE;
+	} else {	
+		ccode = SANDBOX_OK;
+	}
+	
+	return ccode;
+}
+
+	
 /*****************************************************************
  * Dispatch functions: at this point socket's file pointer 
  * is at the first field
@@ -879,13 +944,15 @@ char *get_sandbox_build_info(int fd)
 	uint32_t len;
 	char *listen_buf = NULL, *info = NULL;
 
-	send_rr_buf(fd, SANDBOX_MSG_GET_BLD, SANDBOX_LAST_ARG);
-	read_sandbox_message_header(fd, &version, &id, &len, (void **)&listen_buf);
+	if (send_rr_buf(fd, SANDBOX_MSG_GET_BLD, SANDBOX_LAST_ARG) == SANDBOX_OK) {
 		
-	if (listen_buf != NULL) {
-		info =  strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
-		free(listen_buf);
-	}
+		read_sandbox_message_header(fd, &version, &id, &len, (void **)&listen_buf);
+		if (listen_buf != NULL) {
+			info =  strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
+			free(listen_buf);
+		}
+	}	
+
 	return info;
 }
 
@@ -894,6 +961,17 @@ char *get_sandbox_build_info(int fd)
 /* work with struct xpatch (from xen live-patching) */
 int sandbox_list_patches(int fd) 
 {
+	uint16_t version, id;
+	uint32_t len;
+	char *listen_buf = NULL;
+
+	if (send_rr_buf(fd, SANDBOX_MSG_LIST, SANDBOX_LAST_ARG) == SANDBOX_OK) {	
+		read_sandbox_message_header(fd, &version, &id, &len,
+					    (void **)&listen_buf);
+
+		//TODO HANDLE RESPONSE INFO
+		
+	}
 	return SANDBOX_OK;
 }
 
@@ -920,9 +998,5 @@ int sandbox_list_patches(int fd)
 
 /* TODO: unwind the buffer and get a pointer to the blob */
 
-int write_xspatch_to_socket(int fd, struct xpatch *patch, uint32_t numwrites,
-			    struct xenlp_patch_write *writes)
-{
-	return SANDBOX_OK;
-}
+
 

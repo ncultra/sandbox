@@ -99,7 +99,7 @@ static inline void list_add(struct list_head *h,
 	list_add_after(h, &h->n, n);
 }
 
-static inline int list_empty_(const struct list_head *h)
+static inline int list_empty(const struct list_head *h)
 {
 	return h->n.next == &h->n;
 }
@@ -110,6 +110,7 @@ static inline void list_del(struct list_node *n)
 	n->prev->next = n->next;
 }
 
+
 #define list_entry(n, type, member) container_of(n, type, member)
 
 #define list_first_entry(ptr, type, member) \
@@ -117,6 +118,9 @@ static inline void list_del(struct list_node *n)
 
 #define list_next_entry(pos, member)			\
 	list_entry((pos)->member.next, typeof(*(pos)), member)
+
+#define list_for_each(pos, head) \
+        for (pos = (head)->next; pos != (head); pos = pos->next)
 
 #define list_for_each_entry(pos, head, member)                          \
          for (pos = list_first_entry(head, typeof(*pos), member);        \
@@ -263,6 +267,7 @@ extern uintptr_t patch_sandbox_start, patch_sandbox_end;
 extern uint8_t *patch_cursor;
 
 extern struct list_head patch_list;
+extern struct list_head applied_list;
 
 uint8_t *make_sandbox_writeable(void);
 struct patch *alloc_patch(char *name, uint64_t size);
@@ -313,15 +318,22 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_APPLYRSP 2
 #define SANDBOX_MSG_LIST 3
 #define SANDBOX_MSG_LISTRSP 4
-#define SANDBOX_MSG_BLD_BUFSIZE 512
+#define SANDBOX_MSG_LIST_BUFSIZE 512
+struct list_response {
+	uint8_t sha1[20];
+	uint8_t name[PATH_MAX];
+	
+};
+
 #define SANDBOX_MSG_GET_BLD 5
 #define SANDBOX_MSG_GET_BLDRSP 6
+#define SANDBOX_MSG_BLD_BUFSIZE 512
+#define SANDBOX_TEST_REQ 7
+#define SANDBOX_TEST_REP 8
+
 
 
 #define SANDBOX_LAST_ARG -1
-#define SANDBOX_TEST_REQ 0xfd
-#define SANDBOX_TEST_REP 0xfe
-
 #define SANDBOX_OK 0
 #define SANDBOX_ERR_BAD_HDR -2
 #define SANDBOX_ERR_BAD_VER -3
@@ -429,6 +441,9 @@ int write_sandbox_message_header(int fd,
 char *get_sandbox_build_info(int fd);
 int client_func(void *p);
 int sandbox_list_patches(int fd);
+ssize_t dispatch_list(int fd, int len, void **bufp);
+ssize_t dispatch_list_response(int fd, int len, void **bufp);
+
 int do_lp_apply(int fd, void *buf, size_t buflen);
 
 #endif /* __SANDBOX_H */
