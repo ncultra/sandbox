@@ -55,13 +55,13 @@ struct applied_patch {
 	unsigned char sha1[20];		/* binary encoded */
 	uint32_t numwrites;
 	struct xenlp_patch_write *writes;
-	struct list_node l;
+	struct list_head l;
 };
 
 /* this is the 'new'patch struct */
 LIST_HEAD(patch_list);
-/* Linked list of applied patches */
 
+/* Linked list of applied patches */
 LIST_HEAD(applied_list);
 
 uint8_t *patch_cursor = NULL;
@@ -139,7 +139,7 @@ int apply_patch(struct patch *new_patch)
 	
 	new_patch->flags |= PATCH_APPLIED;
 
-	list_add(&patch_list, &new_patch->l);
+	list_add(&new_patch->l, &patch_list);
 	return 0;
 	}
 
@@ -343,7 +343,7 @@ int xenlp_apply(struct xenlp_apply *arg, void *blob_patch)
     memcpy(patch->sha1, apply->sha1, sizeof(patch->sha1));
     patch->numwrites = apply->numwrites;
     patch->writes = writes;
-    list_add(&applied_list, &patch->l);
+    list_add(&patch->l, &applied_list);
     bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
     DMSG("successfully applied patch %s\n", sha1);
 

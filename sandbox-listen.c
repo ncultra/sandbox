@@ -760,30 +760,31 @@ ssize_t dispatch_apply(int fd, int len, void **bufp)
 
 ssize_t dispatch_list(int fd, int len, void **bufp)
 {
-	int ccode = SANDBOX_ERR_PARSE, remaining_bytes = len - SANDBOX_MSG_HDRLEN;
+	int ccode = SANDBOX_ERR_PARSE;
 	DMSG("patch list dispatcher\n");
 
 /*	count the number of patches, then allocate list_response array
 	struct list_response[];
 */
 	struct list_response *r;
-	struct list_node l;
-	struct xpatch *xp;
+	struct list_head *xp;
+	struct xpatch *ap;
+	
 	int count = 1, current  = 0;
 	
 	if (! list_empty(&applied_list))  {
-//		list_for_each(xp->l, &applied_list->n) {
-//			count++;
-//		}
+		list_for_each(xp, &applied_list) {
+		count++;
+		}
 
-		r = = calloc(sizeof(struct list_response), count + 1);
+		r = calloc(sizeof(struct list_response), count + 1);
 		if (r == NULL) {
 			DMSG("server out of memory processing patch list\n");
 			return SANDBOX_ERR_NOMEM;
 		}
-		
-		list_for_each_entry(applied_list, xp, l) {
-			memcpy(&r[current].sha1, xp->sha1, sizeof(xp->sha1));
+
+		list_for_each_entry(ap, &applied_list, l) {
+			memcpy(&r[current].sha1, ap->sha1, sizeof(ap->sha1));
 			current++;
 			if (current == count)
 				break;
@@ -792,7 +793,7 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 		ccode = send_rr_buf(fd, SANDBOX_MSG_LISTRSP,
 				   sizeof(r), r,
 				   SANDBOX_LAST_ARG);
-		free(r;
+		free(r);
 		
 	}
 	
@@ -803,9 +804,8 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 
 	/* allocates a response buffer using the clients double pointer */
 	/* buffer will contain an array of struct list_response or NULL */
-ssize_t dispatch_list_response(inf fd, int len, void **bufp)
+ssize_t dispatch_list_response(int fd, int len, void **bufp)
 {
-	struct list_response *r = NULL;
 	int ccode, remaining_bytes = len - SANDBOX_MSG_HDRLEN;
 	DMSG("patch list responder\n");
 
@@ -817,10 +817,10 @@ ssize_t dispatch_list_response(inf fd, int len, void **bufp)
 
 	/* read the array of struct list_response into the buffer */
 	/* terminated by a NULL entry */
-	if (ccode = readn(fd, *bufp, remaining_bytes) != remaining_bytes)  {
+	if ((ccode = readn(fd, *bufp, remaining_bytes) != remaining_bytes))  {
 		DMSG("error reading list response buffer\n");
 		/* safe way to free a buffer without checking for null */
-		realloc(*bufp, 0);
+		*bufp = realloc(*bufp, 0);
 		*bufp = NULL;
 		ccode = SANDBOX_ERR_PARSE;
 	} else {	

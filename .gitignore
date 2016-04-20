@@ -13,3 +13,13 @@ raxlpqemu
 *disasm
 sandbox
 sandbox-patched
+*compilation*
+*raxlpxs
+
+client.log
+cscope.files
+cscope.out
+memcpy.asm
+perf.data
+perf.data.old
+server.log

@@ -2,8 +2,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "atomic.h"
-
-
+#include "/racksrc/linux/include/uapi/linux/types.h"
+#include "/racksrc/linux/include/linux/types.h"
+#include "/racksrc/linux/include/linux/list.h"
 //  sudo numactl --physcpubind=1 perf stat ./a.out 10 1
 
 
