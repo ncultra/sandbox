@@ -39,17 +39,38 @@ char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
 	if (strnlen(info_strings[0], INFO_STRING_LEN) < 1)	\
 		get_info_strings(sockfd, 0);
 
-int find_patch(int fd, unsigned char *sha1, size_t sha1_size,
-	       struct xenlp_patch_info **patch )
 
+/* return: < 0 for error; zero if patch applied; one if patch not applied */
+/* TODO: refactor to allow printing the list */
+int find_patch(int fd, uint8_t sha1[20])
 {
-//	struct xenlp_list list = { .skippatches = 0 };
-
-	int ccode = sandbox_list_patches(fd);
+	uint32_t *count, i = 0, ccode = SANDBOX_MSG_APPLY;;
+	struct list_response *response;
 	
-
+	/* return buffer format:*/
+        /* uint32_t count;
+         * struct list_response[count];
+	 * buffer needs to be freed by caller 
+	*/
+	count = (uint32_t *)sandbox_list_patches(fd);
+	if (count == NULL) {
+		DMSG("error getting the list of applied patches\n");
+		return SANDBOX_ERR_PARSE;
+	} 
+	
+	response = (struct list_response *) count + sizeof(uint32_t);
+	for (i = 0; i < *count; i++) {
+		if (memcmp(sha1, response[i].sha1, 20) == 0) {
+			goto exit;
+		}
+	}
+	
+	ccode = SANDBOX_MSG_APPLY;
+exit:
+	free(count);
 	return ccode;
 }
+
 
 static inline char *get_patch_name(char *path)
 {
@@ -160,6 +181,19 @@ inline char * get_sandbox_build(int fd)
 int do_lp_apply(int fd, void *buf, size_t buflen)
 {
 // fill buffer, write it to the socket 
+	if (send_rr_buf(fd,
+			SANDBOX_MSG_APPLY,
+			buflen,
+			buf,
+			SANDBOX_LAST_ARG) == SANDBOX_OK) {
+
+		void *buf;
+		uint16_t version = 1, id = SANDBOX_MSG_APPLYRSP;
+		uint32_t len = 0;
+		read_sandbox_message_header(fd, &version, &id, &len, &buf);
+		
+	}
+	
 	return SANDBOX_OK;
 }
 
@@ -252,17 +286,13 @@ int cmd_apply(int fd)
     
 
 
-    struct xenlp_patch_info *info = NULL;
+    
     /* Do a list first and make sure patch isn't already applied yet */
-    if (find_patch(fd, patch.sha1, sizeof(patch.sha1), &info) < 0) {
-        DMSG("error: could not search for patches\n");
-        return SANDBOX_ERR_RW;
+    if (find_patch(fd, patch.sha1) == SANDBOX_OK) {
+        DMSG("Patch is already applied, skipping\n");
+        return SANDBOX_OK;
     }
-    if (info) {
-        printf("Patch already applied, skipping\n");
-        return 0;
-    }
-
+    
     /* Convert into a series of writes for the live patch functionality */
     uint32_t numwrites = patch.numfuncs;
     struct xenlp_patch_write writes[numwrites];

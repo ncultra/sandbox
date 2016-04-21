@@ -463,7 +463,7 @@ uint64_t get_sandbox_end(void);
 struct list_response {
 	uint8_t sha1[20];
 	uint8_t name[PATH_MAX];
-	
+	struct list_head l;
 };
 
 #define SANDBOX_MSG_GET_BLD 5
@@ -581,10 +581,11 @@ int write_sandbox_message_header(int fd,
 /* **** test functions **** */
 char *get_sandbox_build_info(int fd);
 int client_func(void *p);
-int sandbox_list_patches(int fd);
+void *sandbox_list_patches(int fd);
 ssize_t dispatch_list(int fd, int len, void **bufp);
 ssize_t dispatch_list_response(int fd, int len, void **bufp);
-
+ssize_t dispatch_apply(int fd, int len, void **bufp);
+ssize_t dispatch_apply_response(int fd, int len, void **bufp);
 int do_lp_apply(int fd, void *buf, size_t buflen);
 
 #endif /* __SANDBOX_H */
