@@ -39,9 +39,12 @@ char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
 	if (strnlen(info_strings[0], INFO_STRING_LEN) < 1)	\
 		get_info_strings(sockfd, 0);
 
+static void bin2hex(unsigned char *, size_t, char *, size_t);
+
+
 
 /* return: < 0 for error; zero if patch applied; one if patch not applied */
-/* TODO: refactor to allow printing the list */
+/* if sha1 is NULL print all applied patches */
 int find_patch(int fd, uint8_t sha1[20])
 {
 	uint32_t *count, i = 0, ccode = SANDBOX_MSG_APPLY;;
@@ -57,10 +60,19 @@ int find_patch(int fd, uint8_t sha1[20])
 		DMSG("error getting the list of applied patches\n");
 		return SANDBOX_ERR_PARSE;
 	} 
+	if (*count == 0)
+		goto exit;
+	
+	DMSG("%d applied patches...\n", *count);
 	
 	response = (struct list_response *) count + sizeof(uint32_t);
 	for (i = 0; i < *count; i++) {
-		if (memcmp(sha1, response[i].sha1, 20) == 0) {
+		if (sha1 == NULL) {
+			char sha1str[41];
+			bin2hex(response[i].sha1, sizeof(response[i].sha1),
+				sha1str, sizeof(sha1str));
+			DMSG("%s\n", sha1str);
+		} else if (memcmp(sha1, response[i].sha1, 20) == 0) {
 			goto exit;
 		}
 	}
@@ -71,6 +83,11 @@ exit:
 	return ccode;
 }
 
+int list_patches(int fd)
+{
+	find_patch(fd, 0L);
+	return SANDBOX_OK;
+}
 
 static inline char *get_patch_name(char *path)
 {
