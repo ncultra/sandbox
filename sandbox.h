@@ -36,17 +36,16 @@
 
 // TODO: remove move this def to the makefile
 // TODO: incorporate a log level so this macro can log as well as diagnose bugs
-#ifndef __DEBUG__
-#define __DEBUG__ 1
-#endif
 
-#ifdef __DEBUG__
+/* debugging message*/
 #define DMSG(...) do {				\
 		fprintf(stderr, __VA_ARGS__);	\
 	} while ( 0 ) 	
-#else
-#define DMSG(...) do { } while( 0 )
-#endif
+/* logging message */
+#define LMSG(...) do {				\
+		fprintf(stdout, __VA_ARGS__);	\
+	} while ( 0 ) 	
+
 
 /* list macros */
 
