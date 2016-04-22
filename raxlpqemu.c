@@ -3,7 +3,7 @@
  *
  * listen on a unix domain socket for incoming patches
  ****************************************************************/
-/* these are not used by any otherx obj, so keep the #includes here */
+/* these are not used by any other obj, so keep the #includes here */
 
 #include <zlib.h>
 #include <libelf.h>
@@ -605,7 +605,7 @@ int main(int argc, char **argv)
 			{0,0,0,0}
 		};
 		int option_index = 0;
-		c = getopt_long(argc, argv, "ila:r:s:h", long_options, &option_index);
+		c = getopt_long_only(argc, argv, "ila:r:s:h", long_options, &option_index);
 		if (c == -1) {
 			break;
 		}
@@ -616,15 +616,19 @@ int main(int argc, char **argv)
 			switch (c) {
 			case  'i':
 				option_index = 1;
+				info_flag = 1;
 				goto restart_long;
 			case 'l':
 				option_index = 2;
+				list_flag = 1;
 				goto restart_long;
 			case 'a' :
 				option_index = 3;
+				apply_flag = 1;
 				goto restart_long;
 			case 'r':
 				option_index = 4;
+				remove_flag = 1;
 				goto restart_long;
 			case 's':
 				option_index = 5;
@@ -638,6 +642,8 @@ int main(int argc, char **argv)
 			}
 			DMSG("selected option %s\n", long_options[option_index].name);
 		case 1:
+			info_flag = 1;
+			DMSG("selected option %s\n", long_options[option_index].name);
 			break;
 			
 		case 2:
@@ -649,28 +655,6 @@ int main(int argc, char **argv)
 			
 			strncpy(filepath, optarg, sizeof(filepath) - 1);
 			DMSG("stored path of the patch file: %s\n", filepath);
-			
-
-			/* save patch apply flag and patch path to global vars */
-			/* move this code into cmd_apply */
-			/* int pfd; */
-			/* char *fdname; */
-			/* struct xpatch patch; */
-			
-			/* DMSG("selected option %s with arg %s\n", */
-			/*      long_options[option_index].name, optarg); */
-
-			/* fdname  = get_patch_name(optarg); */
-			/* DMSG("patch file name: %s\n", fdname);			 */
-			/* if ((pfd = open_patch_file(optarg)) == SANDBOX_ERR_BAD_FD) */
-			/* 	exit(0); */
-			/* DMSG("patch file fd %d\n", pfd); */
-
-			/* if (load_patch_file(pfd, fdname, &patch) < 0) { */
-			/* 	return SANDBOX_ERR_BAD_FD; */
-			/* }			 */
-			/* DMSG("patch file is loaded\n"); */
-
 			break;
 		}
 		case 4: 
@@ -692,7 +676,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-// TODO: un-globalize sockname, sockfd, filepath etc.
+	
 	if (info_flag > 0) {
 		if ((sockfd = connect_to_sandbox(sockname)) < 0) {
 			DMSG("error connecting to sandbox server\n");
