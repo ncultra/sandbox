@@ -654,7 +654,7 @@ static inline void get_options(int argc, char **argv)
 			printf("%s\n", optarg);
 			
 			strncpy(filepath, optarg, sizeof(filepath) - 1);
-			DMSG("stored path of the patch file: %s\n", filepath);
+			LMSG("patch file: %s\n", filepath);
 			break;
 		}
 		case 4: 
@@ -664,7 +664,7 @@ static inline void get_options(int argc, char **argv)
 		{
 			
 			strncpy(sockname, optarg, PATH_MAX);
-			DMSG("socket: %s\n", sockname);
+			LMSG("socket: %s\n", sockname);
 			
 			break;
 		}
@@ -701,8 +701,6 @@ int main(int argc, char **argv)
 			close(sockfd);
 			sockfd = -1;
 		}
-		
-		
 	}
 	
 
@@ -727,7 +725,7 @@ int main(int argc, char **argv)
 	if (sockfd > 0)
 		close(sockfd);
 	
-	printf("bye\n");
+	LMSG(("bye\n");
 	return SANDBOX_OK;
 	
 }
