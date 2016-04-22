@@ -584,11 +584,11 @@ static inline char *get_qemu_version(void)
 	INFO_CHECK();
 	return info_strings[INFO_VER_INDEX];
 }
-		
-int main(int argc, char **argv)
+
+
+static inline void get_options(int argc, char **argv)
 {
-	
-	while (1)
+		while (1)
 	{
 		if (argc < 2)
 			usage();
@@ -676,7 +676,17 @@ int main(int argc, char **argv)
 		}
 	}
 
+}
+
 	
+int main(int argc, char **argv)
+{
+	
+
+	get_options(argc, argv);
+	
+	/* we don't run these functions within the option switch because */
+	/* we reply on having the sockname set, which can happen after other options */
 	if (info_flag > 0) {
 		if ((sockfd = connect_to_sandbox(sockname)) < 0) {
 			DMSG("error connecting to sandbox server\n");
