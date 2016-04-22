@@ -44,9 +44,7 @@
 /* logging message */
 #define LMSG(...) do {				\
 		fprintf(stdout, __VA_ARGS__);	\
-	} while ( 0 ) 	
-
-
+	} while ( 0 )
 /* list macros */
 
 #define container_of(ptr, type, member) ({ \

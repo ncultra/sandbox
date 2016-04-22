@@ -63,7 +63,7 @@ int find_patch(int fd, uint8_t sha1[20])
 	if (*count == 0)
 		goto exit;
 	
-	DMSG("%d applied patches...\n", *count);
+	LMSG("%d applied patches...\n", *count);
 	
 	response = (struct list_response *) count + sizeof(uint32_t);
 	for (i = 0; i < *count; i++) {
@@ -71,7 +71,7 @@ int find_patch(int fd, uint8_t sha1[20])
 			char sha1str[41];
 			bin2hex(response[i].sha1, sizeof(response[i].sha1),
 				sha1str, sizeof(sha1str));
-			DMSG("%s\n", sha1str);
+			LMSG("%s\n", sha1str);
 		} else if (memcmp(sha1, response[i].sha1, 20) == 0) {
 			goto exit;
 		}
@@ -125,7 +125,7 @@ int string2sha1(const char *string, unsigned char *sha1)
     /* Make sure first 40 chars of string are composed of only hex digits */
     for (i = 0; i < 40; i += 2) {
         if (sscanf(string + i, "%02x", (int*)(&sha1[i / 2])) != 1) {
-            fprintf(stderr, "error: not a valid sha1 string: %s\n", string);
+            DMSG("error: not a valid sha1 string: %s\n", string);
             return -1;
         }
     }
@@ -138,13 +138,13 @@ int extract_sha1_from_filename(unsigned char *sha1, size_t sha1len,
 
     /* Make sure suffix is .raxlpxs */
     if (strstr(filename, ".raxlpxs") == NULL) {
-        fprintf(stderr, "error: missing .raxlpxs extension: filename must be of form <sha1>.raxlpxs\n");
+	    DMSG("error: missing .raxlpxs extension: filename must be of form <sha1>.raxlpxs\n");
         return -1;
     }
 
     /* Make sure filename length is 48: 40 (<sha1>) + 8 ('.raxlpxs') */
     if (strlen(filename) != 48) {
-        fprintf(stderr, "error: filename must be of form <sha1>.raxlpxs\n");
+        DMSG("error: filename must be of form <sha1>.raxlpxs\n");
         return -1;
     }
 
@@ -193,7 +193,7 @@ inline char * get_sandbox_build(int fd)
 }
 
 
-/* TODO: this is stubbed out */
+
 /* client-side counterpart to xenlp_apply */
 int do_lp_apply(int fd, void *buf, size_t buflen)
 {
@@ -285,14 +285,14 @@ int cmd_apply(int fd)
     }
 
  
-    printf("  QEMU Version: %s\n", qemu_version);
-    printf("  QEMU Compile Date: %s\n", qemu_compile_date);
+    LMSG("  QEMU Version: %s\n", qemu_version);
+    LMSG("  QEMU Compile Date: %s\n", qemu_compile_date);
 
-    printf("\n");
-    printf("Patch Applies To:\n");
-    printf("  QEMU Version: %s\n", patch.xenversion);
-    printf("  QEMU  Compile Date: %s\n", patch.xencompiledate);
-    printf("\n");
+    LMSG("\n");
+    LMSG("Patch Applies To:\n");
+    LMSG("  QEMU Version: %s\n", patch.xenversion);
+    LMSG("  QEMU  Compile Date: %s\n", patch.xencompiledate);
+    LMSG("\n");
 
 
     if (strncmp(qemu_version, patch.xenversion, INFO_STRING_LEN) != 0 ||
@@ -301,12 +301,9 @@ int cmd_apply(int fd)
 	    return SANDBOX_ERR_BAD_VER;
     }
     
-
-
-    
     /* Do a list first and make sure patch isn't already applied yet */
     if (find_patch(fd, patch.sha1) == SANDBOX_OK) {
-        DMSG("Patch is already applied, skipping\n");
+        LMSG("Patch is already applied, skipping\n");
         return SANDBOX_OK;
     }
     
@@ -333,7 +330,7 @@ int cmd_apply(int fd)
         pw->reloctype = XENLP_RELOC_INT32;
         pw->dataoff = 1;
 
-        printf("Patching function %s @ %llx\n", func->funcname,
+        LMSG("Patching function %s @ %llx\n", func->funcname,
 	       (long long unsigned int)func->oldabs);
     }
 
@@ -343,13 +340,13 @@ int cmd_apply(int fd)
 
     int ret = do_lp_apply(fd, buf, buflen);
     if (ret < 0) {
-        fprintf(stderr, "failed to patch hypervisor: %m\n");
+        DMSG("failed to patch hypervisor: %m\n");
         return -1;
     }
 
     char sha1str[41];
     bin2hex(patch.sha1, sizeof(patch.sha1), sha1str, sizeof(sha1str));
-    printf("\nSuccessfully applied patch %s\n", sha1str);
+    LMSG("\nSuccessfully applied patch %s\n", sha1str);
     return 0;
 }
 
@@ -388,9 +385,9 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
 
     if (memcmp(patch->sha1, hash, sizeof(patch->sha1)) != 0) {
         char hex[SHA_DIGEST_LENGTH * 2 + 1];
-        fprintf(stderr, "%s: hash mismatch\n", filename);
+        DMSG("%s: hash mismatch\n", filename);
         bin2hex(hash, sizeof(hash), hex, sizeof(hex));
-        fprintf(stderr, "  calculated %s\n", hex);
+        DMSG("  calculated %s\n", hex);
         return -1;
     }
 
@@ -401,7 +398,7 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
         return -1;
 
     if (memcmp(signature, XSPATCH_COOKIE, sizeof(signature))) {
-        fprintf(stderr, "%s: invalid signature\n", filename);
+        DMSG("%s: invalid signature\n", filename);
         return -1;
     }
 
@@ -534,8 +531,7 @@ int get_info_strings(int fd, int display)
 	for (index = 0; index < COUNT_INFO_STRINGS && p != NULL; index++) {	
 		strncpy(info_strings[index], p, INFO_STRING_LEN);
 		if (display)
-			printf("%s\n", info_strings[index]);
-		
+			LMSG("%s\n", info_strings[index]);
 		p = strtok_r(NULL, "\n", &info_buf_save);
 	}
 	if (index <  COUNT_INFO_STRINGS - 1) {
@@ -651,8 +647,7 @@ static inline void get_options(int argc, char **argv)
 			
 		case 3:
 		{
-			printf("%s\n", optarg);
-			
+						
 			strncpy(filepath, optarg, sizeof(filepath) - 1);
 			LMSG("patch file: %s\n", filepath);
 			break;
@@ -725,7 +720,7 @@ int main(int argc, char **argv)
 	if (sockfd > 0)
 		close(sockfd);
 	
-	LMSG(("bye\n");
+	LMSG("bye\n");
 	return SANDBOX_OK;
 	
 }
