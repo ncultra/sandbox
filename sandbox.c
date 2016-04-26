@@ -209,6 +209,8 @@ void patched_stub(void)
 	
 	static int count = 0;
 	printf("executing inside the patched code, count: %i\n", ++count);
+	__asm__("patched_stub_exit:");
+	
 	exit(0);
 	
 }

@@ -390,38 +390,53 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
         DMSG("  calculated %s\n", hex);
         return -1;
     }
-
+    
     lseek(fd, 0, SEEK_SET);
 
     char signature[8];
     if (_read(filename, fd, signature, sizeof(signature)) < 0)
         return -1;
-
+    DMSG("read %lx bytes\n", sizeof(signature));
+    
+    DMSG("signature: %s\n", signature);
+    
     if (memcmp(signature, XSPATCH_COOKIE, sizeof(signature))) {
         DMSG("%s: invalid signature\n", filename);
         return -1;
     }
 
+    /* extract_patch writes 32 bytes each for the next two fields */
     /* Read Xen version and compile date */
     if (_read(filename, fd, patch->xenversion,
-              sizeof(patch->xenversion)) < 0)
+              32) < 0)
         return -1;
+    DMSG("read %lx bytes\n", sizeof(patch->xenversion));
     if (_read(filename, fd, patch->xencompiledate,
-              sizeof(patch->xencompiledate)) < 0)
+              32) < 0)
         return -1;
+    DMSG("read %lx bytes\n", sizeof(patch->xencompiledate));
+    DMSG("xenversion: %s; xencompiledate: %s\n",
+	 patch->xenversion, patch->xencompiledate);
+    
 
+    
     /* Only used for crowbar, ignored in this utility */
     if (_readu64(filename, fd, &patch->crowbarabs) < 0)
-        return -1;
+      return -1;
 
+    DMSG("read crowbar abs: %llx\n",
+	 (long long unsigned int)patch->crowbarabs);
+    
     /* Virtual address used for first-stage relocation */
     if (_readu64(filename, fd, &patch->refabs) < 0)
         return -1;
-
+    DMSG("read refabs: %llx\n", (long long unsigned int)patch->refabs);
+    
     /* Pull the blob out */
     if (_readu32(filename, fd, &patch->bloblen) < 0)
         return -1;
-
+    DMSG("read blob len: %xl\n", patch->bloblen);
+    
     patch->blob = _zalloc(patch->bloblen);
     if (_read(filename, fd, patch->blob, patch->bloblen) < 0)
         return -1;

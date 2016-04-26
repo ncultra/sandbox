@@ -6,15 +6,18 @@
 #include "util.h"
 
 
+ssize_t	readn(int fd, void *vptr, size_t n);
+
+
 int _read(const char *filename, int fd, void *buf, size_t buflen)
 {
-    int ret = read(fd, buf, buflen);
+    int ret = readn(fd, buf, buflen);
     if (ret < 0) {
         fprintf(stderr, "%s: %m\n", filename);
         return -1;
     }
     if (ret < buflen) {
-        fprintf(stderr, "%s: expected %d bytes, read %d\n",
+	    fprintf(stderr, "%s: expected %d bytes, read %d\n",
                 filename, (int)buflen, ret);
         return -1;
     }
