@@ -206,7 +206,9 @@ int main(int argc, char **argv)
 void patched_stub(void)
 {
 	__asm__("patched_stub_entry:");
-	
+	__asm__("patched_stub_entry_patch:");
+	__asm__("patched_stub_entry_patch_patch:");
+	__asm__("patched_stub_entry_patch_patch_patch:");
 	static int count = 0;
 	printf("executing inside the patched code, count: %i\n", ++count);
 	__asm__("patched_stub_exit:");

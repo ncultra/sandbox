@@ -742,20 +742,35 @@ errout:
 /* TODO - init message len field */
 ssize_t dispatch_apply(int fd, int len, void **bufp)
 {
+
+	int ccode = SANDBOX_OK, remaining_bytes = len - SANDBOX_MSG_HDRLEN;;
 	DMSG("apply patch dispatcher\n");
-
-/* allocate bufp and read the remainder of the message */
-
 	
-	uint32_t ccode = marshal_patch_data(fd, len, bufp);
-	if (ccode == SANDBOX_OK) {
+	if (remaining_bytes >= SANDBOX_MSG_MAX_LEN) {	
+		ccode = SANDBOX_ERR_PARSE;
+		goto err_out;
+	}
+
+	if ((uint8_t *patch_buf = calloc(remaining_bytes, sizeof(uint8_t)) == NULL)) {
 		
-		struct patch *p = (struct patch *)*bufp;
-		ccode = apply_patch(p);
+		ccode = SANDBOX_ERR_NOMEM;
+		goto err_out;		
+	}
+
+
+TODO: unpack the blob in the xenlp_apply function, not here
+	if (readn(fd, patch_buf, remaining_bytes) == remaining_bytes) {
+		ccode = xenlp_apply(
+		
 	}
 	
-	send_rr_buf(fd, SANDBOX_MSG_APPLYRSP, sizeof(ccode), &ccode, SANDBOX_LAST_ARG);
-	return(ccode);
+/* allocate bufp and read the remainder of the message */
+	err_out:
+	send_rr_buf(fd, SANDBOX_MSG_APPLYRSP,
+		    sizeof(ccode), &ccode,
+		    SANDBOX_LAST_ARG);
+	
+	return ccode;
 }
 
 
@@ -811,8 +826,16 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 				   sizeof(r), r,
 				   SANDBOX_LAST_ARG);
 		free(r);	
+	} else {
+		DMSG("applied patch list empty, sending null response list\n");
+		DMSG(" %lx %p\n", sizeof(current), &current);
+		
+			
+		ccode  = send_rr_buf(fd,
+				     SANDBOX_MSG_LISTRSP,
+				     sizeof(current), (uint8_t *)&current, 
+				     SANDBOX_LAST_ARG);
 	}
-	
 	return ccode;
 } 
 
@@ -866,7 +889,7 @@ ssize_t dispatch_getbld(int fd, int len, void **bufp)
 		DMSG("error allocating buffer for build info\n");
 		return SANDBOX_ERR_NOMEM;
 	}
-	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%s\n%d %d %d\n",
+	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%s\n%d.%d%d\n",
 		 get_git_revision(),
 		 get_compiled(), get_ccflags(),
 		 get_compiled_date(), get_tag(),

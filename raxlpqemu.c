@@ -60,8 +60,10 @@ int find_patch(int fd, uint8_t sha1[20])
 		DMSG("error getting the list of applied patches\n");
 		return SANDBOX_ERR_PARSE;
 	} 
-	if (*count == 0)
+	if (*count == 0) {
+		LMSG("currently there are no applied patches\n");
 		goto exit;
+	}
 	
 	LMSG("%d applied patches...\n", *count);
 	
@@ -204,13 +206,11 @@ int do_lp_apply(int fd, void *buf, size_t buflen)
 			buf,
 			SANDBOX_LAST_ARG) == SANDBOX_OK) {
 
-		void *buf;
+		void *buf2;
 		uint16_t version = 1, id = SANDBOX_MSG_APPLYRSP;
 		uint32_t len = 0;
-		read_sandbox_message_header(fd, &version, &id, &len, &buf);
-		
+		read_sandbox_message_header(fd, &version, &id, &len, &buf2);
 	}
-	
 	return SANDBOX_OK;
 }
 
@@ -224,7 +224,7 @@ size_t fill_patch_buf(unsigned char *buf, struct xpatch *patch,
     unsigned char *ptr = buf;
     struct xenlp_apply apply = {
         bloblen: patch->bloblen,
-
+f
         numrelocs: patch->numrelocs,
         numwrites: numwrites,
 
@@ -712,7 +712,25 @@ int main(int argc, char **argv)
 			sockfd = -1;
 		}
 	}
+
+
+	if (list_flag > 0) {
+		int ccode;
 	
+		if ((sockfd = connect_to_sandbox(sockname)) < 0) {
+			DMSG("error connecting to sandbox server\n");
+			return SANDBOX_ERR_RW;
+		}
+
+		if ((ccode = list_patches(sockfd)) < 0)
+			DMSG("error listing applied patches\n");
+
+		
+		if (sockfd > 0) {
+			close(sockfd);
+			sockfd = -1;
+		}
+	}
 
 	if (apply_flag > 0) {
 

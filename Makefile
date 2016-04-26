@@ -91,7 +91,7 @@ libsandbox.so: gitsha $(LIB_FILES)
 static: libsandbox.a
 
 .PHONY: all
-all: static shared sandbox raxl
+all: static shared sandbox raxlpqemu
 
 .PHONY: install
 install:
