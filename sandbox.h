@@ -584,5 +584,6 @@ ssize_t dispatch_list_response(int fd, int len, void **bufp);
 ssize_t dispatch_apply(int fd, int len, void **bufp);
 ssize_t dispatch_apply_response(int fd, int len, void **bufp);
 int do_lp_apply(int fd, void *buf, size_t buflen);
+int xenlp_apply(void *arg);
 
 #endif /* __SANDBOX_H */

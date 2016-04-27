@@ -224,7 +224,7 @@ size_t fill_patch_buf(unsigned char *buf, struct xpatch *patch,
     unsigned char *ptr = buf;
     struct xenlp_apply apply = {
         bloblen: patch->bloblen,
-f
+
         numrelocs: patch->numrelocs,
         numwrites: numwrites,
 

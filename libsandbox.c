@@ -208,146 +208,146 @@ static void make_text_writeable(struct xenlp_patch_write *writes,
 
 /* server-side apply function */
 /* corresponds to do_lp_apply on the raxl side */
-int xenlp_apply(struct xenlp_apply *arg, void *blob_patch)
+int xenlp_apply(void *arg)
 {
-    struct xenlp_apply *apply = arg;
-    unsigned char *blob = NULL;
-    struct xenlp_patch_write *writes;
-    size_t i;
-    struct applied_patch *patch;
-    int32_t relocrel = 0;
-    char sha1[41];
-    unsigned char *p;
-    
+	struct xenlp_apply *apply = (struct xenlp_apply *)arg;
+	unsigned char *blob = NULL;
+	struct xenlp_patch_write *writes;
+	size_t i;
+	struct applied_patch *patch;
+	int32_t relocrel = 0;
+	char sha1[41];
+	unsigned char *p;
+	
 
     
-    /* Skip over struct xenlp_apply */
-    p = (unsigned char *)arg + sizeof(arg);
+	/* Skip over struct xenlp_apply */
+	p = (unsigned char *)arg + sizeof(arg);
 
-    /* Do some initial sanity checking */
-    if (apply->bloblen > MAX_PATCH_SIZE) {
-	    DMSG("live patch size %u is too large\n", apply->bloblen);
-        return -EINVAL;
-    }
+	/* Do some initial sanity checking */
+	if (apply->bloblen > MAX_PATCH_SIZE) {
+		DMSG("live patch size %u is too large\n", apply->bloblen);
+		return -EINVAL;
+	}
 
-    if (apply->numwrites == 0) {
-        DMSG("need at least one patch\n");
-        return -EINVAL;
-    }
+	if (apply->numwrites == 0) {
+		DMSG("need at least one patch\n");
+		return -EINVAL;
+	}
 
-    patch = calloc(1, sizeof(struct applied_patch));
-    if (!patch)
-        return SANDBOX_ERR_NOMEM;
+	patch = calloc(1, sizeof(struct applied_patch));
+	if (!patch)
+		return SANDBOX_ERR_NOMEM;
 
-    /* FIXME: Memory allocated for patch can leak in case of error */
+	/* FIXME: Memory allocated for patch can leak in case of error */
 
-    /* Blobs are optional */
+	/* Blobs are optional */
 
-    /* use sandbox memory */
-    blob = get_sandbox_memory(apply->bloblen);
-    if (!blob)
-	    return SANDBOX_ERR_NOMEM;
+	/* use sandbox memory */
+	blob = get_sandbox_memory(apply->bloblen);
+	if (!blob)
+		return SANDBOX_ERR_NOMEM;
     
-    /* FIXME: Memory allocated for blob can leak in case of error */
+	/* FIXME: Memory allocated for blob can leak in case of error */
     
-    /* Copy blob to hypervisor was copy from guest */
-    memcpy(blob, blob_patch, apply->bloblen);
+	/* Copy blob to hypervisor was */
+	memcpy(blob, p, apply->bloblen);
     
-    /* Skip over blob */
-    p += apply->bloblen;
+	/* Skip over blob */
+	p += apply->bloblen;
     
-    /* Calculate offset of relocations */
-    relocrel = (uint64_t)blob - apply->refabs;
+	/* Calculate offset of relocations */
+	relocrel = (uint64_t)blob - apply->refabs;
 
 
 
 /* Read relocs */
-    if (apply->numrelocs) {
-        uint32_t *relocs;
+	if (apply->numrelocs) {
+		uint32_t *relocs;
 	
-        relocs = calloc(apply->numrelocs, sizeof(uint32_t));
+		relocs = calloc(apply->numrelocs, sizeof(uint32_t));
 
-        if (!relocs)
-            return SANDBOX_ERR_NOMEM;
+		if (!relocs)
+			return SANDBOX_ERR_NOMEM;
 
-	/* was copy from guest */
+		/* was copy from guest */
 
-        p += (apply->numrelocs * sizeof(relocs[0]));
+		p += (apply->numrelocs * sizeof(relocs[0]));
 
-        for (i = 0; i < apply->numrelocs; i++) {
-            uint32_t off = relocs[i];
-            if (off > apply->bloblen - sizeof(int32_t)) {
-                DMSG("invalid off value %d\n", off);
-                return SANDBOX_ERR_PARSE;
-            }
+		for (i = 0; i < apply->numrelocs; i++) {
+			uint32_t off = relocs[i];
+			if (off > apply->bloblen - sizeof(int32_t)) {
+				DMSG("invalid off value %d\n", off);
+				return SANDBOX_ERR_PARSE;
+			}
 
-            /* blob -> HV .text */
-            *((int32_t *)(blob + off)) -= relocrel;
-        }
+			/* blob -> HV .text */
+			*((int32_t *)(blob + off)) -= relocrel;
+		}
 
-        free(relocs);
-    }
+		free(relocs);
+	}
 
-    /* Read writes */
-    writes = calloc(apply->numwrites, sizeof(struct xenlp_patch_write));
-    if (!writes)
-        return SANDBOX_ERR_NOMEM;
+	/* Read writes */
+	writes = calloc(apply->numwrites, sizeof(struct xenlp_patch_write));
+	if (!writes)
+		return SANDBOX_ERR_NOMEM;
 
-    /* was copy from guest */
+	memcpy(writes, p, apply->numwrites * sizeof(writes[0]));
+    
+	/* Move over all of the writes */
+	p += (apply->numwrites * sizeof(writes[0]));
 
-    /* Move over all of the writes */
-    p += (apply->numwrites * sizeof(writes[0]));
-
-    /* Verify writes and apply any relocations in writes */
-    for (i = 0; i < apply->numwrites; i++) {
-        struct xenlp_patch_write *pw = &writes[i];
-        char off = pw->dataoff;
+	/* Verify writes and apply any relocations in writes */
+	for (i = 0; i < apply->numwrites; i++) {
+		struct xenlp_patch_write *pw = &writes[i];
+		char off = pw->dataoff;
 /* removed the validation test that used to be here because we don't 
  * need it (we have a sandbox) */
-        if (off < 0)
-            continue;
+		if (off < 0)
+			continue;
 
-        /* HV .text -> blob */
-	/* TODO: confirm only need the 32-bit variant */
-        switch (pw->reloctype) {
-        case XENLP_RELOC_UINT64:
-            if (off > sizeof(pw->data) - sizeof(uint64_t)) {
-                DMSG("invalid dataoff value %d\n", off);
-                return SANDBOX_ERR_PARSE;
-            }
+		/* HV .text -> blob */
+		/* TODO: confirm only need the 32-bit variant */
+		switch (pw->reloctype) {
+		case XENLP_RELOC_UINT64:
+			if (off > sizeof(pw->data) - sizeof(uint64_t)) {
+				DMSG("invalid dataoff value %d\n", off);
+				return SANDBOX_ERR_PARSE;
+			}
 
-            *((uint64_t *)(pw->data + off)) += relocrel;
-            break;
-        case XENLP_RELOC_INT32:
-            if (off > sizeof(pw->data) - sizeof(int32_t)) {
-                DMSG("invalid dataoff value %d\n", off);
-                return SANDBOX_ERR_PARSE;
-            }
+			*((uint64_t *)(pw->data + off)) += relocrel;
+			break;
+		case XENLP_RELOC_INT32:
+			if (off > sizeof(pw->data) - sizeof(int32_t)) {
+				DMSG("invalid dataoff value %d\n", off);
+				return SANDBOX_ERR_PARSE;
+			}
 
-            *((int32_t *)(pw->data + off)) += relocrel;
-            break;
-        default:
-            DMSG("unknown reloctype value %u\n", pw->reloctype);
-            return SANDBOX_ERR_PARSE;
-        }
-    }
+			*((int32_t *)(pw->data + off)) += relocrel;
+			break;
+		default:
+			DMSG("unknown reloctype value %u\n", pw->reloctype);
+			return SANDBOX_ERR_PARSE;
+		}
+	}
 
 
-    make_text_writeable(writes, apply->numwrites);
+	make_text_writeable(writes, apply->numwrites);
     
-    /* Nothing should be possible to fail now, so do all of the writes */
-    swap_trampolines(writes, apply->numwrites);
+	/* Nothing should be possible to fail now, so do all of the writes */
+	swap_trampolines(writes, apply->numwrites);
 
-    /* Record applied patch */
-    patch->blob = blob;
-    memcpy(patch->sha1, apply->sha1, sizeof(patch->sha1));
-    patch->numwrites = apply->numwrites;
-    patch->writes = writes;
-    list_add(&patch->l, &applied_list);
-    bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
-    DMSG("successfully applied patch %s\n", sha1);
+	/* Record applied patch */
+	patch->blob = blob;
+	memcpy(patch->sha1, apply->sha1, sizeof(patch->sha1));
+	patch->numwrites = apply->numwrites;
+	patch->writes = writes;
+	list_add(&patch->l, &applied_list);
+	bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
+	DMSG("successfully applied patch %s\n", sha1);
 
-    return 0;
+	return 0;
 }
 
 

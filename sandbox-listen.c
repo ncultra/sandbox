@@ -93,7 +93,7 @@ static inline ssize_t check_magic(uint8_t *magic)
 /* dispatch functions need to drain the socket buy reading all the bytes
  * in the message that follow the header */
 
-static ssize_t marshal_patch_data(int, int, void **);
+
 ssize_t dispatch_apply(int, int, void **);
 ssize_t dispatch_list(int, int, void **);
 ssize_t dispatch_getbld(int, int, void **);
@@ -528,116 +528,6 @@ errout:
 
 
 
-static ssize_t marshal_patch_data(int sock, int msg_len, void **bufp)
-{
-	assert(bufp && *bufp == NULL);
-
-	
-	uint8_t bldid[0x14];
-	char name[0x81];
-	uint64_t len, patchlen;
-	ssize_t ccode;
-	struct patch *new_patch = NULL;
-	
-
-	/* target build id * - size must be 20 bytes */
-	//TODO - check the build id!
-	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == 0x14) {
-		ccode = readn(sock, bldid, len);
-		if (ccode != len) {
-			return(SANDBOX_ERR_BAD_LEN);
-		}
-	} else {
-		return(SANDBOX_ERR_RW);
-	}
-	
-	//TODO: macro-ize this repitive code
-
-	if (readn(sock, &len, sizeof(len)) == sizeof(len)  && len < 0x40 && len < 0 ) {
-		if (readn(sock, name, len) != len) {
-			return(SANDBOX_ERR_RW);
-		}
-	}else {
-		return(SANDBOX_ERR_BAD_LEN);	
-	}
-	
-	/* patch data */
-
-
-	if (readn(sock, &patchlen, sizeof(patchlen)) == sizeof(patchlen) &&
-	    patchlen > 0 && patchlen < MAX_PATCH_SIZE) {
-		new_patch = alloc_patch(name, patchlen);
-		if (new_patch == NULL) {
-			ccode = SANDBOX_ERR_NOMEM;
-			goto errout;
-		}
-		assert(new_patch->patch_buf);
-		if (readn(sock, (uint8_t *)new_patch->patch_buf, new_patch->patch_size) !=
-		    new_patch->patch_size) {
-			ccode = SANDBOX_ERR_RW;
-			goto errout;
-		}
-	} else {
-		ccode = SANDBOX_ERR_BAD_LEN;
-		goto errout;
-	}
-
-	/* patch canary, 64 bytes */
-
-	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == 0x20) {
-		if (readn(sock, new_patch->canary, 0x20) != 0x20) {
-			return(SANDBOX_ERR_RW);
-		}	
-	}  else {
-		return(SANDBOX_ERR_BAD_LEN);
-	}
-
-	/* jump location */
-	/* the socket writer will provide the relative jump location. we need to make */
-	/*   it absolute by adding the start of the .text segment to the address. */
-	/* Then we check it using the canary. The canary should be identical to */
-        /*  64 bytes starting at the jmp location (inclusively) */
-
-	if (readn(sock, &len, sizeof(len)) == sizeof(len) && len == sizeof(uintptr_t)) {
-		if (readn(sock, &new_patch->reloc_dest, sizeof(uintptr_t)) !=
-		    sizeof(uintptr_t)) {
-			return(SANDBOX_ERR_RW);
-		}	
-	}  else {
-		return(SANDBOX_ERR_BAD_LEN);
-	}
-	
-	/* patch sha1 signature */
-	if (readn(sock, &len, sizeof(len)) == 0x14) {
-		// TODO: actually check the signature !
-		if (readn(sock, new_patch->SHA1, 0x14) != 0X14) {
-			ccode = SANDBOX_ERR_RW;
-			goto errout;
-		}
-	} else {
-		ccode = SANDBOX_ERR_BAD_LEN;
-		goto errout;
-	}
-	
-	new_patch->flags |= PATCH_WRITE_ONCE;
-	memcpy(new_patch->build_id, bldid, 0x14);
-	new_patch->reloc_size = PLATFORM_RELOC_SIZE;
-	*bufp = new_patch;
-	return(0L);
-	
-errout:
-	if (new_patch != NULL) {
-		free_patch(new_patch);
-	}
-	if (bufp && *bufp != NULL) {
-		free(*bufp);
-	}
-	
-	return send_rr_buf(sock, SANDBOX_ERR_BAD_HDR, sizeof(ccode), &ccode, SANDBOX_LAST_ARG);
-	
-}
-
-
 //todo normalize return types to int	
 ssize_t send_rr_buf(int fd, uint16_t id, ...)
 {
@@ -751,17 +641,19 @@ ssize_t dispatch_apply(int fd, int len, void **bufp)
 		goto err_out;
 	}
 
-	if ((uint8_t *patch_buf = calloc(remaining_bytes, sizeof(uint8_t)) == NULL)) {
+	uint8_t *patch_buf = calloc(remaining_bytes, sizeof(uint8_t));
+	
+	
+	if (patch_buf == NULL) {
 		
 		ccode = SANDBOX_ERR_NOMEM;
 		goto err_out;		
 	}
 
 
-TODO: unpack the blob in the xenlp_apply function, not here
+//TODO: unpack the blob in the xenlp_apply function, not here
 	if (readn(fd, patch_buf, remaining_bytes) == remaining_bytes) {
-		ccode = xenlp_apply(
-		
+		ccode = xenlp_apply(patch_buf, NULL);
 	}
 	
 /* allocate bufp and read the remainder of the message */
