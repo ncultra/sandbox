@@ -3,7 +3,7 @@ CFLAGS =  -g -Wall -fPIC -std=gnu11 -mcmodel=large -ffunction-sections -pthread
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
-LIB_FILES=libsandbox.o hexdump.o sandbox-listen.o
+LIB_FILES=libsandbox.o  sandbox-listen.o
 LIBELF=/usr/lib64/libelf.a
 CLEAN=@-rm -f sandbox raxlpqemu *o *a *so gitsha.txt platform.h \
 	gitsha.h &>/dev/null
@@ -16,16 +16,17 @@ sandbox: sandbox.o libsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
 # any target that requires libsandbox will pull in gitsha.txt automatically
-libsandbox.a: gitsha.txt libsandbox.o hexdump.o sandbox-listen.o
+libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 	$(shell objcopy --add-section .buildinfo=gitsha.txt \
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 # add the static elf library to the sandbox
-	ar crT libsandbox.a libsandbox.o hexdump.o sandbox-listen.o \
+	ar crT libsandbox.a libsandbox.o  sandbox-listen.o \
 	$(LIBELF)
 
 libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.h
-
-.PHONY: clean
+	$(CC) -g -c -Wall -fPIC -std=gnu11 -mcmodel=large \
+	-fkeep-static-consts -O0 -pthread $<
+.PHONY: qclean
 clean:	
 	$(CLEAN)
 	@echo "repo is clean"

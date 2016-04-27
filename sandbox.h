@@ -401,7 +401,8 @@ struct patch {
 
 // these const strings contain information generated at build time.
 extern const char *gitversion, *cc, *cflags;
-extern uintptr_t patch_sandbox_start, patch_sandbox_end;
+extern uintptr_t patch_sandbox_start, patch_sandbox_end; 
+
 extern uint8_t *patch_cursor;
 
 extern struct list_head patch_list;
@@ -585,5 +586,6 @@ ssize_t dispatch_apply(int fd, int len, void **bufp);
 ssize_t dispatch_apply_response(int fd, int len, void **bufp);
 int do_lp_apply(int fd, void *buf, size_t buflen);
 int xenlp_apply(void *arg);
+void dump_sandbox(const void* data, size_t size);
 
 #endif /* __SANDBOX_H */

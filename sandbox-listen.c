@@ -650,10 +650,10 @@ ssize_t dispatch_apply(int fd, int len, void **bufp)
 		goto err_out;		
 	}
 
-
-//TODO: unpack the blob in the xenlp_apply function, not here
 	if (readn(fd, patch_buf, remaining_bytes) == remaining_bytes) {
-		ccode = xenlp_apply(patch_buf, NULL);
+		ccode = xenlp_apply(patch_buf);
+	} else {	
+		ccode = SANDBOX_ERR_RW;
 	}
 	
 /* allocate bufp and read the remainder of the message */

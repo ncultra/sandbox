@@ -15,38 +15,50 @@
  ************************************************************/
 /* TODO: configure option for building with a tiny sandbox. Client applications */
 /* can use the library without wasting space in the sandbox */
-uint64_t fill = PLATFORM_ALLOC_SIZE;
-__asm__(".text");
 
-__asm__(".global patch_sandbox_start");
+uint64_t fill = PLATFORM_ALLOC_SIZE;
+void the_sandbox(void); __attribute__ ((unused))
+void the_sandbox(void)
+{
+
+	__asm__(".text");
+	__asm__(".global patch_sandbox_start");
+	__asm__(".global patch_sandbox_end");
 
 #ifdef X86_64
-__asm__(".align 0x1000");
+	__asm__(".align 0x40"); // cache line size
 #endif
 #ifdef  PPC64LE
-__asm__(".align 0x0c");
+	__asm__(".align 0x0c");
 #endif
-__asm__("patch_sandbox_start:");
-#ifdef X86_6
-__asm__("jmp patch_sandbox_end");
-__asm__(".fill 0x1000");
-__asm__(".align 8");
-#endif
-#ifdef PPC64LE
-__asm__("b patch_sandbox_end");
-__asm__(".fill PLATFORM_ALLOC_SIZE");
-__asm__(".align 3");
+	
+#ifdef X86_64
+
+	__asm__("patch_sandbox_start:");
+	__asm__("mfence");
+	__asm__("jmp patch_sandbox_end");
+	__asm__(".text");
+	__asm__(".fill 0x1000,1,0xc3");
+// TODO: get rid of this constant, gas doesn't use the cpp 
+	__asm__(".align 8");
 
 #endif
-__asm__("patch_sandbox_end:");
+#ifdef PPC64L
+	__asm__("b patch_sandbox_end");
+	__asm__(".fill PLATFORM_ALLOC_SIZE");
+	__asm__(".align 3");
+
+#endif
+	__asm__("patch_sandbox_end:");
 
 #ifdef X86_64
-__asm__("retq");
+	__asm__("retq");
 #endif
 
 #ifdef PPC64LE
-__asm__("blr");
+	__asm__("blr");
 #endif
+}
 
 
 /* TODO: merge with sandbox struct patch */
@@ -69,12 +81,12 @@ uint8_t *patch_cursor = NULL;
 
 uint64_t get_sandbox_start(void)
 {
-	return  (uint64_t)&patch_sandbox_start;
+	return  (uint64_t)( &patch_sandbox_end - PLATFORM_ALLOC_SIZE);
 }
 
 uint64_t get_sandbox_end(void)
 {
-	return PLATFORM_ALLOC_SIZE + get_sandbox_start();
+	return (uint64_t)&patch_sandbox_end;
 	
 }
 
@@ -436,4 +448,37 @@ int reflect(struct dl_phdr_info *info,
 	dl_iterate_phdr(cb, NULL);	
 	return 0;
 
+}
+
+void dump_sandbox(const void* data, size_t size) {
+	char ascii[17];
+	size_t i, j;
+	ascii[16] = '\0';
+	printf ("\n");
+	printf ("%08lx\t", (unsigned long) (unsigned char *)data);
+	for (i = 0; i < size; ++i) {
+		printf("%02X ", ((unsigned char*)data)[i]);
+		if (((unsigned char*)data)[i] >= ' ' && ((unsigned char*)data)[i] <= '~') {
+			ascii[i % 16] = ((unsigned char*)data)[i];
+		} else {
+			ascii[i % 16] = '.';
+		}
+		if ((i+1) % 8 == 0 || i+1 == size) {
+			printf(" ");
+			if ((i+1) % 16 == 0 && i + 1 < size) {
+				printf("|  %s \n%08lx\t", ascii, (unsigned long)(((unsigned char *)data) + i));
+			} else if (i+1 == size) {
+				ascii[(i+1) % 16] = '\0';
+				if ((i+1) % 16 <= 8) {
+					printf(" ");
+				}
+				for (j = (i+1) % 16; j < 16; ++j) {
+					printf("   ");
+				}
+				printf("\n");
+				
+			}
+			
+		}
+	}
 }
