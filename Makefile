@@ -92,7 +92,7 @@ libsandbox.so: gitsha $(LIB_FILES)
 static: libsandbox.a
 
 .PHONY: all
-all: static shared sandbox raxlpqemu
+all: static  sandbox raxlpqemu
 
 .PHONY: install
 install:

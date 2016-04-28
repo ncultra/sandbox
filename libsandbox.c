@@ -81,7 +81,7 @@ uint8_t *patch_cursor = NULL;
 
 uint64_t get_sandbox_start(void)
 {
-	return  (uint64_t)( &patch_sandbox_end - PLATFORM_ALLOC_SIZE);
+	return  (uint64_t)( &patch_sandbox_start);
 }
 
 uint64_t get_sandbox_end(void)
