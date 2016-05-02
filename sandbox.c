@@ -189,11 +189,10 @@ int main(int argc, char **argv)
 		printf ("err = %d\n", err);
 		dump_sandbox(&patch_sandbox_start, 16);
 		DMSG("write completed, calling into the patch sandbox\n\n");
-		
+		DMSG("this message added by live patching\n\n");
 		patched();
 		
 		DMSG("\nreturned from the patch sandbox\n\n");
-		dump_sandbox(main + 0x758, 16);
 
 	}
 	__asm__("jmp patched_stub_entry");
@@ -205,15 +204,20 @@ int main(int argc, char **argv)
 
 void patched_stub(void)
 {
-	__asm__("patched_stub_entry:");
-	__asm__("patched_stub_entry_patch:");
-	__asm__("patched_stub_entry_patch_patch:");
-	__asm__("patched_stub_entry_patch_patch_patch:");
-	__asm__("patched_stub_entry_patch_patch_patch_patch:");
-	static int count = 0;
-	printf("executing inside the patched code, count: %i\n", ++count);
-	__asm__("patched_stub_exit:");
+	 __asm__("patched_stub_entry:");
+	 __asm__("patched_stub_entry_patch:");
+	 __asm__("patched_stub_entry_BUTT:"); 
+	 /*  __asm__("patched_stub_entry_BUTT_BUTT:"); */
+	 /* __asm__("patched_stub_entry_BUTT_BUTT_BUTT:"); */
+	 __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT:");
+	 __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT_BUTT:");
+	 __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT:");
+	  __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT:");
+	 __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT:");
+	 static int count = 0;
+	 printf("executing inside the patched code, count: %i\n", ++count);
+	 __asm__("patched_stub_exit:");
 	
-	exit(0);
+	 exit(0);
 	
 }

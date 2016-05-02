@@ -47,7 +47,7 @@ static void bin2hex(unsigned char *, size_t, char *, size_t);
 /* if sha1 is NULL print all applied patches */
 int find_patch(int fd, uint8_t sha1[20])
 {
-	uint32_t *count, i = 0, ccode = SANDBOX_MSG_APPLY;;
+	uint32_t *count = NULL, i = 0, ccode = SANDBOX_MSG_APPLY;;
 	struct list_response *response;
 	
 	/* return buffer format:*/
@@ -56,10 +56,10 @@ int find_patch(int fd, uint8_t sha1[20])
 	 * buffer needs to be freed by caller 
 	*/
 	count = (uint32_t *)sandbox_list_patches(fd);
-	if (count == NULL) {
-		DMSG("error getting the list of applied patches\n");
-		return SANDBOX_ERR_PARSE;
-	} 
+	DMSG("list path response buf %p\n", count);
+	dump_sandbox(count, 32);
+	
+	
 	if (*count == 0) {
 		LMSG("currently there are no applied patches\n");
 		goto exit;
@@ -67,7 +67,7 @@ int find_patch(int fd, uint8_t sha1[20])
 	
 	LMSG("%d applied patches...\n", *count);
 	
-	response = (struct list_response *) count + sizeof(uint32_t);
+	response = (struct list_response *)count + sizeof(uint32_t);
 	for (i = 0; i < *count; i++) {
 		if (sha1 == NULL) {
 			char sha1str[41];
@@ -237,7 +237,7 @@ size_t fill_patch_buf(unsigned char *buf, struct xpatch *patch,
 
     if (buf == NULL)
         return buflen;
-
+//TODO: these macros can obfuscate the code
     memcpy(apply.sha1, patch->sha1, sizeof(apply.sha1));
 
 #define ADR(d, s)	do { memcpy(ptr, d, s); ptr += s; } while (0)
@@ -337,7 +337,10 @@ int cmd_apply(int fd)
     size_t buflen = fill_patch_buf(NULL, &patch, numwrites, writes);
     unsigned char *buf = _zalloc(buflen);
     buflen = fill_patch_buf(buf, &patch, numwrites, writes);
-
+    DMSG("outgoing patch buf header:\n");
+    dump_sandbox(buf, 32);
+    
+    
     int ret = do_lp_apply(fd, buf, buflen);
     if (ret < 0) {
         DMSG("failed to patch hypervisor: %m\n");
@@ -484,7 +487,8 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
         func->funcname = _zalloc(size + 1);
         if (_read(filename, fd, func->funcname, size) < 0)
             return -1;
-
+	DMSG("patch function %s\n", func->funcname);
+	
         if (_readu64(filename, fd, &func->oldabs) < 0)
             return -1;
         if (_readu32(filename, fd, &func->newrel) < 0)

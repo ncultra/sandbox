@@ -17,9 +17,9 @@
 /* can use the library without wasting space in the sandbox */
 
 uint64_t fill = PLATFORM_ALLOC_SIZE;
-void the_sandbox(void); __attribute__ ((unused))
-void the_sandbox(void)
-{
+//void the_sandbox(void); __attribute__ ((unused))
+//void the_sandbox(void)
+//{
 
 	__asm__(".text");
 	__asm__(".global patch_sandbox_start");
@@ -38,7 +38,7 @@ void the_sandbox(void)
 	__asm__("mfence");
 	__asm__("jmp patch_sandbox_end");
 	__asm__(".text");
-	__asm__(".fill 0x1000,1,0xc3");
+	__asm__(".fill 0x1000 * 0x1000,1,0xc3");
 // TODO: get rid of this constant, gas doesn't use the cpp 
 	__asm__(".align 8");
 
@@ -58,17 +58,10 @@ void the_sandbox(void)
 #ifdef PPC64LE
 	__asm__("blr");
 #endif
-}
+//}
 
 
 /* TODO: merge with sandbox struct patch */
-struct applied_patch {
-	void *blob;
-	unsigned char sha1[20];		/* binary encoded */
-	uint32_t numwrites;
-	struct xenlp_patch_write *writes;
-	struct list_head l;
-};
 
 /* this is the 'new'patch struct */
 LIST_HEAD(patch_list);
@@ -90,7 +83,7 @@ uint64_t get_sandbox_end(void)
 	
 }
 
-static void *get_sandbox_memory(int size)
+static void *get_sandbox_memory(uint32_t size)
 {
 	uint8_t *p = NULL;
 	
@@ -188,8 +181,8 @@ void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 	for (i = 0; i < numwrites; i++) {
 		struct xenlp_patch_write *pw = &writes[i];
 
-	    atomic_xchg((uint64_t *)pw->hvabs,
-			(uint64_t *)pw->data);
+	    atomic_xchg((uint64_t *)&pw->hvabs,
+			(uint64_t *)&pw->data);
 	    
 	
 	}
@@ -210,11 +203,10 @@ static void make_text_writeable(struct xenlp_patch_write *writes,
 		if (mprotect((void *)p , PLATFORM_PAGE_SIZE,
 			     PROT_READ|PROT_EXEC|PROT_WRITE)){			
 			perror("err: ");
-			assert(0);
+
 		}	
 	}
 }
-
 
 
 
@@ -234,7 +226,7 @@ int xenlp_apply(void *arg)
 
     
 	/* Skip over struct xenlp_apply */
-	p = (unsigned char *)arg + sizeof(arg);
+	p = (unsigned char *)arg + sizeof(struct xenlp_apply);
 
 	/* Do some initial sanity checking */
 	if (apply->bloblen > MAX_PATCH_SIZE) {
@@ -242,11 +234,16 @@ int xenlp_apply(void *arg)
 		return -EINVAL;
 	}
 
+	DMSG("live patch size: %u\n", apply->bloblen);
+
+	
 	if (apply->numwrites == 0) {
 		DMSG("need at least one patch\n");
 		return -EINVAL;
 	}
-
+	DMSG("number of writes: %d \n", apply->numwrites);
+	
+	
 	patch = calloc(1, sizeof(struct applied_patch));
 	if (!patch)
 		return SANDBOX_ERR_NOMEM;
@@ -274,6 +271,9 @@ int xenlp_apply(void *arg)
 
 
 /* Read relocs */
+
+	DMSG("number of relocs: %d\n", apply->numrelocs);
+	
 	if (apply->numrelocs) {
 		uint32_t *relocs;
 	
@@ -323,6 +323,7 @@ int xenlp_apply(void *arg)
 		/* TODO: confirm only need the 32-bit variant */
 		switch (pw->reloctype) {
 		case XENLP_RELOC_UINT64:
+			DMSG("write is a 64-bit reloc\n");
 			if (off > sizeof(pw->data) - sizeof(uint64_t)) {
 				DMSG("invalid dataoff value %d\n", off);
 				return SANDBOX_ERR_PARSE;
@@ -331,6 +332,7 @@ int xenlp_apply(void *arg)
 			*((uint64_t *)(pw->data + off)) += relocrel;
 			break;
 		case XENLP_RELOC_INT32:
+			DMSG("write is a 64-bit reloc\n");
 			if (off > sizeof(pw->data) - sizeof(int32_t)) {
 				DMSG("invalid dataoff value %d\n", off);
 				return SANDBOX_ERR_PARSE;
@@ -349,12 +351,16 @@ int xenlp_apply(void *arg)
     
 	/* Nothing should be possible to fail now, so do all of the writes */
 	swap_trampolines(writes, apply->numwrites);
-
 	/* Record applied patch */
 	patch->blob = blob;
 	memcpy(patch->sha1, apply->sha1, sizeof(patch->sha1));
+	DMSG("incoming patch sha1:\n");
+	dump_sandbox(patch->sha1, 20);
+	
 	patch->numwrites = apply->numwrites;
 	patch->writes = writes;
+	INIT_LIST_HEAD(&patch->l);
+
 	list_add(&patch->l, &applied_list);
 	bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
 	DMSG("successfully applied patch %s\n", sha1);
@@ -438,6 +444,12 @@ void init_sandbox(void)
 {
 	make_sandbox_writeable(); 
 	patch_cursor = (uint8_t *)&patch_sandbox_start;
+	uint64_t p  = (uint64_t)&applied_list;
+	p &= PLATFORM_PAGE_MASK;
+	if (mprotect((void *)p, PLATFORM_PAGE_SIZE,
+		     PROT_READ|PROT_EXEC|PROT_WRITE))
+		perror("err: ");
+	
 }
 
 

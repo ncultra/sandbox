@@ -24,8 +24,8 @@ libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 	$(LIBELF)
 
 libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.h
-	$(CC) -g -c -Wall -fPIC -std=gnu11 -mcmodel=large \
-	-fkeep-static-consts -O0 -pthread $<
+	$(CC) -g -c -Wall  -std=gnu11 -mcmodel=large \
+	 -ffunction-sections -fkeep-static-consts -O0 -pthread $<
 .PHONY: qclean
 clean:	
 	$(CLEAN)

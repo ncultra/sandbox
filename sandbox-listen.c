@@ -610,7 +610,7 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 		}
 		DMSG("writing vararg to fd size %d address %p\n",
 		     bufs[index].size, bufs[index].buf);
-		dump_sandbox(bufs[index].buf, bufs[index].size);
+		dump_sandbox(bufs[index].buf, 16);
 		
 		writen(fd, &bufs[index].size, sizeof(uint32_t));
 		DMSG("wrote var field size %d\n", bufs[index].size);
@@ -633,7 +633,7 @@ errout:
 ssize_t dispatch_apply(int fd, int len, void **bufp)
 {
 
-	int ccode = SANDBOX_OK, remaining_bytes = len - SANDBOX_MSG_HDRLEN;;
+	uint32_t ccode = SANDBOX_OK, remaining_bytes = len - SANDBOX_MSG_HDRLEN;;
 	DMSG("apply patch dispatcher\n");
 	
 	if (remaining_bytes >= SANDBOX_MSG_MAX_LEN) {	
@@ -650,7 +650,10 @@ ssize_t dispatch_apply(int fd, int len, void **bufp)
 		goto err_out;		
 	}
 
+	
 	if (readn(fd, patch_buf, remaining_bytes) == remaining_bytes) {
+		DMSG("read incoming patch into the buffer...\n");
+		dump_sandbox(patch_buf, 32);
 		ccode = xenlp_apply(patch_buf);
 	} else {	
 		ccode = SANDBOX_ERR_RW;
@@ -678,6 +681,10 @@ ssize_t dispatch_apply_response(int fd, int len, void **bufp)
 	
 }
 
+extern void bin2hex(unsigned char *bin, size_t binlen, char *buf,
+                    size_t buflen);
+
+
 ssize_t dispatch_list(int fd, int len, void **bufp)
 {
 	int ccode = SANDBOX_ERR_PARSE;
@@ -688,17 +695,20 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 */
 	struct list_response *r;
 	struct list_head *xp;
-	struct xpatch *ap;
+	struct  applied_patch *ap;
 	char *rbuf = NULL;
 	
-	uint32_t count = 1, current  = 0;
+	uint32_t count = 0, current  = 0, rsize = 0;
 	
 	if (! list_empty(&applied_list))  {
 		list_for_each(xp, &applied_list) {
 			count++;
 		}
-
-		rbuf = calloc(sizeof(struct list_response), count + 1 + sizeof(uint32_t));
+		DMSG("applied patch list has %d patches\n", count);
+		rsize = (20  * count) + sizeof(uint32_t);
+		DMSG("response buf size:  %d\n", rsize);
+		
+		rbuf = calloc(rsize, sizeof(uint8_t));
 		if (rbuf == NULL) {
 			DMSG("server out of memory processing patch list\n");
 			return SANDBOX_ERR_NOMEM;
@@ -708,21 +718,25 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 		
 
 		list_for_each_entry(ap, &applied_list, l) {
+			dump_sandbox(&ap->sha1, 20);
 			memcpy(&r[current].sha1, ap->sha1, sizeof(ap->sha1));
+			DMSG("reading %d patch sha1: \n", current);
+			dump_sandbox(&r[current].sha1, 24);
+			
 			current++;
 			if (current == count)
 				break;
 			//TODO: add patch name to xpatch and return it here
 		}
 		ccode = send_rr_buf(fd, SANDBOX_MSG_LISTRSP,
-				   sizeof(r), r,
-				   SANDBOX_LAST_ARG);
-		free(r);	
+				   rsize, rbuf, SANDBOX_LAST_ARG);
+		free(rbuf);	
 	} else {
 		DMSG("applied patch list empty, sending null response list\n");
 		DMSG(" %lx %p\n", sizeof(current), &current);
 		
-			
+
+		
 		ccode  = send_rr_buf(fd,
 				     SANDBOX_MSG_LISTRSP,
 				     sizeof(current), (uint8_t *)&current, 
@@ -746,16 +760,21 @@ ssize_t dispatch_list_response(int fd, int len, void **bufp)
 		DMSG("error allocating buffer for patch list\n");
 		return SANDBOX_ERR_NOMEM;
 	}
-
+	DMSG("allocated response buffer %p\n", *bufp);
+	
 	/* read the array of struct list_response into the buffer */
 	/* terminated by a NULL entry */
 	if ((ccode = readn(fd, *bufp, remaining_bytes) != remaining_bytes))  {
+	
 		DMSG("error reading list response buffer\n");
 		/* safe way to free a buffer without checking for null */
 		*bufp = realloc(*bufp, 0);
 		*bufp = NULL;
 		ccode = SANDBOX_ERR_PARSE;
-	} else {	
+	} else {
+		DMSG("read list response buf, %d bytes\n", remaining_bytes);
+		dump_sandbox(*bufp, 24);
+		
 		ccode = SANDBOX_OK;
 	}
 	
@@ -903,6 +922,7 @@ void  *sandbox_list_patches(int fd)
 						    (void **)&listen_buf);
 		if (ccode || len < 0) {
 			goto errout;
+			dump_sandbox(listen_buf, 32);
 		}
 	}
 

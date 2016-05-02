@@ -55,10 +55,6 @@ struct list_head {
 	struct list_head *next, *prev;
 };
 
-
-
-
-
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
 
 #define LIST_HEAD(name) \
@@ -69,7 +65,6 @@ static inline void INIT_LIST_HEAD(struct list_head *list)
 	list->next = list;
 	list->prev = list;
 }
-
 
 
 static inline void __list_add(struct list_head *new,
@@ -92,7 +87,7 @@ static inline void __list_add(struct list_head *new,
  */
 static inline void list_add(struct list_head *new, struct list_head *head)
 {
-	__list_add(new, head, head->next);
+	__list_add(new, head->prev, head->next);
 }
 
 
@@ -325,6 +320,16 @@ struct table_patch {
 #define XENLP_RELOC_UINT64	0	/* function dispatch tables, etc */
 #define XENLP_RELOC_INT32	1	/* jmp instructions, etc */
 
+
+struct applied_patch {
+	void *blob;
+	unsigned char sha1[20];		/* binary encoded */
+	uint32_t numwrites;
+	struct xenlp_patch_write *writes;
+	struct list_head l;
+};
+
+
 struct xenlp_apply {
     unsigned char sha1[20];	/* SHA1 of patch file (binary) */
     char __pad0[4];
@@ -449,7 +454,7 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_VERSION (uint16_t)0x0001				      
 #define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 4))
 #define SANDBOX_MSG_GET_ID(b) (*(uint16_t *)((uint8_t *)b + 6))
-#define SANDBOX_MSG_MAX_LEN PLATFORM_PAGE_SIZE
+#define SANDBOX_MSG_MAX_LEN (MAX_PATCH_SIZE + SANDBOX_MSG_HDRLEN)
 #define SANDBOX_MSG_GET_LEN(b) (*(uint32_t *)((uint8_t *)b + 8))
 #define SANDBOX_MSG_PUT_LEN(b, l) ((*(uint32_t *)((uint8_t *)b + 8)) = (uint32_t)l)
 
