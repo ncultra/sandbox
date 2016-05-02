@@ -47,8 +47,10 @@ static void bin2hex(unsigned char *, size_t, char *, size_t);
 /* if sha1 is NULL print all applied patches */
 int find_patch(int fd, uint8_t sha1[20])
 {
-	uint32_t *count = NULL, i = 0, ccode = SANDBOX_MSG_APPLY;;
+	uint32_t *count = NULL, i = 0, ccode = SANDBOX_MSG_APPLY;
 	struct list_response *response;
+	char *rbuf = NULL;
+	
 	
 	/* return buffer format:*/
         /* uint32_t count;
@@ -66,11 +68,18 @@ int find_patch(int fd, uint8_t sha1[20])
 	}
 	
 	LMSG("%d applied patches...\n", *count);
+	rbuf = (char *)count;
+	rbuf += sizeof(uint32_t);
 	
-	response = (struct list_response *)count + sizeof(uint32_t);
+	response = (struct list_response *)rbuf;
+	dump_sandbox(response, 32);
+	
 	for (i = 0; i < *count; i++) {
 		if (sha1 == NULL) {
 			char sha1str[41];
+			DMSG("extracting sha1\n");
+			dump_sandbox(response[i].sha1, 20);
+			
 			bin2hex(response[i].sha1, sizeof(response[i].sha1),
 				sha1str, sizeof(sha1str));
 			LMSG("%s\n", sha1str);

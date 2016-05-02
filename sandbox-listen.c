@@ -705,7 +705,7 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 			count++;
 		}
 		DMSG("applied patch list has %d patches\n", count);
-		rsize = (20  * count) + sizeof(uint32_t);
+		rsize = (count * sizeof(struct list_response)) + sizeof(uint32_t);
 		DMSG("response buf size:  %d\n", rsize);
 		
 		rbuf = calloc(rsize, sizeof(uint8_t));
@@ -734,8 +734,6 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 	} else {
 		DMSG("applied patch list empty, sending null response list\n");
 		DMSG(" %lx %p\n", sizeof(current), &current);
-		
-
 		
 		ccode  = send_rr_buf(fd,
 				     SANDBOX_MSG_LISTRSP,
@@ -893,13 +891,13 @@ char *get_sandbox_build_info(int fd)
 {
 	uint16_t version, id;
 	uint32_t len;
-	char *listen_buf = NULL, *info = NULL;
+	char *listen_buf = NULL, *info;
 
 	if (send_rr_buf(fd, SANDBOX_MSG_GET_BLD, SANDBOX_LAST_ARG) == SANDBOX_OK) {
 		
 		read_sandbox_message_header(fd, &version, &id, &len, (void **)&listen_buf);
 		if (listen_buf != NULL) {
-			info =  strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
+			info = strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
 			free(listen_buf);
 		}
 	}	
@@ -924,6 +922,8 @@ void  *sandbox_list_patches(int fd)
 			goto errout;
 			dump_sandbox(listen_buf, 32);
 		}
+		DMSG("list patch response header: \n");
+		dump_sandbox(listen_buf, 24);
 	}
 
 	/* return buffer format:*/

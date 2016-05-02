@@ -465,8 +465,8 @@ uint64_t get_sandbox_end(void);
 #define SANDBOX_MSG_LIST_BUFSIZE 512
 struct list_response {
 	uint8_t sha1[20];
-	uint8_t name[PATH_MAX];
-	struct list_head l;
+	uint8_t name[128];
+
 };
 
 #define SANDBOX_MSG_GET_BLD 5
