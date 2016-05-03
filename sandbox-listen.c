@@ -922,8 +922,8 @@ void  *sandbox_list_patches(int fd)
 			goto errout;
 			dump_sandbox(listen_buf, 32);
 		}
-		DMSG("list patch response header: \n");
-		dump_sandbox(listen_buf, 24);
+		//DMSG("list patch response header: \n");
+		//dump_sandbox(listen_buf, 24);
 	}
 
 	/* return buffer format:*/

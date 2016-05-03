@@ -37,15 +37,7 @@
 // TODO: remove move this def to the makefile
 // TODO: incorporate a log level so this macro can log as well as diagnose bugs
 
-/* debugging message*/
-#define DMSG(...) do {				\
-		fprintf(stderr, __VA_ARGS__);	\
-	} while ( 0 ) 	
-/* logging message */
-#define LMSG(...) do {				\
-		fprintf(stdout, __VA_ARGS__);	\
-	} while ( 0 )
-/* list macros */
+
 
 #define container_of(ptr, type, member) ({ \
                 const typeof( ((type *)0)->member ) *__mptr = (ptr);  \
@@ -568,6 +560,9 @@ struct listen
 	int sock;
 	void *arg;
 };
+
+void DMSG(char *fmt, ...);
+void LMSG(char *fmt, ...);
 
 pthread_t *run_listener(struct listen *l);
 void *listen_thread(void *arg);

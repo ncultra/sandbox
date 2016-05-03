@@ -58,7 +58,7 @@ int find_patch(int fd, uint8_t sha1[20])
 	 * buffer needs to be freed by caller 
 	*/
 	count = (uint32_t *)sandbox_list_patches(fd);
-	DMSG("list path response buf %p\n", count);
+//	DMSG("list path response buf %p\n", count);
 	dump_sandbox(count, 32);
 	
 	
@@ -72,13 +72,13 @@ int find_patch(int fd, uint8_t sha1[20])
 	rbuf += sizeof(uint32_t);
 	
 	response = (struct list_response *)rbuf;
-	dump_sandbox(response, 32);
+//	dump_sandbox(response, 32);
 	
 	for (i = 0; i < *count; i++) {
 		if (sha1 == NULL) {
 			char sha1str[41];
-			DMSG("extracting sha1\n");
-			dump_sandbox(response[i].sha1, 20);
+//			DMSG("extracting sha1\n");
+//			dump_sandbox(response[i].sha1, 20);
 			
 			bin2hex(response[i].sha1, sizeof(response[i].sha1),
 				sha1str, sizeof(sha1str));

@@ -207,7 +207,7 @@ void patched_stub(void)
 	 __asm__("patched_stub_entry:");
 	 __asm__("patched_stub_entry_patch:");
 	 __asm__("patched_stub_entry_BUTT:"); 
-	 /*  __asm__("patched_stub_entry_BUTT_BUTT:"); */
+	 __asm__("patched_stub_entry_BUTT_BUTT:");
 	 /* __asm__("patched_stub_entry_BUTT_BUTT_BUTT:"); */
 	 /*__asm__("patched_stub_entry _BUTT_BUTT_BUTT_BUTT:"); */
 	 __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT_BUTT:");

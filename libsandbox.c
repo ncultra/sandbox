@@ -17,9 +17,6 @@
 /* can use the library without wasting space in the sandbox */
 
 uint64_t fill = PLATFORM_ALLOC_SIZE;
-//void the_sandbox(void); __attribute__ ((unused))
-//void the_sandbox(void)
-//{
 
 	__asm__(".text");
 	__asm__(".global patch_sandbox_start");
@@ -58,7 +55,44 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 #ifdef PPC64LE
 	__asm__("blr");
 #endif
-//}
+
+
+
+FILE *log_fd = NULL;
+int DEBUG = 1;
+
+
+FILE * open_log(void) 
+{
+	char lpath[0x32];
+	snprintf(lpath, 0x32, "/var/log/sand_log%d", getpid());
+	
+	log_fd = fopen(lpath, "a");
+	assert(log_fd != NULL);
+	return log_fd;	
+}
+
+
+void DMSG(char *fmt, ...)
+{
+	if (DEBUG) {
+		va_list va;
+		va_start(va, fmt);
+		vfprintf(log_fd, fmt, va);
+	}
+}
+
+
+void LMSG(char *fmt, ...)
+{
+	if (log_fd == NULL)
+		open_log();
+	va_list va;
+	va_start(va, fmt);
+	vfprintf(log_fd, fmt, va);
+}
+
+
 
 
 /* TODO: merge with sandbox struct patch */
