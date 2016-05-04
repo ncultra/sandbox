@@ -37,12 +37,14 @@ int usage(void)
 	printf("\t --test: call into the sandbox\n");
 	printf("\t --server: run as a server\n");
 	printf("\t --client: run as a client\n");
+	printf("\t --debug: turn on debug messages (default is off)\n");
 	printf("\t --help: display this usage information\n");
 	return 0;
 }
 
 
 char clsock[PATH_MAX];
+extern int DEBUG;
 
 int main(int argc, char **argv)
 {
@@ -53,13 +55,13 @@ int main(int argc, char **argv)
 		static struct option long_options[] = {
 			{"test", no_argument, &test_flag, 1},
 			{"help", no_argument, NULL, 0},
-			{"symbols", no_argument, NULL, 0},
 			{"server", no_argument, &server_flag, 1},
 			{"client", required_argument, &client_flag, 1},
+			{"debug", no_argument, &DEBUG, 1},
 			{0,0,0,0}
 		};
 		int option_index = 0;
-		cl = getopt_long(argc, argv, "thsc:", long_options, &option_index);
+		cl = getopt_long(argc, argv, "thsc:d", long_options, &option_index);
 		if (cl == -1)
 		    break;
 
@@ -87,10 +89,15 @@ int main(int argc, char **argv)
 				client_flag = 1;
 				printf("running as a client\n");
 				snprintf(clsock, sizeof(clsock), "%s", optarg);
-				
 			}
-			
 			break;
+		case 'd':  printf("%s\n", long_options[option_index].name);
+		{	
+				DEBUG = 1;
+				printf("debug messages are on\n");
+		}
+		
+		
 		default:
 			break;	
 		}

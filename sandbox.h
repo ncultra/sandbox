@@ -561,6 +561,7 @@ struct listen
 	void *arg;
 };
 
+int set_debug(int db);
 void DMSG(char *fmt, ...);
 void LMSG(char *fmt, ...);
 

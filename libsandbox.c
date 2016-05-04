@@ -59,13 +59,14 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 
 
 FILE *log_fd = NULL;
-int DEBUG = 1;
+int DEBUG = 0;
 
 
 int set_debug(int db)
 {
 	int old = DEBUG;
 	DEBUG = db;
+	printf("debug messages are %s", db > 0 ? "on" : "off" );
 	return old;
 }
 
@@ -74,10 +75,10 @@ int set_debug(int db)
 FILE * open_log(void) 
 {
 	char lpath[0x32];
-	snprintf(lpath, 0x32, "/var/log/sand_log%d", getpid());
+	snprintf(lpath, 0x32, "sand_log_%d", getpid());
 	
 	log_fd = fopen(lpath, "a");
-	assert(log_fd != NULL);
+
 	return log_fd;
 }
 
@@ -94,8 +95,14 @@ void DMSG(char *fmt, ...)
 
 void LMSG(char *fmt, ...)
 {
-	if (log_fd == NULL)
-		open_log();
+	
+	if (log_fd == NULL) {
+		
+		log_fd = open_log();
+		perror(NULL);
+		
+	}
+	
 	va_list va;
 	va_start(va, fmt);
 	vfprintf(log_fd, fmt, va);

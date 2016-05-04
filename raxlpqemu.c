@@ -110,7 +110,7 @@ static inline char *get_patch_name(char *path)
 void usage(void)
 {
 	printf("\nraxlpqemu --info --list --apply <patch> \
---remove <patch> --socket --help\n");
+--remove <patch> --socket --debug --help\n");
 	exit(0);	
 }
 
@@ -625,11 +625,13 @@ static inline void get_options(int argc, char **argv)
 			{"apply", required_argument, &apply_flag, 1},
 			{"remove", required_argument, &remove_flag, 1},
 			{"socket", required_argument, 0, 0},
+			{"debug", no_argument, NULL, 0},
 			{"help", no_argument, NULL, 0},
 			{0,0,0,0}
 		};
 		int option_index = 0;
-		c = getopt_long_only(argc, argv, "ila:r:s:h", long_options, &option_index);
+		c = getopt_long_only(argc, argv, "ila:r:s:dh",
+				     long_options, &option_index);
 		if (c == -1) {
 			break;
 		}
@@ -657,9 +659,13 @@ static inline void get_options(int argc, char **argv)
 			case 's':
 				option_index = 5;
 				goto restart_long;
-			case 'h':
+			case 'd':
 				option_index = 6;
 				goto restart_long;
+			case 'h':
+				option_index = 7;
+				goto restart_long;
+				
 			default:
 				break;
 				usage();			
@@ -688,12 +694,19 @@ static inline void get_options(int argc, char **argv)
 			
 			strncpy(sockname, optarg, PATH_MAX);
 			LMSG("socket: %s\n", sockname);
-			
 			break;
 		}
-		
 		case 6:
+		{
+			set_debug(1);
+			break;
+			
+		}
+		
+		case 7:
 			usage();
+			break;
+			
 		default:
 			break;
 		}
