@@ -58,7 +58,7 @@ int find_patch(int fd, uint8_t sha1[20])
 	 * buffer needs to be freed by caller 
 	*/
 	count = (uint32_t *)sandbox_list_patches(fd);
-//	DMSG("list path response buf %p\n", count);
+	DMSG("list path response buf %p\n", count);
 	dump_sandbox(count, 32);
 	
 	
@@ -72,13 +72,13 @@ int find_patch(int fd, uint8_t sha1[20])
 	rbuf += sizeof(uint32_t);
 	
 	response = (struct list_response *)rbuf;
-//	dump_sandbox(response, 32);
+	dump_sandbox(response, 32);
 	
 	for (i = 0; i < *count; i++) {
 		if (sha1 == NULL) {
 			char sha1str[41];
-//			DMSG("extracting sha1\n");
-//			dump_sandbox(response[i].sha1, 20);
+			DMSG("extracting sha1\n");
+			dump_sandbox(response[i].sha1, 20);
 			
 			bin2hex(response[i].sha1, sizeof(response[i].sha1),
 				sha1str, sizeof(sha1str));
@@ -124,7 +124,7 @@ int open_patch_file(char *path)
 	}	
 	patchfd = open(path, O_RDONLY);
 	if (patchfd < 0) {
-		DMSG("error: open(%s): %m\n", path);
+		LMSG("error: open(%s): %m\n", path);
 		return SANDBOX_ERR_BAD_FD;
 	}
 	return patchfd;
@@ -136,7 +136,7 @@ int string2sha1(const char *string, unsigned char *sha1)
     /* Make sure first 40 chars of string are composed of only hex digits */
     for (i = 0; i < 40; i += 2) {
         if (sscanf(string + i, "%02x", (int*)(&sha1[i / 2])) != 1) {
-            DMSG("error: not a valid sha1 string: %s\n", string);
+            LMSG("error: not a valid sha1 string: %s\n", string);
             return -1;
         }
     }
@@ -149,13 +149,13 @@ int extract_sha1_from_filename(unsigned char *sha1, size_t sha1len,
 
     /* Make sure suffix is .raxlpxs */
     if (strstr(filename, ".raxlpxs") == NULL) {
-	    DMSG("error: missing .raxlpxs extension: filename must be of form <sha1>.raxlpxs\n");
+	    LMSG("error: missing .raxlpxs extension: filename must be of form <sha1>.raxlpxs\n");
         return -1;
     }
 
     /* Make sure filename length is 48: 40 (<sha1>) + 8 ('.raxlpxs') */
     if (strlen(filename) != 48) {
-        DMSG("error: filename must be of form <sha1>.raxlpxs\n");
+        LMSG("error: filename must be of form <sha1>.raxlpxs\n");
         return -1;
     }
 
@@ -199,7 +199,7 @@ inline char * get_sandbox_build(int fd)
 {
 	char  *info = get_sandbox_build_info(fd);
 	if (info != NULL)
-		DMSG("%s\n", info);
+		LMSG("%s\n", info);
 	return info;
 }
 
@@ -275,21 +275,21 @@ int cmd_apply(int fd)
     
     pfd = open_patch_file(filepath);
     if (pfd < 0) {
-	    DMSG("error opening patch file %s\n", filepath);
+	    LMSG("error opening patch file %s\n", filepath);
 	    return SANDBOX_ERR_BAD_FD;
     }
     
     if (load_patch_file(pfd, filename, &patch) < 0) {
-	    DMSG("error parsing patch file %s\n", filename);
+	    LMSG("error parsing patch file %s\n", filename);
 	    return SANDBOX_ERR_PARSE;;
     }
     
-    DMSG("Getting QEMU/sandbox info\n");
+    LMSG("Getting QEMU/sandbox info\n");
     
     char *qemu_version = get_qemu_version();
     char *qemu_compile_date = get_qemu_date();
     if (!strlen(qemu_version) || !strlen(qemu_compile_date)) {
-	    DMSG("error getting version and complilation data\n");
+	    LMSG("error getting version and complilation data\n");
 	    return SANDBOX_ERR_RW;	    
     }
 
@@ -306,7 +306,7 @@ int cmd_apply(int fd)
 
     if (strncmp(qemu_version, patch.xenversion, INFO_STRING_LEN) != 0 ||
 	strncmp(qemu_compile_date, patch.xencompiledate, INFO_STRING_LEN) != 0) {
-	    DMSG("error: patch does not match QEMU build\n");
+	    LMSG("error: patch does not match QEMU build\n");
 	    return SANDBOX_ERR_BAD_VER;
     }
     
@@ -352,7 +352,7 @@ int cmd_apply(int fd)
     
     int ret = do_lp_apply(fd, buf, buflen);
     if (ret < 0) {
-        DMSG("failed to patch hypervisor: %m\n");
+        LMSG("failed to patch hypervisor: %m\n");
         return -1;
     }
 
@@ -397,7 +397,7 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
 
     if (memcmp(patch->sha1, hash, sizeof(patch->sha1)) != 0) {
         char hex[SHA_DIGEST_LENGTH * 2 + 1];
-        DMSG("%s: hash mismatch\n", filename);
+        LMSG("%s: hash mismatch\n", filename);
         bin2hex(hash, sizeof(hash), hex, sizeof(hex));
         DMSG("  calculated %s\n", hex);
         return -1;
@@ -410,10 +410,10 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
         return -1;
     DMSG("read %lx bytes\n", sizeof(signature));
     
-    DMSG("signature: %s\n", signature);
+    LMSG("signature: %s\n", signature);
     
     if (memcmp(signature, XSPATCH_COOKIE, sizeof(signature))) {
-        DMSG("%s: invalid signature\n", filename);
+        LMSG("%s: invalid signature\n", filename);
         return -1;
     }
 
@@ -427,7 +427,7 @@ int load_patch_file(int fd, char *filename, struct xpatch *patch)
               32) < 0)
         return -1;
     DMSG("read %lx bytes\n", sizeof(patch->xencompiledate));
-    DMSG("xenversion: %s; xencompiledate: %s\n",
+    LMSG("xenversion: %s; xencompiledate: %s\n",
 	 patch->xenversion, patch->xencompiledate);
     
 
@@ -550,7 +550,7 @@ int get_info_strings(int fd, int display)
 	
 	info_buf =  get_sandbox_build_info(fd);
 	if (info_buf == NULL) {
-		DMSG("unable to get info strings\n");
+		LMSG("unable to get info strings\n");
 		return SANDBOX_ERR_RW;
 	}
 
@@ -563,7 +563,7 @@ int get_info_strings(int fd, int display)
 		p = strtok_r(NULL, "\n", &info_buf_save);
 	}
 	if (index <  COUNT_INFO_STRINGS - 1) {
-		DMSG("error parsing info strings, index: %d\n", index);
+		LMSG("error parsing info strings, index: %d\n", index);
 		return SANDBOX_ERR_PARSE;
 	}
 	
@@ -693,7 +693,7 @@ static inline void get_options(int argc, char **argv)
 		{
 			
 			strncpy(sockname, optarg, PATH_MAX);
-			LMSG("socket: %s\n", sockname);
+			DMSG("socket: %s\n", sockname);
 			break;
 		}
 		case 6:
@@ -725,13 +725,13 @@ int main(int argc, char **argv)
 	/* we reply on having the sockname set, which can happen after other options */
 	if (info_flag > 0) {
 		if ((sockfd = connect_to_sandbox(sockname)) < 0) {
-			DMSG("error connecting to sandbox server\n");
+			LMSG("error connecting to sandbox server\n");
 			return SANDBOX_ERR_RW;
 		}
 		
 		int info = get_info_strings(sockfd, 1);
 		if (info != SANDBOX_OK)  {	
-			DMSG("error getting build info\n");
+			LMSG("error getting build info\n");
 		}
 		if (sockfd > 0) {
 			close(sockfd);
@@ -744,12 +744,12 @@ int main(int argc, char **argv)
 		int ccode;
 	
 		if ((sockfd = connect_to_sandbox(sockname)) < 0) {
-			DMSG("error connecting to sandbox server\n");
+			LMSG("error connecting to sandbox server\n");
 			return SANDBOX_ERR_RW;
 		}
 
 		if ((ccode = list_patches(sockfd)) < 0)
-			DMSG("error listing applied patches\n");
+			LMSG("error listing applied patches\n");
 
 		
 		if (sockfd > 0) {
@@ -763,12 +763,12 @@ int main(int argc, char **argv)
 		int ccode;
 		
 		if ((sockfd = connect_to_sandbox(sockname)) < 0) {
-			DMSG("error connecting to sandbox server\n");
+			LMSG("error connecting to sandbox server\n");
 			return SANDBOX_ERR_RW;
 		}	
 
 		if ((ccode = cmd_apply(sockfd)) < 0)
-			DMSG("error applying patch %d\n", ccode);
+			LMSG("error applying patch %d\n", ccode);
 		close(sockfd);
 		return ccode;
 		

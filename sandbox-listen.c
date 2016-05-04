@@ -519,7 +519,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 		return ccode;
 	
 errout:
-	DMSG("read a bad or incomplete sandbox header\n");
+	LMSG("read a bad or incomplete sandbox header\n");
 	
 	return SANDBOX_ERR_BAD_HDR;
 	
@@ -574,7 +574,7 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	DMSG("message length estimated to be %d bytes\n", len);	
 
 	if (len > SANDBOX_MSG_MAX_LEN) {
-		DMSG("message calculated to exceed the maximum size\n");
+		LMSG("message calculated to exceed the maximum size\n");
 		goto errout;
 	}
 	
@@ -795,7 +795,7 @@ ssize_t dispatch_getbld(int fd, int len, void **bufp)
 	
 	*bufp = calloc(sizeof(uint8_t), SANDBOX_MSG_BLD_BUFSIZE);
 	if (*bufp  == NULL) {
-		DMSG("error allocating buffer for build info\n");
+		LMSG("error allocating buffer for build info\n");
 		return SANDBOX_ERR_NOMEM;
 	}
 	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%s\n%d.%d%d\n",

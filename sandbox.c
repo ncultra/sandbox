@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 
 				info = get_sandbox_build_info(fd);
 				if (info != NULL) {
-					DMSG("%s\n", info);
+					LMSG("%s\n", info);
 					free(info);
 				}
 			}			
@@ -196,7 +196,6 @@ int main(int argc, char **argv)
 		printf ("err = %d\n", err);
 		dump_sandbox(&patch_sandbox_start, 16);
 		DMSG("write completed, calling into the patch sandbox\n\n");
-		DMSG("this message added by live patching\n\n");
 		patched();
 		
 		DMSG("\nreturned from the patch sandbox\n\n");

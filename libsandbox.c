@@ -108,8 +108,7 @@ void LMSG(char *fmt, ...)
 		DMSG("opening log file\n");		
 		log_fd = open_log();
 		if (log_fd == NULL) {
-			DMSG("could not open log file\n");
-			
+			DMSG("could not open log file\n");	
 			perror(NULL);
 			return;
 		}
@@ -219,7 +218,7 @@ int apply_patch(struct patch *new_patch)
 	}
 
 err_exit:
-	DMSG("Unable to write relocation record @ %p\n", (void *)new_patch->reloc_dest);
+	LMSG("Unable to write relocation record @ %p\n", (void *)new_patch->reloc_dest);
 	return -1;
 }
 
@@ -300,7 +299,7 @@ int xenlp_apply(void *arg)
 
 	/* Do some initial sanity checking */
 	if (apply->bloblen > MAX_PATCH_SIZE) {
-		DMSG("live patch size %u is too large\n", apply->bloblen);
+		LMSG("live patch size %u is too large\n", apply->bloblen);
 		return -EINVAL;
 	}
 
@@ -308,7 +307,7 @@ int xenlp_apply(void *arg)
 
 	
 	if (apply->numwrites == 0) {
-		DMSG("need at least one patch\n");
+		LMSG("need at least one patch\n");
 		return -EINVAL;
 	}
 	DMSG("number of writes: %d \n", apply->numwrites);
@@ -402,7 +401,7 @@ int xenlp_apply(void *arg)
 			*((uint64_t *)(pw->data + off)) += relocrel;
 			break;
 		case XENLP_RELOC_INT32:
-			DMSG("write is a 64-bit reloc\n");
+			DMSG("write is a 32-bit reloc\n");
 			if (off > sizeof(pw->data) - sizeof(int32_t)) {
 				DMSG("invalid dataoff value %d\n", off);
 				return SANDBOX_ERR_PARSE;
@@ -433,7 +432,7 @@ int xenlp_apply(void *arg)
 
 	list_add(&patch->l, &applied_list);
 	bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
-	DMSG("successfully applied patch %s\n", sha1);
+	LMSG("successfully applied patch %s\n", sha1);
 
 	return 0;
 }
@@ -442,7 +441,7 @@ int xenlp_apply(void *arg)
 struct patch *alloc_patch(char  *name, uint64_t size)
 {
 	uint64_t avail = get_sandbox_free();
-	DMSG("%08lx available in sandbox\n", avail);
+	LMSG("%08lx available in sandbox\n", avail);
 	
 	if (avail < size ) {
 		DMSG("Not enough room to apply patch: %ld available, %ld needed\n",
@@ -535,6 +534,9 @@ int reflect(struct dl_phdr_info *info,
 void dump_sandbox(const void* data, size_t size) {
 	char ascii[17];
 	size_t i, j;
+	if (DEBUG < 1)
+		return;
+	
 	ascii[16] = '\0';
 	printf ("\n");
 	printf ("%08lx\t", (unsigned long) (unsigned char *)data);
