@@ -683,7 +683,7 @@ static inline void get_options(int argc, char **argv)
 		{
 						
 			strncpy(filepath, optarg, sizeof(filepath) - 1);
-			LMSG("patch file: %s\n", filepath);
+			DMSG("patch file: %s\n", filepath);
 			break;
 		}
 		case 4: 

@@ -59,7 +59,15 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 
 
 FILE *log_fd = NULL;
+int log_level = 1; /* mirror log to stdout */
 int DEBUG = 0;
+
+int set_loglevel(int l) 
+{
+	int old = log_level;
+	log_level = l;
+	return old;
+}
 
 
 int set_debug(int db)
@@ -76,9 +84,7 @@ FILE * open_log(void)
 {
 	char lpath[0x32];
 	snprintf(lpath, 0x32, "sand_log_%d", getpid());
-	
 	log_fd = fopen(lpath, "a");
-
 	return log_fd;
 }
 
@@ -89,23 +95,37 @@ void DMSG(char *fmt, ...)
 		va_list va;
 		va_start(va, fmt);
 		vfprintf(stderr, fmt, va);
+		va_end(va);
+		
 	}
 }
 
 
 void LMSG(char *fmt, ...)
 {
-	
+	va_list va;
 	if (log_fd == NULL) {
-		
+		DMSG("opening log file\n");		
 		log_fd = open_log();
-		perror(NULL);
-		
+		if (log_fd == NULL) {
+			DMSG("could not open log file\n");
+			
+			perror(NULL);
+			return;
+		}
+	}
+	if (log_level > 0) {
+		va_list vb;
+		va_copy(vb, va);
+		va_start(vb, fmt);
+		vfprintf(stdout, fmt, vb);
+		va_end(vb);
 	}
 	
-	va_list va;
 	va_start(va, fmt);
 	vfprintf(log_fd, fmt, va);
+	va_end(va);
+	
 }
 
 
