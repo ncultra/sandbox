@@ -62,6 +62,15 @@ FILE *log_fd = NULL;
 int DEBUG = 1;
 
 
+int set_debug(int db)
+{
+	int old = DEBUG;
+	DEBUG = db;
+	return old;
+}
+
+
+
 FILE * open_log(void) 
 {
 	char lpath[0x32];
@@ -69,7 +78,7 @@ FILE * open_log(void)
 	
 	log_fd = fopen(lpath, "a");
 	assert(log_fd != NULL);
-	return log_fd;	
+	return log_fd;
 }
 
 
@@ -78,7 +87,7 @@ void DMSG(char *fmt, ...)
 	if (DEBUG) {
 		va_list va;
 		va_start(va, fmt);
-		vfprintf(log_fd, fmt, va);
+		vfprintf(stderr, fmt, va);
 	}
 }
 
