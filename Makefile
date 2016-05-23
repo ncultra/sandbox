@@ -4,13 +4,12 @@ MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
 LIB_FILES=libsandbox.o  sandbox-listen.o
-LIBELF=/usr/lib64/libelf.a
 CLEAN=@-rm -f sandbox raxlpqemu *o *a *so gitsha.txt platform.h \
 	gitsha.h &>/dev/null
 
 .PHONY: gitsha
 gitsha: gitsha.txt gitsha.h libsandbox.o
-	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
+#	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=nolo#ad,readonly libsandbox.o libsandbox.o)
 
 sandbox: sandbox.o libsandbox.a
 	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
@@ -20,10 +19,10 @@ libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 	$(shell objcopy --add-section .buildinfo=gitsha.txt \
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 # add the static elf library to the sandbox
-	ar cr libsandbox.a libsandbox.o  sandbox-listen.o \
-	$(LIBELF)
+	ar cr libsandbox.a libsandbox.o  sandbox-listen.o
 
-libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.h
+
+libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.h gitsha.txt
 	$(CC) -g -c -Wall  -std=gnu11 -mcmodel=large \
 	 -ffunction-sections -fkeep-static-consts -O0 -pthread $<
 .PHONY: qclean
@@ -47,7 +46,7 @@ raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
 # use the git tag as the version number
 # tag should be in the format v0.0.0
 gitsha.txt:
-	@echo  "generating .buildinfo elf section..."
+#	@echo  "generating .buildinfo elf section..."
 	@echo -n "SANDBOXBUILDINFOSTART" > $@
 	@echo -n "{" >> $@
 	@echo -n "'git-revision': '$(shell git rev-parse HEAD)'," >> $@	
@@ -61,7 +60,7 @@ gitsha.txt:
 .PHONY: gitsha.h
 
 gitsha.h:
-	@echo "generating gitsha.h...."
+#	@echo "generating gitsha.h...."
 	@echo "/* this file is generated automatically in the Makefile */" >$@
 	@echo "const char *git_revision=\"$(shell git rev-parse HEAD)\";" >> $@
 	@echo "const char *compiled=\"$(shell $(CC) --version)\";" >> $@
