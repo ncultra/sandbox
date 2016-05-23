@@ -20,7 +20,7 @@ libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 	$(shell objcopy --add-section .buildinfo=gitsha.txt \
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 # add the static elf library to the sandbox
-	ar crT libsandbox.a libsandbox.o  sandbox-listen.o \
+	ar cr libsandbox.a libsandbox.o  sandbox-listen.o \
 	$(LIBELF)
 
 libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.h
