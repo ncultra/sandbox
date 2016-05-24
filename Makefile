@@ -22,9 +22,17 @@ libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 	ar cr libsandbox.a libsandbox.o  sandbox-listen.o
 
 
-libsandbox.o: libsandbox.c sandbox.h sandbox-listen.c gitsha.h gitsha.txt
+.NOTPARALLEL: libsandbox.o 
+libsandbox.o: libsandbox.c platform.h sandbox.h gitsha.h gitsha.txt
 	$(CC) -g -c -Wall  -std=gnu11 -mcmodel=large \
-	 -ffunction-sections -fkeep-static-consts -O0 -pthread $<
+	 -ffunction-sections -fkeep-static-consts -O0  $<
+	$(shell ./config.sh)
+.NOTPARALLEL: sandbox-listen.o
+sandbox-listen.o: sandbox-listen.c platform.h
+	$(CC) -g -c -Wall  -std=gnu11 -mcmodel=large \
+	 -ffunction-sections -fkeep-static-consts -O0  $<
+	$(shell ./config.sh)
+
 .PHONY: qclean
 clean:	
 	$(CLEAN)
