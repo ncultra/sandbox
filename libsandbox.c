@@ -40,7 +40,7 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 	__asm__(".align 8");
 
 #endif
-#ifdef PPC64L
+#ifdef PPC64LE
 	__asm__("b patch_sandbox_end");
 	__asm__(".fill PLATFORM_ALLOC_SIZE");
 	__asm__(".align 3");
@@ -173,7 +173,7 @@ static void *get_sandbox_memory(uint32_t size)
 }
 
 
-int apply_patch(struct patch *new_patch)
+ int apply_patch(struct patch *new_patch)
 {
 	assert(get_sandbox_free() > new_patch->patch_size);
         assert(new_patch->patch_size < MAX_PATCH_SIZE);

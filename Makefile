@@ -1,4 +1,4 @@
-BUILD_ROOT := "/home/mdday/src/sandbox/"
+BUILD_ROOT := "/home/$(shell id -n -u)/src/sandbox/"
 CFLAGS =  -g -Wall -fPIC -std=gnu11 -mcmodel=large -ffunction-sections -pthread
 MAJOR_VERSION=0
 MINOR_VERSION=0

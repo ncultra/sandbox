@@ -256,9 +256,6 @@ static inline int list_empty(const struct list_head *head)
 // must be page-aligned.
 #define SANDBOX_ALLOC_SIZE PLATFORM_PAGE_SIZE
 
-#ifdef PPC64LE
-#define smp_mb() {__asm__ __volatile__ ("sync" : : : "memory");}
-#endif
 typedef uint8_t * reloc_ptr_t;
 
 
@@ -548,8 +545,8 @@ struct list_response {
 */
 
 // TODO: add pid to socket name
-#define SSANDBOX "sandbox-sock"
-
+#define SSANDBOX "sandbox-sock" 
+ 
 struct sandbox_buf {
 	uint32_t size;
 	uint8_t *buf;

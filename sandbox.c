@@ -201,8 +201,10 @@ int main(int argc, char **argv)
 		DMSG("\nreturned from the patch sandbox\n\n");
 
 	}
+	#ifdef X86_64
 	__asm__("jmp patched_stub_entry");
-	
+
+	#endif
 	
 	
 	return 0;
