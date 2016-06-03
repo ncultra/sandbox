@@ -4,15 +4,15 @@ MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
 LIB_FILES=libsandbox.o  sandbox-listen.o
-CLEAN=@-rm -f sandbox raxlpqemu *o *a *so gitsha.txt platform.h \
-	gitsha.h &>/dev/null
+CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
+	gitsha.h
 
 .PHONY: gitsha
 gitsha: gitsha.txt gitsha.h libsandbox.o
 #	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=nolo#ad,readonly libsandbox.o libsandbox.o)
 
 sandbox: sandbox.o libsandbox.a
-	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
+	$(CC) $(CFLAGS) -o sandbox.out sandbox.o libsandbox.a 
 
 # any target that requires libsandbox will pull in gitsha.txt automatically
 libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
@@ -35,7 +35,7 @@ sandbox-listen.o: sandbox-listen.c platform.h
 
 .PHONY: qclean
 clean:	
-	$(CLEAN)
+	$(shelll CLEAN >& /dev/null)
 	@echo "repo is clean"
 
 *.c: platform.h
