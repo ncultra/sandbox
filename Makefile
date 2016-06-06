@@ -4,15 +4,17 @@ MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
 LIB_FILES=libsandbox.o  sandbox-listen.o
-CLEAN=@-rm -f sandbox raxlpqemu *o *a *so gitsha.txt platform.h \
-	gitsha.h &>/dev/null
+CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
+	gitsha.h
+CC=gcc
+
 
 .PHONY: gitsha
 gitsha: gitsha.txt gitsha.h libsandbox.o
 #	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=nolo#ad,readonly libsandbox.o libsandbox.o)
 
 sandbox: sandbox.o libsandbox.a
-	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
+	$(CC) $(CFLAGS) -o sandbox.out sandbox.o libsandbox.a 
 
 # any target that requires libsandbox will pull in gitsha.txt automatically
 libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
@@ -21,21 +23,25 @@ libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 # add the static elf library to the sandbox
 	ar cr libsandbox.a libsandbox.o  sandbox-listen.o
 
+# force the qemu makefile to copy the build info into the .buidinfo section
+.PHONY: libsandbox-qemu
+libsandbox-qemu: libsandbox.o sandbox-listen.o
+	$(shell objcopy --add-section .buildinfo=gitsha.txt \
+	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 
-.NOTPARALLEL: libsandbox.o 
 libsandbox.o: libsandbox.c platform.h sandbox.h gitsha.h gitsha.txt
 	$(CC) -g -c -Wall  -std=gnu11 -mcmodel=large \
 	 -ffunction-sections -fkeep-static-consts -O0  $<
 	$(shell ./config.sh)
-.NOTPARALLEL: sandbox-listen.o
+
 sandbox-listen.o: sandbox-listen.c platform.h
 	$(CC) -g -c -Wall  -std=gnu11 -mcmodel=large \
 	 -ffunction-sections -fkeep-static-consts -O0  $<
 	$(shell ./config.sh)
 
-.PHONY: qclean
+.PHONY: clean
 clean:	
-	$(CLEAN)
+	$(shell $(CLEAN) >& /dev/null)
 	@echo "repo is clean"
 
 *.c: platform.h

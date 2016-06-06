@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <signal.h>
+#include <sched.h>
 #include <memory.h> 
 #include <sys/mman.h>
 #include <errno.h>
@@ -564,9 +566,9 @@ void LMSG(char *fmt, ...);
 
 pthread_t *run_listener(struct listen *l);
 void *listen_thread(void *arg);
-int listen_sandbox_sock(const char *sock_name);
+int listen_sandbox_sock(char *sock_name);
 int accept_sandbox_sock(int listenfd, uid_t *uidptr);
-int cli_conn(const char *sock_name);
+int cli_conn(char *sock_name);
 ssize_t	readn(int fd, void *vptr, size_t n);
 ssize_t writen(int fd, const void *vptr, size_t n);
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
