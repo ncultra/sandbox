@@ -175,7 +175,7 @@ void *listen_thread(void *arg)
 // connect, peek at the incoming data. 
 // sock_name: full path of the socket e.g. /var/run/SANDBOX_ERR_BAD_HDR
 
-int listen_sandbox_sock(const char *sock_name)
+int listen_sandbox_sock(char *sock_name)
 {
 	int fd, len, err, ccode;
 	struct sockaddr_un un;
