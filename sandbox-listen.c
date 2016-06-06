@@ -74,12 +74,14 @@ static inline int get_handler_count(void)
 #define QLEN 5 // depth of the listening queue
 #define STALE 30 // timout for client user id data
 
+pthread_t *thr;
+
 pthread_t *run_listener(struct listen *l)
 {
 	int ccode;
 	DMSG("run_listener\n");
 	
-	pthread_t *thr = calloc(1, sizeof(pthread_t));
+	thr = calloc(1, sizeof(pthread_t));
 	if (!thr)
 		goto errout;
 	
@@ -95,6 +97,13 @@ errout:
 	return NULL;
 }
 
+int should_stop = 0;
+
+void stop_listener(pthread_t *which)
+{
+    if (thr == which)
+        should_stop = 1;
+}
 
 void *listen_thread(void *arg)
 {
@@ -147,7 +156,7 @@ void *listen_thread(void *arg)
                 DMSG("bad socket value in listen thread\n");
                 return NULL;
             }
-	} while (1);
+	} while (!should_stop);
 
         if (blocked) {
            pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
