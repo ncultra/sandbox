@@ -27,60 +27,6 @@
 /*      |    field  n                    ...                            |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-
-
-/* Message ID 1: apply patch ********************************************/
-/* Fields:
-   1) header
-   2) sha1 build id of the target - must match (20 bytes)
-   3) patch name (string)
-   4) patch size
-   5) patch buf
-   6) canary (32 bytes of binary instructions), used to
-      verify the jump address.
-   7) jump location (uintptr_t  absolute address for jump)
-   7) sha1 of the patch bytes (20 bytes)
-   8) count of extended fields (4 bytes, always zero for this version).
-
-   reply msg: ID 2
-   1) header
-   2) uint64_t  0L "OK," or error code
- */
-
-/* Message ID 3: list patch ********************************************/
-/* Fields:
-   1) header
-   2) msg id (3) sha1 of the patch (corresponding to field 5 of message ID 1),
-      ...
-
-   reply msg ID 4:
-   1) header
-
-   2...n a tuple for each patch on the list containing sha1 and patch name 
-
-*/
-
-/* Message ID 5: get build info ********************************************/
-
-/* Fields:
-   1) header (msg id 3)
-
-   reply msg ID 6:
-   1) header
-   2) uint64_t 0L "OK, or error code.
-  
- the next field is one string with each field starting on a newline.
- Note: major, minor, revision are combined in one line
-
-   3) 20-bytes sha1 git HEAD of the running binary,
-     $CC at build time,
-     $CFLAGS at build time,
-     $compile_date,
-     major version,
-     minor version,
-     revision
-*/
-
 static inline ssize_t check_magic(uint8_t *magic)
 {
 	uint8_t m[] = SANDBOX_MSG_MAGIC;
@@ -150,52 +96,64 @@ errout:
 }
 
 
-// TODO: handle signals in the thread
-
 void *listen_thread(void *arg)
 {
 	struct listen *l  = (struct listen *)arg;
-	int quit = 0;
+	int quit = 0, blocked = 0;
 	int client_fd;
 	uid_t client_id;
 	char *listen_buf = NULL;
-
-	/* TODO - need an inner loop to use the same socket with multiple messages. */
-
+        sigset_t newmask, oldmask;
+        
+        sigfillset(&newmask);
+        
 	DMSG("server_thread: listen.sock %d\n", l->sock);
 
-	do {
-		if (l->sock > 0) {	
-			client_fd = accept_sandbox_sock(l->sock, &client_id);
-			if (client_fd < 0) {
-				DMSG("accept on %d failed\n", l->sock);
-			}
-			
-			while (client_fd > 0) {
-				uint16_t version, id;
-				uint32_t len;
-				quit   = read_sandbox_message_header(client_fd,
-								     &version,
-								     &id, &len,
-								     (void **)&listen_buf);
-				if (quit == SANDBOX_ERR_CLOSED) {
-					DMSG("client closed socket %d\n", client_fd);
-					close(client_fd);
-					client_fd = -1;
-				}
-				
-				else if (quit < 0) {
-					DMSG("error reading header %d\n", quit);
-				}
 
-			}
-		} else {
-			DMSG("bad socket value in listen thread\n");
-			return NULL;
-		}
+        /* this thread must never bring the guest down, including uncaught signals */
+        if (pthread_sigmask(SIG_BLOCK, &newmask, &oldmask) < 0) {
+            LMSG("error %s setting signal mask in sandbox listen thread",
+                 strerror(errno));
+        } else {
+            blocked = 1;
+        }
+        
+	do {
+            if (l->sock > 0) {	
+                client_fd = accept_sandbox_sock(l->sock, &client_id);
+                if (client_fd < 0) {
+                    DMSG("accept on %d failed\n", l->sock);
+                }
+		
+                while (client_fd > 0) {
+                    uint16_t version, id;
+                    uint32_t len;
+                    quit   = read_sandbox_message_header(client_fd,
+                                                         &version,
+                                                         &id, &len,
+                                                         (void **)&listen_buf);
+                    if (quit == SANDBOX_ERR_CLOSED) {
+                        DMSG("client closed socket %d\n", client_fd);
+                        close(client_fd);
+                        client_fd = -1;
+                    }
+                    
+                    else if (quit < 0) {
+                        DMSG("error reading header %d\n", quit);
+                    }
+                    sched_yield();
+                }
+            } else {
+                DMSG("bad socket value in listen thread\n");
+                return NULL;
+            }
 	} while (1);
+
+        if (blocked) {
+           pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
+        }
 	if (client_fd >= 0)
-		close(client_fd);
+            close(client_fd);
 	
 	return NULL;
 }
@@ -208,7 +166,7 @@ void *listen_thread(void *arg)
 // connect, peek at the incoming data. 
 // sock_name: full path of the socket e.g. /var/run/SANDBOX_ERR_BAD_HDR
 
-	int listen_sandbox_sock(const char *sock_name)
+int listen_sandbox_sock(const char *sock_name)
 {
 	int fd, len, err, ccode;
 	struct sockaddr_un un;

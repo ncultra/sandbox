@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <signal.h>
+#include <sched.h>
 #include <memory.h> 
 #include <sys/mman.h>
 #include <errno.h>
