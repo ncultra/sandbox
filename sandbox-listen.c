@@ -115,9 +115,9 @@ void *listen_thread(void *arg)
         sigset_t newmask, oldmask;
         
         sigfillset(&newmask);
-        
-	DMSG("server_thread: listen.sock %d\n", l->sock);
+        newmask &= ~(SIGABRT, SIGKILL, SIGTERM, SIGTRAP);
 
+        DMSG("server_thread: listen.sock %d\n", l->sock);
 
         /* this thread must never bring the guest down, including uncaught signals */
         if (pthread_sigmask(SIG_BLOCK, &newmask, &oldmask) < 0) {
