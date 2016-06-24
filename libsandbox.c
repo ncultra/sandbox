@@ -25,14 +25,18 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 #ifdef X86_64
 	__asm__(".align 0x40"); // cache line size
 #endif
+
+#ifdef X86_32
+        __asm__(".align 0x40");
+#endif
+
 #ifdef  PPC64LE
 	__asm__(".align 0x0c");
 #endif
 
 	__asm__("patch_sandbox_start:");
 
-#ifdef X86_64
-
+#if defined (X86_64) || defined (__i386__) || defined(X86_32)
 	__asm__("mfence");
 	__asm__("jmp patch_sandbox_end");
 	__asm__(".text");
@@ -51,6 +55,10 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 
 #ifdef X86_64
 	__asm__("retq");
+#endif
+
+#if defined (__i386__) || defined(X86_32)
+__asm__("retd");
 #endif
 
 #ifdef PPC64LE

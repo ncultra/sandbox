@@ -108,7 +108,7 @@ void stop_listener(pthread_t *which)
 void *listen_thread(void *arg)
 {
 	struct listen *l  = (struct listen *)arg;
-	int quit = 0, blocked = 0;
+	int quit = 0;
 	int client_fd;
 	uid_t client_id;
 	char *listen_buf = NULL;
@@ -119,7 +119,8 @@ void *listen_thread(void *arg)
             if (l->sock > 0) {	
                 client_fd = accept_sandbox_sock(l->sock, &client_id);
                 if (client_fd < 0) {
-                    DMSG("accept on %d failed\n", l->sock
+                    DMSG("accept on %d failed\n", l->sock);
+                    
                 }
 		
                 while (client_fd > 0) {

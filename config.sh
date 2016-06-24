@@ -18,7 +18,13 @@ case $(uname -i) in
 	echo "#define PLATFORM_INSTRUCTION_DIVISOR 2" >> platform.h 
 
         ;;
-    
+
+    "i386")
+	   echo "#define X86_32 1"  >> platform.h
+	   echo "#define PLATFORM_CACHE_LINE_SIZE "0x20""
+	   echo "#define PLATFORM_INSTRUCTION_DIVISOR 2" >> platform.h
+	   ;;
+	   
     "ppc64le")
 	echo "#define PPC64LE 1" >> platform.h
 	echo "#define PLATFORM_CACHE_LINE_SIZE 0x80" >> platform.h
