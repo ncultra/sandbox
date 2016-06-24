@@ -28,10 +28,11 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 #ifdef  PPC64LE
 	__asm__(".align 0x0c");
 #endif
-	
-#ifdef X86_64
 
 	__asm__("patch_sandbox_start:");
+
+#ifdef X86_64
+
 	__asm__("mfence");
 	__asm__("jmp patch_sandbox_end");
 	__asm__(".text");
@@ -42,7 +43,7 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 #endif
 #ifdef PPC64LE
 	__asm__("b patch_sandbox_end");
-	__asm__(".fill PLATFORM_ALLOC_SIZE");
+	__asm__(".fill 1000 * 1000,1,0x00");
 	__asm__(".align 3");
 
 #endif
