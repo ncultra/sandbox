@@ -14,7 +14,7 @@ gitsha: gitsha.txt gitsha.h libsandbox.o
 #	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=nolo#ad,readonly libsandbox.o libsandbox.o)
 
 sandbox: sandbox.o libsandbox.a
-	$(CC) $(CFLAGS) -o sandbox.out sandbox.o libsandbox.a 
+	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
 
 # any target that requires libsandbox will pull in gitsha.txt automatically
 libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
