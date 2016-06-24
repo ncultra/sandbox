@@ -112,26 +112,14 @@ void *listen_thread(void *arg)
 	int client_fd;
 	uid_t client_id;
 	char *listen_buf = NULL;
-        sigset_t newmask, oldmask;
-        
-        sigfillset(&newmask);
-        newmask &= ~(SIGABRT, SIGKILL, SIGTERM, SIGTRAP);
 
         DMSG("server_thread: listen.sock %d\n", l->sock);
 
-        /* this thread must never bring the guest down, including uncaught signals */
-        if (pthread_sigmask(SIG_BLOCK, &newmask, &oldmask) < 0) {
-            LMSG("error %s setting signal mask in sandbox listen thread",
-                 strerror(errno));
-        } else {
-            blocked = 1;
-        }
-        
 	do {
             if (l->sock > 0) {	
                 client_fd = accept_sandbox_sock(l->sock, &client_id);
                 if (client_fd < 0) {
-                    DMSG("accept on %d failed\n", l->sock);
+                    DMSG("accept on %d failed\n", l->sock
                 }
 		
                 while (client_fd > 0) {
@@ -158,9 +146,6 @@ void *listen_thread(void *arg)
             }
 	} while (!should_stop);
 
-        if (blocked) {
-           pthread_sigmask(SIG_SETMASK, &oldmask, NULL);
-        }
 	if (client_fd >= 0)
             close(client_fd);
 	
