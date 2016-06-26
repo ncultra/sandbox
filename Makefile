@@ -1,12 +1,11 @@
 BUILD_ROOT := "/home/$(shell id -n -u)/src/sandbox/"
-CFLAGS =  -g -Wall -fPIC -std=gnu11 -mcmodel=large -ffunction-sections -pthread
+CFLAGS = -g -Wall -fPIC -std=gnu11 -ffunction-sections -pthread
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
 LIB_FILES=libsandbox.o  sandbox-listen.o
 CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
 	gitsha.h
-CC=gcc
 
 
 .PHONY: gitsha
@@ -30,18 +29,18 @@ libsandbox-qemu: libsandbox.o sandbox-listen.o
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 
 libsandbox.o: libsandbox.c platform.h sandbox.h gitsha.h gitsha.txt
-	$(CC) -g -c -Wall  -std=gnu11 -mcmodel=large \
+	$(CC) -g -c -Wall  -std=gnu11 \
 	 -ffunction-sections -fkeep-static-consts -O0  $<
 	$(shell ./config.sh)
 
 sandbox-listen.o: sandbox-listen.c platform.h
-	$(CC) -g -c -Wall  -std=gnu11 -mcmodel=large \
+	$(CC) -g -c -Wall  -std=gnu11 \
 	 -ffunction-sections -fkeep-static-consts -O0  $<
 	$(shell ./config.sh)
 
 .PHONY: clean
 clean:	
-	$(shell $(CLEAN) >& /dev/null)
+	$(shell $(CLEAN) &> /dev/null)
 	@echo "repo is clean"
 
 *.c: platform.h
@@ -53,7 +52,7 @@ platform.h:
 raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
 	$(CC) $(CFLAGS) -c raxlpqemu.c util.c
 #TODO: might need to link libraries statically (probably not)
-	$(CC) $(CFLAGS) -o raxlpqemu -lz -lelf -lcrypto -lpthread -ldl raxlpqemu.o util.o libsandbox.a
+	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o util.o libsandbox.a -Wl,-Bstatic -lz -lelf -lcrypto -Wl,-Bdynamic -lpthread -ldl
 
 .PHONY: gitsha.txt
 

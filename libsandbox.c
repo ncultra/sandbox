@@ -4,6 +4,9 @@
 #include <sys/mman.h>
 #include "sandbox.h"
 
+#define str1(s) #s
+#define str(s) str1(s)
+
 /************************************************************
  * The .align instruction has a different syntax on X86_64
  * than it does on PPC64. 
@@ -22,12 +25,8 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 	__asm__(".global patch_sandbox_start");
 	__asm__(".global patch_sandbox_end");
 
-#ifdef X86_64
-	__asm__(".align 0x40"); // cache line size
-#endif
-
-#ifdef X86_32
-        __asm__(".align 0x40");
+#if defined (__X86_64__) || defined (__i386__)
+	__asm__(".align " str(PLATFORM_CACHE_LINE_SIZE)); // cache line size
 #endif
 
 #ifdef  PPC64LE
@@ -36,11 +35,11 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 
 	__asm__("patch_sandbox_start:");
 
-#if defined (X86_64) || defined (__i386__) || defined(X86_32)
+#if defined (__X86_64__) || defined (__i386__)
 	__asm__("mfence");
 	__asm__("jmp patch_sandbox_end");
 	__asm__(".text");
-	__asm__(".fill 0x1000 * 0x1000,1,0xc3");
+	__asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
 // TODO: get rid of this constant, gas doesn't use the cpp 
 	__asm__(".align 8");
 
@@ -53,12 +52,12 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 #endif
 	__asm__("patch_sandbox_end:");
 
-#ifdef X86_64
+#if defined (__X86_64__)
 	__asm__("retq");
 #endif
 
-#if defined (__i386__) || defined(X86_32)
-__asm__("retd");
+#if defined (__i386__)
+	__asm__("ret");
 #endif
 
 #ifdef PPC64LE
