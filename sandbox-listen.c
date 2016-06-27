@@ -298,7 +298,7 @@ int client_func(void *p)
 	should_unlink = 1;
 	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
-	sprintf(un.sun_path, cpath);
+	sprintf(un.sun_path, "%s", cpath);
 
 	len = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
 	unlink(un.sun_path);
