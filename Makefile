@@ -7,18 +7,19 @@ LIB_FILES=libsandbox.o  sandbox-listen.o
 CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
 	gitsha.h
 
+include version.mak
 
 .PHONY: gitsha
 gitsha: gitsha.txt gitsha.h libsandbox.o
 #	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=nolo#ad,readonly libsandbox.o libsandbox.o)
 
 sandbox: sandbox.o libsandbox.a
-	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a 
+	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a
 
 # any target that requires libsandbox will pull in gitsha.txt automatically
 libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 	$(shell objcopy --add-section .buildinfo=gitsha.txt \
-	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
+	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.
 # add the static elf library to the sandbox
 	ar cr libsandbox.a libsandbox.o  sandbox-listen.o
 
@@ -39,7 +40,7 @@ sandbox-listen.o: sandbox-listen.c platform.h
 	$(shell ./config.sh)
 
 .PHONY: clean
-clean:	
+clean:
 	$(shell $(CLEAN) &> /dev/null)
 	@echo "repo is clean"
 
@@ -56,33 +57,32 @@ raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
 
 .PHONY: gitsha.txt
 
-# use the git tag as the version number
-# tag should be in the format v0.0.0
 gitsha.txt:
-#	@echo  "generating .buildinfo elf section..."
 	@echo -n "SANDBOXBUILDINFOSTART" > $@
 	@echo -n "{" >> $@
-	@echo -n "'git-revision': '$(shell git rev-parse HEAD)'," >> $@	
-	@echo -n "'compiled': '$(shell $(CC) --version)'," >> $@
-	@echo -n "'ccflags': '$(CFLAGS)'," >> $@
-	@echo -n "'compile-date': '$(shell date)'," >> $@
-	@echo -n "'tag': '$(shell git describe --abbrev=0 --tags)'" >> $@
+	@echo -n "git-revision: $(GIT_REVISIOON), " >> $@
+	@echo -n "compiled: $(shell $(CC) --version), " >> $@
+	@echo -n "ccflags: $(CFLAGS), " >> $@
+	@echo -n "compile-date: $(shell date), " >> $@
+	@echo -n "version: $(VERSION_STRING), " >> $@
+	@echo -n "major: $(MAJOR_VERSION), " >> $@
+	@echo -n "minor: $(MINOR_VERSION), " >> $@
+	@echo -n "revision: $(REVISION), " >> $@
 	@echo  "}" >> $@
 	@echo -n "SANDBOXBUILDINFOEND" >> $@
 
 .PHONY: gitsha.h
 
 gitsha.h:
-#	@echo "generating gitsha.h...."
 	@echo "/* this file is generated automatically in the Makefile */" >$@
-	@echo "const char *git_revision=\"$(shell git rev-parse HEAD)\";" >> $@
-	@echo "const char *compiled=\"$(shell $(CC) --version)\";" >> $@
-	@echo "const char *ccflags=\"$(CFLAGS)\";" >> $@
-	@echo "const char *compile_date=\"$(shell date)\";" >> $@
-	@echo "const char *tag=\"$(shell git describe --abbrev=0 --tags)\";" >> $@
-	@echo "const int major = $(MAJOR_VERSION);" >> $@
-	@echo "const int minor = $(MINOR_VERSION);" >> $@
-	@echo "const int revision = $(REVISION);" >> $@
+	@echo "const char *git_revision = \"$(GIT_REVISION)\";" >> $@
+	@echo "const char *compiled = \"$(shell $(CC) --version)\";" >> $@
+	@echo "const char *ccflags = \"$(CFLAGS)\";" >> $@
+	@echo "const char *compile_date = \"$(shell date)\";" >> $@
+	@echo "const char *tag = \"$(GIT_TAG)\";" >> $@
+	@echo "const int major = \"$(MAJOR_VERSION)\";" >> $@
+	@echo "const int minor = \"$(MINOR_VERSION)\";" >> $@
+	@echo "const int revision = \"$(REVISION)\";" >> $@
 	@echo "static inline const char *get_git_revision(void){return git_revision;}" >> $@
 	@echo "static inline const char *get_compiled(void){return compiled;}" >> $@
 	@echo "static inline const char *get_ccflags(void){return ccflags;}" >> $@
@@ -116,4 +116,3 @@ install:
 qemu:
 	cp -v  libsandbox.c ~/src/qemu/target-i386/libsandbox.c
 	cp -v  sandbox.h ~/src/qemu/include/qemu/sandbox.h
-
