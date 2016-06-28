@@ -7,6 +7,11 @@ LIB_FILES=libsandbox.o  sandbox-listen.o
 CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
 	gitsha.h version.mak
 
+
+version.mak:
+	$(CLEAN)
+	./config.sh --ver="../VERSION"
+
 include version.mak
 
 .PHONY: gitsha
