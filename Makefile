@@ -39,7 +39,7 @@ libsandbox.o: libsandbox.c platform.h sandbox.h gitsha.h gitsha.txt
 	 -ffunction-sections -fkeep-static-consts -O0  $<
 	$(shell ./config.sh)
 
-sandbox-listen.o: sandbox-listen.c platform.h
+sandbox-listen.o: sandbox-listen.c platform.h gitsha
 	$(CC) -g -c -Wall  -std=gnu11 \
 	 -ffunction-sections -fkeep-static-consts -O0  $<
 	$(shell ./config.sh)
