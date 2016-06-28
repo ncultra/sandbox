@@ -5,7 +5,7 @@ MINOR_VERSION=0
 REVISION=1
 LIB_FILES=libsandbox.o  sandbox-listen.o
 CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
-	gitsha.h
+	gitsha.h version.mak
 
 include version.mak
 
@@ -19,7 +19,7 @@ sandbox: sandbox.o libsandbox.a
 # any target that requires libsandbox will pull in gitsha.txt automatically
 libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 	$(shell objcopy --add-section .buildinfo=gitsha.txt \
-	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.
+	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 # add the static elf library to the sandbox
 	ar cr libsandbox.a libsandbox.o  sandbox-listen.o
 
@@ -53,7 +53,10 @@ platform.h:
 raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
 	$(CC) $(CFLAGS) -c raxlpqemu.c util.c
 #TODO: might need to link libraries statically (probably not)
-	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o util.o libsandbox.a -Wl,-Bstatic -lz -lelf -lcrypto -Wl,-Bdynamic -lpthread -ldl
+	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o util.o libsandbox.a -lcrypto -lpthread -lz -lelf
+
+# this link would not build for me 
+#-Wl,-Bstatic -lz -lelf -lcrypto -Wl,-lpthread -ldl 
 
 .PHONY: gitsha.txt
 
@@ -80,9 +83,9 @@ gitsha.h:
 	@echo "const char *ccflags = \"$(CFLAGS)\";" >> $@
 	@echo "const char *compile_date = \"$(shell date)\";" >> $@
 	@echo "const char *tag = \"$(GIT_TAG)\";" >> $@
-	@echo "const int major = \"$(MAJOR_VERSION)\";" >> $@
-	@echo "const int minor = \"$(MINOR_VERSION)\";" >> $@
-	@echo "const int revision = \"$(REVISION)\";" >> $@
+	@echo "const int major = $(MAJOR_VERSION);" >> $@
+	@echo "const int minor = $(MINOR_VERSION);" >> $@
+	@echo "const int revision = $(REVISION);" >> $@
 	@echo "static inline const char *get_git_revision(void){return git_revision;}" >> $@
 	@echo "static inline const char *get_compiled(void){return compiled;}" >> $@
 	@echo "static inline const char *get_ccflags(void){return ccflags;}" >> $@
