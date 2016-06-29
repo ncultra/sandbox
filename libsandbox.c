@@ -180,58 +180,7 @@ static void *get_sandbox_memory(uint32_t size)
 	return p;
 }
 
-
- int apply_patch(struct patch *new_patch)
-{
-	assert(get_sandbox_free() > new_patch->patch_size);
-        assert(new_patch->patch_size < MAX_PATCH_SIZE);
-        int s = new_patch->patch_size;
-
-	patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor, 0x40);
-
-	
-	memcpy((uint8_t*)patch_cursor, (uint8_t *)new_patch->patch_buf, s);
-	new_patch->flags |= PATCH_IN_SANDBOX;
-	patch_cursor += s;
-	patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor, 0x40);
-	
-
-	if (new_patch->reloc_dest) {
-		uint64_t p = (uint64_t)new_patch->reloc_dest;
-		p &= PLATFORM_PAGE_MASK;
-		if (mprotect((void *)p , PLATFORM_PAGE_SIZE,
-			     PROT_READ|PROT_EXEC|PROT_WRITE)){			
-			perror("err: ");
-			
-			assert(0);
-			goto err_exit;
-	}
-
-// the reloc value should be a near jump "e9 0xaaaaaaaa"
-// OR the first 3 bytes of the current value of the dest into the reloc_data
-// TODO: add some awareness of the data size to be written and the read mask
-		
-		smp_mb();
-
-		*(uint64_t *)new_patch->reloc_dest = *(uint64_t *)new_patch->reloc_data;
-		DMSG("relocated to:\n");
-		dump_sandbox((void *)new_patch->reloc_dest, 16);
-		DMSG("patched  instructions\n");
-		dump_sandbox((void *)new_patch->patch_buf, 16);
-	
-	new_patch->flags |= PATCH_APPLIED;
-
-	list_add(&new_patch->l, &patch_list);
-	return 0;
-	}
-
-err_exit:
-	LMSG("Unable to write relocation record @ %p\n", (void *)new_patch->reloc_dest);
-	return -1;
-}
-
-
-static void bin2hex(unsigned char *bin, size_t binlen, char *buf,
+void bin2hex(unsigned char *bin, size_t binlen, char *buf,
                     size_t buflen)
 {
     static const char hexchars[] = "0123456789abcdef";
@@ -445,54 +394,6 @@ int xenlp_apply(void *arg)
 	return 0;
 }
 
-
-struct patch *alloc_patch(char  *name, uint64_t size)
-{
-	uint64_t avail = get_sandbox_free();
-	LMSG("%08lx available in sandbox\n", avail);
-	
-	if (avail < size ) {
-		DMSG("Not enough room to apply patch: %ld available, %ld needed\n",
-		     get_sandbox_free(),
-		     size);
-		goto exit_null;;
-	}
-	
-	
-	struct patch *new_patch = calloc(1, sizeof(struct patch));
-	if (! new_patch) {
-		goto exit_null;;
-	}
-	
-	new_patch->patch_buf = (uintptr_t)aligned_alloc(0x40, size);
-	if (!new_patch->patch_buf) {
-		goto exit_patch_buf;
-	}
-	strncpy(new_patch->name, name, 0x40 - 1);
-	new_patch->patch_size = size;
-	return new_patch;
-	
-exit_patch_buf:
-	if (new_patch->patch_buf)
-		free((uint8_t *)new_patch->patch_buf);
-exit_null:
-	return NULL;
-}
-
-
-void free_patch(struct patch *p)
-{
-
-	if (p->patch_buf) {
-		free((uint8_t *)p->patch_buf);
-		p->patch_buf = 0L;
-	}
-
-	free(p);
-}
-
-
-
 uint8_t *make_sandbox_writeable(void) 
 {
 
@@ -527,16 +428,6 @@ void init_sandbox(void)
 		     PROT_READ|PROT_EXEC|PROT_WRITE))
 		perror("err: ");
 	
-}
-
-
-
-int reflect(struct dl_phdr_info *info,
-	    int (*cb)(struct dl_phdr_info *i, size_t s, void *data))
-{
-	dl_iterate_phdr(cb, NULL);	
-	return 0;
-
 }
 
 void dump_sandbox(const void* data, size_t size) {

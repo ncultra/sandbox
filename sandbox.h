@@ -261,25 +261,22 @@ static inline int list_empty(const struct list_head *head)
 typedef uint8_t * reloc_ptr_t;
 
 
-/* flags for patch list */
+/* flags for patch list 
 #define PATCH_APPLIED      0x01  // patch is applied
 #define PATCH_IN_SANDBOX   0x02  // patch resident in sandbox area
 #define PATCH_IS_DATA      0x04  // patch is modifying data
 #define PATCH_WRITE_ONCE   0x08  // patch can be applied in one copy operation
-#define PATCH_LIST_HDR     -1L;			\
-
+#define PATCH_LIST_HDR     -1L;			
+*/
 //TODO: store the patch version in flags for each patch,
 // return that info in reply messages.
 // version of the sandbox interface is in the two high-order bytes
 // of the flag 
-#define SANDBOX_VERSION(f) (((uint64_t)(f) >> 0x38) & 0xff)
-
-/* needs to be padded to an order of 2 */
-/* TODO: align members on cache lines */
-#define PATCH_PAD 0
+//#define SANDBOX_VERSION(f) (((uint64_t)(f) >> 0x38) & 0xff)
 
 #define INFO_STRING_LEN 255
 #define MAX_LIST_PATCHES 255
+
 
 struct check {
     uint64_t hvabs;
@@ -375,23 +372,6 @@ struct xpatch {
 	uint16_t numtables;
 	struct table_patch *tables;
 	struct list_head l; /* list handle */
-};
-
-/* this is the original QEMU patch format prior to converting to the raxlp tools. */
-struct patch {
-	unsigned int flags;
-	char  name[0x40];
-	uint8_t SHA1[20];
-	uint8_t canary[32];
-	uint8_t build_id[20]; /* sha1 of git head when built */	
-	uint8_t *patch_dest; /* absolute addr within the sandbox */
-	uintptr_t reloc_dest; /* absolutre addr of the relocation */
-	uint8_t reloc_data[PLATFORM_RELOC_SIZE]; /* max single instruction size is 15 */
-	uint8_t reloc_size;
-	uintptr_t patch_buf;  /* address of data to be patched */
-	uint64_t patch_size;
-	struct list_head l;
-	uint8_t pad[(PATCH_PAD)];
 };
 
 
@@ -574,6 +554,8 @@ ssize_t writen(int fd, const void *vptr, size_t n);
 ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 				    uint16_t *id, uint32_t *len, void **buf);
 ssize_t send_rr_buf(int fd, uint16_t id, ...);
+void bin2hex(unsigned char *bin, size_t binlen, char *buf,
+                    size_t buflen);
 int write_sandbox_message_header(int fd,
 				 uint16_t version, uint16_t id);
 /* **** test functions **** */

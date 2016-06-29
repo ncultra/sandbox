@@ -169,37 +169,6 @@ int main(int argc, char **argv)
 
 	
 	if (test_flag) {
-		char *pname = strdup("pname");
-		
-		int err;
-		
-		DMSG (" replacement code: %lx\n", (uint64_t) jumpto[0]);
-
-		DMSG("sandbox start %016lx\n",  (uint64_t)&patch_sandbox_start);
-		DMSG("sandbox end   %016lx\n",  get_sandbox_end());
-		DMSG("Sandbox is      %016lx bytes\n", get_sandbox_end() - (uint64_t)&patch_sandbox_start);
-		
-		DMSG("writing to patch sandbox...\n\n");
-
-		// allocate and init the patch structure
-
-		struct patch *p = (struct patch *)alloc_patch(pname, sizeof(patch_data));
-		p->patch_dest = patch_cursor;
-		p->reloc_dest = (uintptr_t)patched; // points to the "patched" function
-		memcpy(p->reloc_data, jumpto, sizeof(jumpto));
-		memcpy((uint8_t*)p->patch_buf, patch_data, sizeof(patch_data));
-		p->patch_size = sizeof(patch_data);
-		dump_sandbox(&patch_sandbox_start, 16);
-				
-		// apply the patch
-		err = apply_patch(p);
-		printf ("err = %d\n", err);
-		dump_sandbox(&patch_sandbox_start, 16);
-		DMSG("write completed, calling into the patch sandbox\n\n");
-		patched();
-		
-		DMSG("\nreturned from the patch sandbox\n\n");
-
 	}
 	#ifdef X86_64
 	__asm__("jmp patched_stub_entry");
@@ -214,14 +183,7 @@ void patched_stub(void)
 {
 	 __asm__("patched_stub_entry:");
 	 __asm__("patched_stub_entry_patch:");
-	 __asm__("patched_stub_entry_BUTT:"); 
-	 __asm__("patched_stub_entry_BUTT_BUTT:");
-	 /* __asm__("patched_stub_entry_BUTT_BUTT_BUTT:"); */
-	 /*__asm__("patched_stub_entry _BUTT_BUTT_BUTT_BUTT:"); */
-	 __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT_BUTT:");
-	 __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT:");
-	  __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT:");
-	 __asm__("patched_stub_entry_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT_BUTT:");
+
 	 static int count = 0;
 	 printf("executing inside the patched code, count: %i\n", ++count);
 	 __asm__("patched_stub_exit:");

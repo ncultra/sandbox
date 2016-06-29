@@ -634,9 +634,6 @@ ssize_t dispatch_apply_response(int fd, int len, void **bufp)
 	
 }
 
-extern void bin2hex(unsigned char *bin, size_t binlen, char *buf,
-                    size_t buflen);
-
 
 ssize_t dispatch_list(int fd, int len, void **bufp)
 {
