@@ -173,9 +173,7 @@ int listen_sandbox_sock(char *sock_name)
 		errno = ENAMETOOLONG;
 		return(-1);
 	}
-// use the short socket name during testing
-//	sprintf(sn, "%s%d", sock_name, (int)getpid());
-	sprintf(sn, "%s", sock_name);
+	sprintf(sn, "%s%d", sock_name, (int)getpid());
 	
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
 		return(-2);
