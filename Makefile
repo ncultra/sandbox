@@ -1,5 +1,7 @@
 BUILD_ROOT := "/home/$(shell id -n -u)/src/sandbox/"
-CFLAGS = -g -Wall -Werror -fPIC -std=gnu11 -ffunction-sections -pthread
+CC	:= gcc
+CFLAGS = -g  -Wall -Werror -fPIC -std=gnu11 -ffunction-sections \
+	-fkeep-static-consts -pthread
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
@@ -8,6 +10,7 @@ CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
 	gitsha.h version.mak
 
 
+.PHONY: version.mak
 version.mak:
 	$(CLEAN)
 	./config.sh --ver="../VERSION"
@@ -30,18 +33,16 @@ libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 
 # force the qemu makefile to copy the build info into the .buidinfo section
 .PHONY: libsandbox-qemu
-libsandbox-qemu: libsandbox.o sandbox-listen.o
+libsandbox-qemu: libsandbox.o sandbox-listen.o version.mak
 	$(shell objcopy --add-section .buildinfo=gitsha.txt \
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 
 libsandbox.o: libsandbox.c platform.h sandbox.h gitsha.h gitsha.txt
-	$(CC) -g -c -Wall  -std=gnu11 \
-	 -ffunction-sections -fkeep-static-consts -O0  $<
+	$(CC) $(CFLAGS) -c -O0  $<
 	$(shell ./config.sh)
 
 sandbox-listen.o: sandbox-listen.c platform.h gitsha
-	$(CC) -g -c -Wall  -std=gnu11 \
-	 -ffunction-sections -fkeep-static-consts -O0  $<
+	$(CC)  $(CFLAGS) -c -O0  $<
 	$(shell ./config.sh)
 
 .PHONY: clean
@@ -69,7 +70,7 @@ gitsha.txt:
 	@echo -n "SANDBOXBUILDINFOSTART" > $@
 	@echo -n "{" >> $@
 	@echo -n "git-revision: $(GIT_REVISIOON), " >> $@
-	@echo -n "compiled: $(shell $(CC) --version), " >> $@
+	@echo -n "compiled: $(CC --version), " >> $@
 	@echo -n "ccflags: $(CFLAGS), " >> $@
 	@echo -n "compile-date: $(shell date), " >> $@
 	@echo -n "version: $(VERSION_STRING), " >> $@
