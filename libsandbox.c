@@ -26,12 +26,14 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 	__asm__(".global patch_sandbox_end");
 
 #if defined (__X86_64__) || defined (__i386__)
-	__asm__(".align " str(PLATFORM_CACHE_LINE_SIZE)); // cache line size
+	__asm__(".align " str(PLATFORM_CACHE_LINE_SIZE));
 #endif
 
 #ifdef  PPC64LE
 	__asm__(".align 0x0c");
 #endif
+
+/* sandbox is 4MB,  can make it larger or smaller if needed. */
 
 	__asm__("patch_sandbox_start:");
 
@@ -40,7 +42,9 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 	__asm__("jmp patch_sandbox_end");
 	__asm__(".text");
 	__asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
-// TODO: get rid of this constant, gas doesn't use the cpp 
+
+/*  TODO: get rid of this constant, gas doesn't use the cpp 
+*/
 	__asm__(".align 8");
 
 #endif
