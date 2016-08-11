@@ -12,7 +12,6 @@ CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
 
 .PHONY: version.mak
 version.mak:
-	$(CLEAN)
 	./config.sh --ver="../VERSION"
 
 include version.mak
@@ -61,12 +60,9 @@ raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
 #TODO: might need to link libraries statically (probably not)
 	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o util.o libsandbox.a -lcrypto -lpthread -lz -lelf
 
-# this link would not build for me 
-#-Wl,-Bstatic -lz -lelf -lcrypto -Wl,-lpthread -ldl 
 
 .PHONY: gitsha.txt
-
-gitsha.txt:
+gitsha.txt: version.mak
 	@echo -n "SANDBOXBUILDINFOSTART" > $@
 	@echo -n "{" >> $@
 	@echo -n "git-revision: $(GIT_REVISIOON), " >> $@
@@ -82,7 +78,7 @@ gitsha.txt:
 
 .PHONY: gitsha.h
 
-gitsha.h:
+gitsha.h: version.mak
 	@echo "/* this file is generated automatically in the Makefile */" >$@
 	@echo "const char *git_revision = \"$(GIT_REVISION)\";" >> $@
 	@echo "const char *compiled = \"$(shell $(CC) --version)\";" >> $@
