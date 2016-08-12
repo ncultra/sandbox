@@ -65,14 +65,14 @@ raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
 gitsha.txt: version.mak
 	@echo -n "SANDBOXBUILDINFOSTART" > $@
 	@echo -n "{" >> $@
-	@echo -n "git-revision: $(GIT_REVISIOON), " >> $@
-	@echo -n "compiled: $(CC --version), " >> $@
-	@echo -n "ccflags: $(CFLAGS), " >> $@
-	@echo -n "compile-date: $(shell date), " >> $@
-	@echo -n "version: $(VERSION_STRING), " >> $@
-	@echo -n "major: $(MAJOR_VERSION), " >> $@
-	@echo -n "minor: $(MINOR_VERSION), " >> $@
-	@echo -n "revision: $(REVISION), " >> $@
+	@echo -n "git-revision: "$(GIT_REVISIOON), "" >> $@
+	@echo -n "compiled: "$(CC --version), "" >> $@
+	@echo -n "ccflags: "$(CFLAGS), "" >> $@
+	@echo -n "compile-date: "$(shell date), "" >> $@
+	@echo -n "version: "$(VERSION_STRING), "" >> $@
+	@echo -n "major: "$(MAJOR_VERSION), "" >> $@
+	@echo -n "minor: "$(MINOR_VERSION), "" >> $@
+	@echo -n "revision: "$(REVISION), "" >> $@
 	@echo  "}" >> $@
 	@echo -n "SANDBOXBUILDINFOEND" >> $@
 
