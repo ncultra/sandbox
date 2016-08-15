@@ -54,7 +54,7 @@ gen_version() {
     echo "MINOR_VERSION=$MINOR" >> version.mak
     echo "REVISION=$REVISION" >> version.mak
     IFS=$oldifs
-    echo "GIT_REVISION=$(cd .. && git rev-parse HEAD), " >> version.mak
+    echo "GIT_REVISION=$(cd .. && git rev-parse HEAD) " >> version.mak
     echo "GIT_TAG=$(cd .. && git describe --abbrev=0 --tags 2>/dev/null)" >> version.mak
 }
 

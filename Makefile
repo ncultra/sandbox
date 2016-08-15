@@ -65,15 +65,15 @@ raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
 gitsha.txt: version.mak
 	@echo -n "SANDBOXBUILDINFOSTART" > $@
 	@echo -n "{" >> $@
-	@echo -n "git-revision: "$(GIT_REVISIOON), "" >> $@
-	@echo -n "compiled: "$(CC --version), "" >> $@
-	@echo -n "ccflags: "$(CFLAGS), "" >> $@
-	@echo -n "compile-date: "$(shell date), "" >> $@
-	@echo -n "version: "$(VERSION_STRING), "" >> $@
-	@echo -n "major: "$(MAJOR_VERSION), "" >> $@
-	@echo -n "minor: "$(MINOR_VERSION), "" >> $@
-	@echo -n "revision: "$(REVISION), "" >> $@
-	@echo  "}" >> $@
+	@echo -n "'git-revision': \"$(GIT_REVISION)\"," >> $@
+	@echo -n "'compiled': \"`gcc --version`\"," >> $@
+	@echo -n "'ccflags': \"$(CFLAGS)\"," >> $@
+	@echo -n "'compile-date': \"`date`\"," >> $@
+	@echo -n "'version':\"$(VERSION_STRING)\"," >> $@
+	@echo -n "'major':\"$(MAJOR_VERSION)\"," >> $@
+	@echo -n "'minor':\"$(MINOR_VERSION)\"," >> $@
+	@echo -n "'revision':\"$(REVISION)\"," >> $@
+	@echo -n "}" >> $@
 	@echo -n "SANDBOXBUILDINFOEND" >> $@
 
 .PHONY: gitsha.h
@@ -81,9 +81,9 @@ gitsha.txt: version.mak
 gitsha.h: version.mak
 	@echo "/* this file is generated automatically in the Makefile */" >$@
 	@echo "const char *git_revision = \"$(GIT_REVISION)\";" >> $@
-	@echo "const char *compiled = \"$(shell $(CC) --version)\";" >> $@
+	@echo "const char *compiled = \""`gcc --version`"\";" >> $@
 	@echo "const char *ccflags = \"$(CFLAGS)\";" >> $@
-	@echo "const char *compile_date = \"$(shell date)\";" >> $@
+	@echo "const char *compile_date = \"`date`\";" >> $@
 	@echo "const char *tag = \"$(GIT_TAG)\";" >> $@
 	@echo "const int major = $(MAJOR_VERSION);" >> $@
 	@echo "const int minor = $(MINOR_VERSION);" >> $@
