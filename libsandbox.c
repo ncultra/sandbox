@@ -404,6 +404,9 @@ int xenlp_apply(void *arg)
 	memcpy(patch->sha1, apply->sha1, sizeof(patch->sha1));
 	DMSG("incoming patch sha1:\n");
 	dump_sandbox(patch->sha1, 20);
+        patch->numwrites = apply->numwrites;
+        patch->writes = writes;
+        INIT_LIST_HEAD(&patch->l);
 	
 	list_add(&patch->l, &applied_list);
         
