@@ -1,8 +1,8 @@
 #!/bin/bash
 
 create_platform() {
-    echo "// platform definitions" > platform.h
-    echo "// this file is generated automatically by runing config.sh" >> platform.h
+    echo "/* platform definitions */" > platform.h
+    echo "/* this file is generated automatically by runing config.sh */" >> platform.h
 
     PAGESIZE=$(getconf PAGESIZE)
 

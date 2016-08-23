@@ -69,6 +69,24 @@ uint64_t fill = PLATFORM_ALLOC_SIZE;
 #endif
 
 
+uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
+ { 
+ 	if (! p % offset)
+ 		return p;
+	p += (offset - 1);
+ 	p &= ~(offset - 1);
+ 	return p;
+}
+
+uint8_t *update_patch_cursor(uint64_t offset)
+{
+	return (patch_cursor += offset);
+}
+
+uint64_t get_sandbox_free(void)
+{
+	return ((uintptr_t)&patch_sandbox_end - (uintptr_t)patch_cursor);
+}
 
 FILE *log_fd = NULL;
 int log_level = 1; /* mirror log to stdout */
@@ -112,7 +130,7 @@ void DMSG(char *fmt, ...)
 	}
 }
 
-
+extern void va_copy(va_list dest, va_list src);
 void LMSG(char *fmt, ...)
 {
 	va_list va;
@@ -387,11 +405,8 @@ int xenlp_apply(void *arg)
 	DMSG("incoming patch sha1:\n");
 	dump_sandbox(patch->sha1, 20);
 	
-	patch->numwrites = apply->numwrites;
-	patch->writes = writes;
-	INIT_LIST_HEAD(&patch->l);
-
 	list_add(&patch->l, &applied_list);
+        
 	bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
 	LMSG("successfully applied patch %s\n", sha1);
 

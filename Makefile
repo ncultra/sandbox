@@ -1,6 +1,6 @@
 BUILD_ROOT := "/home/$(shell id -n -u)/src/sandbox/"
 CC	:= gcc
-CFLAGS = -g  -Wall -Werror -fPIC -std=gnu11 -ffunction-sections -fdata-sections -fkeep-static-consts -fkeep-inline-functions -pthread
+CFLAGS = -g  -Wall -Werror -fPIC -std=gnu90 -ffunction-sections -fdata-sections -fkeep-static-consts -fkeep-inline-functions -pthread
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
@@ -87,14 +87,14 @@ gitsha.h: version.mak
 	@echo "const int major = $(MAJOR_VERSION);" >> $@
 	@echo "const int minor = $(MINOR_VERSION);" >> $@
 	@echo "const int revision = $(REVISION);" >> $@
-	@echo "static inline const char *get_git_revision(void){return git_revision;}" >> $@
-	@echo "static inline const char *get_compiled(void){return compiled;}" >> $@
-	@echo "static inline const char *get_ccflags(void){return ccflags;}" >> $@
-	@echo "static inline const char *get_compiled_date(void){return compile_date;}" >> $@
-	@echo "static inline const char *get_tag(void){return tag;}" >> $@
-	@echo "static inline const int get_major(void){return major;}" >> $@
-	@echo "static inline const int get_minor(void){return minor;}" >> $@
-	@echo "static inline const int get_revision(void){return revision;}" >> $@
+	@echo "const char *get_git_revision(void){return git_revision;}" >> $@
+	@echo "const char *get_compiled(void){return compiled;}" >> $@
+	@echo "const char *get_ccflags(void){return ccflags;}" >> $@
+	@echo "const char *get_compiled_date(void){return compile_date;}" >> $@
+	@echo "const char *get_tag(void){return tag;}" >> $@
+	@echo "const int get_major(void){return major;}" >> $@
+	@echo "const int get_minor(void){return minor;}" >> $@
+	@echo "const int get_revision(void){return revision;}" >> $@
 
 .PHONY: shared
 shared: libsandbox.so

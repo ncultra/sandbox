@@ -27,7 +27,7 @@
 /*      |    field  n                    ...                            |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-static inline ssize_t check_magic(uint8_t *magic)
+ ssize_t check_magic(uint8_t *magic)
 {
 	uint8_t m[] = SANDBOX_MSG_MAGIC;
 	
@@ -50,7 +50,7 @@ ssize_t dispatch_test_rep(int, int len, void **);
 
 
 typedef ssize_t (*handler)(int, int, void **);
-// TODO: shrink this down and make the test message a canonical msg. 
+
 handler dispatch[] =
 {
 	dummy, /* message ids are indexed starting at 1*/
@@ -65,14 +65,14 @@ handler dispatch[] =
 	dummy, dummy
 };
 
-static inline int get_handler_count(void) 
+ int get_handler_count(void) 
 {
 	return sizeof(dispatch) / sizeof(handler);	
 }
 
 
-#define QLEN 5 // depth of the listening queue
-#define STALE 30 // timout for client user id data
+#define QLEN 5 /* depth of the listening queue */
+#define STALE 30 /* timout for client user id data */
 
 pthread_t *thr;
 
@@ -156,11 +156,11 @@ void *listen_thread(void *arg)
 
 
 
-// WRS
+/* WRS
 // create and listen on a unix domain socket.
 // connect, peek at the incoming data. 
 // sock_name: full path of the socket e.g. /var/run/SANDBOX_ERR_BAD_HDR
-
+*/
 int listen_sandbox_sock(char *sock_name)
 {
 	int fd, len, err, ccode;
@@ -183,7 +183,7 @@ int listen_sandbox_sock(char *sock_name)
 	
 	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
-	strcpy(un.sun_path, sn);  // already checked the length
+	strcpy(un.sun_path, sn);  /* already checked the length */
 	len = offsetof(struct sockaddr_un, sun_path) + strlen(sn);
 
 	if (bind(fd, (struct sockaddr *)&un, len) < 0) {
@@ -232,7 +232,7 @@ int accept_sandbox_sock(int listenfd, uid_t *uidptr)
 	memcpy(name, un.sun_path, len);
 	name[len] = 0;
 	if (stat(name, &statbuf) < 0) {
-		ccode = -3; // couldn't stat the clients uid
+            ccode = -3; /* couldn't stat the clients uid */
 		goto errout;
 	}
 
@@ -243,19 +243,19 @@ int accept_sandbox_sock(int listenfd, uid_t *uidptr)
 	}
 	#endif
 
-	// exit if the socket mode is too permissive or wrong
+	/* exit if the socket mode is too permissive or wrong */
 	if ((statbuf.st_mode & (S_IRWXG | S_IRWXO)) ||
 	    (statbuf.st_mode & S_IRWXU) != S_IRWXU) {
 		ccode = -5;
 		goto errout;
 	}
 
-	// check the age of the socket access bits - it has to be active now
+	/* check the age of the socket access bits - it has to be active now */
 	staletime = time(NULL) - STALE;
 	if (statbuf.st_atime < staletime ||
 	    statbuf.st_ctime < staletime ||
 	    statbuf.st_mtime < staletime) {
-		ccode = -6;  // too old, not a currently active uid
+            ccode = -6;  /* too old, not a currently active uid */
 		goto errout;
 	}
 	
@@ -333,7 +333,7 @@ errout:
 	return SANDBOX_ERR_BAD_FD;
 }
 
-// WRS, with check for Linux EAGAIN
+/* WRS, with check for Linux EAGAIN */
 ssize_t	readn(int fd, void *vptr, size_t n)
 {
 	size_t  nleft;
@@ -358,7 +358,7 @@ ssize_t	readn(int fd, void *vptr, size_t n)
 
 
 
-// WRS, with check for Linux EAGAIN
+/* WRS, with check for Linux EAGAIN */
 ssize_t writen(int fd, const void *vptr, size_t n)
 {
 	size_t nleft;
@@ -422,11 +422,12 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 /* allocate dispatch buffer or not? */
 	uint8_t hbuf[SANDBOX_MSG_HBUFLEN];
 	uint32_t ccode = 0;
-	
+	int i = 0;
+        
 	DMSG("reading sandbox messsge header...\n");
 	DMSG("reading %d bytes from %d into %p\n", SANDBOX_MSG_HDRLEN, fd, hbuf);
 
-	for (int i = 0; i < SANDBOX_MSG_HDRLEN; i++) {
+	for (; i < SANDBOX_MSG_HDRLEN; i++) {
 		if ((ccode = readn(fd, &hbuf[i], 1)) != 1) {
 			if (ccode == 0) {	
 				return SANDBOX_ERR_CLOSED;
@@ -479,7 +480,6 @@ errout:
 
 
 
-//todo normalize return types to int	
 ssize_t send_rr_buf(int fd, uint16_t id, ...)
 {
 	uint32_t len = SANDBOX_MSG_HDRLEN;
@@ -674,7 +674,6 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 			current++;
 			if (current == count)
 				break;
-			//TODO: add patch name to xpatch and return it here
 		}
 		ccode = send_rr_buf(fd, SANDBOX_MSG_LISTRSP,
 				   rsize, rbuf, SANDBOX_LAST_ARG);
@@ -870,8 +869,7 @@ void  *sandbox_list_patches(int fd)
 			goto errout;
 			dump_sandbox(listen_buf, 32);
 		}
-		//DMSG("list patch response header: \n");
-		//dump_sandbox(listen_buf, 24);
+	
 	}
 
 	/* return buffer format:*/

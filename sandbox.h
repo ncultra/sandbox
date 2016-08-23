@@ -36,11 +36,6 @@
 #ifndef __SANDBOX_H
 #define __SANDBOX_H 1
 
-// TODO: remove move this def to the makefile
-// TODO: incorporate a log level so this macro can log as well as diagnose bugs
-
-
-
 #define container_of(ptr, type, member) ({ \
                 const typeof( ((type *)0)->member ) *__mptr = (ptr);  \
 		(type *)( (char *)__mptr - offsetof(type,member) );})
@@ -54,14 +49,14 @@ struct list_head {
 #define LIST_HEAD(name) \
 	struct list_head name = LIST_HEAD_INIT(name)
 
-static inline void INIT_LIST_HEAD(struct list_head *list)
+static __inline__ void INIT_LIST_HEAD(struct list_head *list)
 {
 	list->next = list;
 	list->prev = list;
 }
 
 
-static inline void __list_add(struct list_head *new,
+static __inline__ void __list_add(struct list_head *new,
 			      struct list_head *prev,
 			      struct list_head *next)
 {
@@ -79,7 +74,7 @@ static inline void __list_add(struct list_head *new,
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-static inline void list_add(struct list_head *new, struct list_head *head)
+static __inline__ void list_add(struct list_head *new, struct list_head *head)
 {
 	__list_add(new, head->prev, head->next);
 }
@@ -92,7 +87,7 @@ static inline void list_add(struct list_head *new, struct list_head *head)
  * This is only for internal list manipulation where we know
  * the prev/next entries already!
  */
-static inline void __list_del(struct list_head * prev, struct list_head * next)
+static __inline__ void __list_del(struct list_head * prev, struct list_head * next)
 {
 	next->prev = prev;
 	prev->next = next;
@@ -108,12 +103,12 @@ static inline void __list_del(struct list_head * prev, struct list_head * next)
 
 #define LIST_POISON1 ((void *) 0x100)
 #define LIST_POISON2 ((void *) 0x200)
-static inline void __list_del_entry(struct list_head *entry)
+static __inline__ void __list_del_entry(struct list_head *entry)
 {
 	__list_del(entry->prev, entry->next);
 }
 
-static inline void list_del(struct list_head *entry)
+static __inline__ void list_del(struct list_head *entry)
 {
 	__list_del(entry->prev, entry->next);
 	entry->next = LIST_POISON1;
@@ -126,7 +121,7 @@ static inline void list_del(struct list_head *entry)
  * list_empty - tests whether a list is empty
  * @head: the list to test.
  */
-static inline int list_empty(const struct list_head *head)
+static __inline__ int list_empty(const struct list_head *head)
 {
 	return head->next == head;
 }
@@ -255,7 +250,7 @@ static inline int list_empty(const struct list_head *head)
 
 
 
-// must be page-aligned.
+/* must be page-aligned. */
 #define SANDBOX_ALLOC_SIZE PLATFORM_PAGE_SIZE
 
 typedef uint8_t * reloc_ptr_t;
@@ -297,11 +292,11 @@ struct table_patch {
 
 
 struct applied_patch {
-	void *blob;
-	unsigned char sha1[20];		/* binary encoded */
-	uint32_t numwrites;
-	struct xenlp_patch_write *writes;
-	struct list_head l;
+    struct list_head l;
+    void *blob;
+    unsigned char sha1[20];		/* binary encoded */
+    uint32_t numwrites;
+    struct xenlp_patch_write *writes;
 };
 
 
@@ -362,14 +357,14 @@ struct xpatch {
 };
 
 
-// these const strings contain information generated at build time.
+/* these const strings contain information generated at build time. */
 extern const char *gitversion, *cc, *cflags;
 extern uintptr_t patch_sandbox_start, patch_sandbox_end; 
 
 extern uint8_t *patch_cursor;
 
 extern struct list_head patch_list;
-extern struct list_head applied_list;
+extern struct list_head  applied_list;
 
 uint8_t *make_sandbox_writeable(void);
 struct patch *alloc_patch(char *name, uint64_t size);
@@ -377,35 +372,17 @@ void free_patch(struct patch *p);
 int apply_patch(struct patch *new_patch);
 void init_sandbox(void);
 void dump_sandbox(const void* data, size_t size);
+uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset);
 
-static inline uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
-{
-	if (! p % offset)
-		return p;
-	
-	p += (offset - 1);
-	p &= ~(offset - 1);
-	return p;
-}
- 
+uint8_t *update_patch_cursor(uint64_t offset);
 
-// offset should be  positive when adding a new patch, negative when removing a patch
-static inline uint8_t *update_patch_cursor(uint64_t offset)
-{
-	return (patch_cursor += offset);
-}
-
-
-static inline uint64_t get_sandbox_free(void)
-{
-	return ((uintptr_t)&patch_sandbox_end - (uintptr_t)patch_cursor);
-}
-
+uint64_t get_sandbox_free(void);
 
 uint64_t get_sandbox_start(void);
 uint64_t get_sandbox_end(void);
-// TODO: add a msg nonce (transaction id)
-// from sandbox-listen.h
+/* TODO: add a msg nonce (transaction id)
+ from sandbox-listen.h
+*/
 #define SANDBOX_MSG_HDRLEN 0x10
 #define SANDBOX_MSG_HBUFLEN 0x18
 #define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
@@ -513,7 +490,6 @@ struct list_response {
    2) buildinfo contents 
 */
 
-// TODO: add pid to socket name
 #define SSANDBOX "sandbox-sock" 
  
 struct sandbox_buf {
