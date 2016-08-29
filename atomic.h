@@ -170,8 +170,7 @@
 #define smp_wmb()   barrier()
 #define smp_rmb()   barrier()
 
-#define atomic_xchg(ptr, i)    ({                         \
-    __atomic_exchange(ptr, i, i, __ATOMIC_SEQ_CST);       \
+#define atomic_xchg(ptr, i)    (smp_mb(), __sync_lock_test_and_set(ptr, i))
 })
 
 /*
