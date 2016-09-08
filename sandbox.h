@@ -293,7 +293,7 @@ struct table_patch {
 
 struct applied_patch {
     struct list_head l;
-    void *blob;
+    uintptr_t blob;
     unsigned char sha1[20];		/* binary encoded */
     uint32_t numwrites;
     struct xenlp_patch_write *writes;
@@ -303,7 +303,7 @@ struct applied_patch {
 struct xenlp_apply {
     unsigned char sha1[20];	/* SHA1 of patch file (binary) */
     char __pad0[4];
-    uint32_t bloblen;		/* Length of blob */
+    ptrdiff_t  bloblen;		/* Length of blob */
     uint32_t numrelocs;		/* Number of relocations */
     uint32_t numwrites;		/* Number of writes */
     char __pad1[4];
@@ -342,11 +342,11 @@ struct xpatch {
 	char xenversion[INFO_STRING_LEN]; /* qemu version, compiledate, etc */
 	char xencompiledate[INFO_STRING_LEN]; 
 	uint64_t crowbarabs; /* don't need this */
-	uint64_t refabs; /* qemu start of .txt */
-	uint32_t bloblen;
-	unsigned char *blob;
+	uintptr_t refabs; /* qemu start of .txt */
+	ptrdiff_t bloblen;
+	uintptr_t blob;
 	uint16_t numrelocs;
-	uint32_t *relocs;
+	uintptr_t relocs;
 	uint16_t numchecks;  /*  not currently used */
 	struct check *checks; /* same purpose as the canary in the classic patch struct */
 	uint16_t numfuncs;
@@ -361,12 +361,12 @@ struct xpatch {
 extern const char *gitversion, *cc, *cflags;
 extern uintptr_t patch_sandbox_start, patch_sandbox_end; 
 
-extern uint8_t *patch_cursor;
+extern uintptr_t patch_cursor;
 
 extern struct list_head patch_list;
 extern struct list_head  applied_list;
 
-uint8_t *make_sandbox_writeable(void);
+uintptr_t  make_sandbox_writeable(void);
 struct patch *alloc_patch(char *name, uint64_t size);
 void free_patch(struct patch *p);
 int apply_patch(struct patch *new_patch);
@@ -374,9 +374,8 @@ void init_sandbox(void);
 void dump_sandbox(const void* data, size_t size);
 uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset);
 
-uint8_t *update_patch_cursor(uint64_t offset);
-
-uint64_t get_sandbox_free(void);
+uintptr_t update_patch_cursor(uintptr_t offset);
+ptrdiff_t get_sandbox_free(void);
 
 uint64_t get_sandbox_start(void);
 uint64_t get_sandbox_end(void);

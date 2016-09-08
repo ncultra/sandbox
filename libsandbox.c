@@ -78,14 +78,14 @@ uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
  	return p;
 }
 
-uint8_t *update_patch_cursor(uint64_t offset)
+uintptr_t update_patch_cursor(uintptr_t offset)
 {
-	return (patch_cursor += offset);
+    return (uintptr_t)(patch_cursor += offset);
 }
 
-uint64_t get_sandbox_free(void)
+ptrdiff_t get_sandbox_free(void)
 {
-	return ((uintptr_t)&patch_sandbox_end - (uintptr_t)patch_cursor);
+    return (ptrdiff_t) ((uintptr_t)&patch_sandbox_end - (uintptr_t)patch_cursor);
 }
 
 FILE *log_fd = NULL;
@@ -168,36 +168,35 @@ LIST_HEAD(patch_list);
 /* Linked list of applied patches */
 LIST_HEAD(applied_list);
 
-uint8_t *patch_cursor = NULL;
+uintptr_t patch_cursor = (uintptr_t)NULL;
 
-
-uint64_t get_sandbox_start(void)
+uintptr_t get_sandbox_start(void)
 {
-	return  (uint64_t)( &patch_sandbox_start);
+	return  (uintptr_t)( &patch_sandbox_start);
 }
 
-uint64_t get_sandbox_end(void)
+uintptr_t get_sandbox_end(void)
 {
-	return (uint64_t)&patch_sandbox_end;
+	return (uintptr_t)&patch_sandbox_end;
 	
 }
 
-static void *get_sandbox_memory(uint32_t size)
+static uintptr_t get_sandbox_memory(ptrdiff_t size)
 {
-	uint8_t *p = NULL;
+	uintptr_t p = 0L;
 	
 	assert(get_sandbox_free() > size);
         assert(size < MAX_PATCH_SIZE);
         
-	patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor,
+	patch_cursor = (uintptr_t)ALIGN_POINTER((uintptr_t)patch_cursor,
 						PLATFORM_CACHE_LINE_SIZE);
 	p = patch_cursor;
 	
 	/* paranoid, be certain there are no code fragments wondering around 
 	   in the sandbox. */
-	memset(p, size, sizeof(uint8_t));	
+	memset((void *)p, size, sizeof(uint8_t));	
 	patch_cursor += size;
-	patch_cursor = (uint8_t *)ALIGN_POINTER((uintptr_t)patch_cursor,
+	patch_cursor = (uintptr_t) ALIGN_POINTER((uintptr_t)patch_cursor,
 						PLATFORM_CACHE_LINE_SIZE);
 	return p;
 }
@@ -263,18 +262,18 @@ static void make_text_writeable(struct xenlp_patch_write *writes,
 int xenlp_apply(void *arg)
 {
 	struct xenlp_apply *apply = (struct xenlp_apply *)arg;
-	unsigned char *blob = NULL;
+	uintptr_t blob = 0L;
 	struct xenlp_patch_write *writes;
 	size_t i;
 	struct applied_patch *patch;
-	int32_t relocrel = 0;
+	ptrdiff_t relocrel = 0;
 	char sha1[41];
-	unsigned char *p;
+	ptrdiff_t p;
 	
 
     
 	/* Skip over struct xenlp_apply */
-	p = (unsigned char *)arg + sizeof(struct xenlp_apply);
+	p = (ptrdiff_t) arg + sizeof(struct xenlp_apply);
 
 	/* Do some initial sanity checking */
 	if (apply->bloblen > MAX_PATCH_SIZE) {
@@ -308,13 +307,13 @@ int xenlp_apply(void *arg)
 	/* FIXME: Memory allocated for blob can leak in case of error */
     
 	/* Copy blob to hypervisor was */
-	memcpy(blob, p, apply->bloblen);
+	memcpy((void *)blob, (void *)p, apply->bloblen);
     
 	/* Skip over blob */
 	p += apply->bloblen;
     
 	/* Calculate offset of relocations */
-	relocrel = (uint64_t)blob - apply->refabs;
+	relocrel = (ptrdiff_t) blob - apply->refabs;
 
 
 
@@ -323,29 +322,30 @@ int xenlp_apply(void *arg)
 	DMSG("number of relocs: %d\n", apply->numrelocs);
 	
 	if (apply->numrelocs) {
-		uint32_t *relocs;
+		uintptr_t relocs;
 	
-		relocs = calloc(apply->numrelocs, sizeof(uint32_t));
+		relocs = (uintptr_t) calloc(apply->numrelocs, sizeof(uintptr_t));
 
 		if (!relocs)
 			return SANDBOX_ERR_NOMEM;
 
 		/* was copy from guest */
 
-		p += (apply->numrelocs * sizeof(relocs[0]));
+		p += (apply->numrelocs * sizeof(uintptr_t));
 
 		for (i = 0; i < apply->numrelocs; i++) {
-			uint32_t off = relocs[i];
-			if (off > apply->bloblen - sizeof(int32_t)) {
+			ptrdiff_t off = relocs + i;
+			if (off > apply->bloblen - sizeof(uintptr_t)) {
 				DMSG("invalid off value %d\n", off);
 				return SANDBOX_ERR_PARSE;
 			}
 
 			/* blob -> HV .text */
-			*((int32_t *)(blob + off)) -= relocrel;
+
+                        *((uintptr_t *)(blob + off)) -= relocrel;
 		}
 
-		free(relocs);
+		free((void *)relocs);
 	}
 
 	/* Read writes */
@@ -353,7 +353,7 @@ int xenlp_apply(void *arg)
 	if (!writes)
 		return SANDBOX_ERR_NOMEM;
 
-	memcpy(writes, p, apply->numwrites * sizeof(writes[0]));
+	memcpy(writes, (void *)p, apply->numwrites * sizeof(writes[0]));
     
 	/* Move over all of the writes */
 	p += (apply->numwrites * sizeof(writes[0]));
@@ -416,18 +416,18 @@ int xenlp_apply(void *arg)
 	return 0;
 }
 
-uint8_t *make_sandbox_writeable(void) 
+uintptr_t make_sandbox_writeable(void) 
 {
 
 	
-	uint64_t p = (uint64_t)&patch_sandbox_start;
+	uintptr_t p = (uintptr_t)&patch_sandbox_start;
 	
-	DMSG ("sandbox start before alignment\n %016lx\n",(uint64_t)&patch_sandbox_start);
+	DMSG ("sandbox start before alignment\n %016lx\n",(uintptr_t)&patch_sandbox_start);
 	p &= PLATFORM_PAGE_MASK;
-	DMSG("page mask: %016lx\n", (uint64_t)PLATFORM_PAGE_MASK);
+	DMSG("page mask: %016lx\n", (uintptr_t)PLATFORM_PAGE_MASK);
 	
-	DMSG ("sandbox start %016lx\n", (uint64_t)&patch_sandbox_start);
-	DMSG ("page size: %016lx\n", (uint64_t)PLATFORM_PAGE_SIZE);
+	DMSG ("sandbox start %016lx\n", (uintptr_t) &patch_sandbox_start);
+	DMSG ("page size: %016lx\n", (uintptr_t)PLATFORM_PAGE_SIZE);
 	printf("page-aligned address: %016lx\n", p);
 	
 	if (mprotect((void *)p, SANDBOX_ALLOC_SIZE,
@@ -436,15 +436,15 @@ uint8_t *make_sandbox_writeable(void)
 		perror("err: ");
 		
 	}
-	return (uint8_t *)p;
+	return p;
 }
 
 
 void init_sandbox(void)
 {
 	make_sandbox_writeable(); 
-	patch_cursor = (uint8_t *)&patch_sandbox_start;
-	uint64_t p  = (uint64_t)&applied_list;
+	patch_cursor = (uintptr_t) &patch_sandbox_start;
+	uintptr_t p  = (uintptr_t) &applied_list;
 	p &= PLATFORM_PAGE_MASK;
 	if (mprotect((void *)p, PLATFORM_PAGE_SIZE,
 		     PROT_READ|PROT_EXEC|PROT_WRITE))
