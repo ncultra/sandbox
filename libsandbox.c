@@ -443,13 +443,13 @@ uintptr_t make_sandbox_writeable(void)
 void init_sandbox(void)
 {
 	make_sandbox_writeable(); 
-	patch_cursor = (uintptr_t) &patch_sandbox_start;
 	uintptr_t p  = (uintptr_t) &applied_list;
 	p &= PLATFORM_PAGE_MASK;
-	if (mprotect((void *)p, PLATFORM_PAGE_SIZE,
-		     PROT_READ|PROT_EXEC|PROT_WRITE))
-		perror("err: ");
-	
+	if (
+            mprotect((void *)p, PLATFORM_PAGE_SIZE,
+                     PROT_READ|PROT_EXEC|PROT_WRITE)) {    
+            perror("err: ");
+	}        
 }
 
 void dump_sandbox(const void* data, size_t size) {
