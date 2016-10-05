@@ -16,6 +16,14 @@
 #define __QEMU_ATOMIC_H 1
 
 
+#ifndef QEMU_GNUC_PREREQ
+#if defined (__GNUC__) && defined (__GNUC_MINOR_)
+# define QEMU_GNUC_PREREQ(maj, min) \
+            ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
+#else
+# define QEMU_GNUC_PREREQ(maj, min) 0
+#endif
+#endif
 
 /* Compiler barrier */
 #define barrier()   ({ asm volatile("" ::: "memory"); (void)0; })
@@ -171,7 +179,6 @@
 #define smp_rmb()   barrier()
 
 #define atomic_xchg(ptr, i)    (smp_mb(), __sync_lock_test_and_set(ptr, i))
-})
 
 /*
  * Load/store with Java volatile semantics.

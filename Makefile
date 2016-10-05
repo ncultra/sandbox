@@ -1,6 +1,6 @@
 BUILD_ROOT := "/home/$(shell id -n -u)/src/sandbox/"
 CC	:= gcc
-CFLAGS = -g  -Wall -Werror -fPIC -std=gnu89 -ffunction-sections -fdata-sections -fkeep-static-consts -fkeep-inline-functions -pthread
+CFLAGS = -g  -Wall -Werror -fPIC -ffunction-sections -fdata-sections -fkeep-static-consts -fkeep-inline-functions -pthread
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
@@ -11,7 +11,7 @@ CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
 
 .PHONY: version.mak
 version.mak:
-	./config.sh --ver="../VERSION"
+	sh config.sh --ver="../VERSION"
 
 include version.mak
 
@@ -37,11 +37,11 @@ libsandbox-qemu: libsandbox.o sandbox-listen.o version.mak
 
 libsandbox.o: libsandbox.c platform.h sandbox.h gitsha.h gitsha.txt
 	$(CC) $(CFLAGS) -c -O0  $<
-	$(shell ./config.sh)
+	$(shell sh config.sh)
 
 sandbox-listen.o: sandbox-listen.c platform.h gitsha
 	$(CC)  $(CFLAGS) -c -O0  $<
-	$(shell ./config.sh)
+	$(shell sh config.sh)
 
 .PHONY: clean
 clean:
@@ -51,7 +51,7 @@ clean:
 *.c: platform.h
 
 platform.h:
-	$(shell $(BUILD_ROOT)config.sh)
+	$(shell sh config.sh)
 
 .PHONY: raxlpqemu
 raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
@@ -92,9 +92,9 @@ gitsha.h: version.mak
 	@echo "const char *get_ccflags(void){return ccflags;}" >> $@
 	@echo "const char *get_compiled_date(void){return compile_date;}" >> $@
 	@echo "const char *get_tag(void){return tag;}" >> $@
-	@echo "const int get_major(void){return major;}" >> $@
-	@echo "const int get_minor(void){return minor;}" >> $@
-	@echo "const int get_revision(void){return revision;}" >> $@
+	@echo "int get_major(void){return major;}" >> $@
+	@echo "int get_minor(void){return minor;}" >> $@
+	@echo "int get_revision(void){return revision;}" >> $@
 
 .PHONY: shared
 shared: libsandbox.so

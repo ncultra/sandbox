@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include <link.h>
-#include <libelf.h>
 #include <sys/mman.h>
+#include "atomic.h"
 #include "sandbox.h"
 
 #define str1(s) #s
@@ -245,7 +245,7 @@ static void make_text_writeable(struct xenlp_patch_write *writes,
 	int i;
 	for (i = 0; i < numwrites; i++) {
 		struct xenlp_patch_write *pw = &writes[i];
-		uint64_t p = (uint64_t)pw->hvabs;
+		uintptr_t p = (uintptr_t)pw->hvabs;
 		p &= PLATFORM_PAGE_MASK;
 		if (mprotect((void *)p , PLATFORM_PAGE_SIZE,
 			     PROT_READ|PROT_EXEC|PROT_WRITE)){			
@@ -428,7 +428,7 @@ uintptr_t make_sandbox_writeable(void)
 	
 	DMSG ("sandbox start %016lx\n", (uintptr_t) &patch_sandbox_start);
 	DMSG ("page size: %016lx\n", (uintptr_t)PLATFORM_PAGE_SIZE);
-	printf("page-aligned address: %016lx\n", p);
+	printf("page-aligned address: %p\n", (void *)p);
 	
 	if (mprotect((void *)p, SANDBOX_ALLOC_SIZE,
 		     PROT_READ|PROT_EXEC|PROT_WRITE)) {

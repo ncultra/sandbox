@@ -28,9 +28,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <libgen.h>
-#include <openssl/sha.h>
 #include "platform.h"
-#include "atomic.h"
 
 
 #ifndef __SANDBOX_H
@@ -377,8 +375,8 @@ uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset);
 uintptr_t update_patch_cursor(uintptr_t offset);
 ptrdiff_t get_sandbox_free(void);
 
-uint64_t get_sandbox_start(void);
-uint64_t get_sandbox_end(void);
+uintptr_t get_sandbox_start(void);
+uintptr_t get_sandbox_end(void);
 /* TODO: add a msg nonce (transaction id)
  from sandbox-listen.h
 */
