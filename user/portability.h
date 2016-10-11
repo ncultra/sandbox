@@ -5,13 +5,15 @@
 * 
 * Copyright 2015-16 Rackspace, Inc.
 ***************************************************************/
-
-#include "../sandbox.h"
+#include <sys/socket.h>
 
 #ifndef __SANDBOX_PORT_H
 #define __SANDBOX_PORT_H
 
+#define XEN_GUEST_HANDLE(a) ((int) a) 
 
+int copy_from_guest(void *dest, int fd, int size);
+int copy_to_guest(int fd, void *src, int size);
 
 
 #endif /* __SANDBOX_PORT_H */
