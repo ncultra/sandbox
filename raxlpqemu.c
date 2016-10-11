@@ -235,7 +235,7 @@ size_t fill_patch_buf(unsigned char *buf, struct xpatch *patch,
 
     AD(apply);				/* struct xenlp_apply */
     if (patch->bloblen > 0)
-        ADR(patch->blob, patch->bloblen);	/* blob */
+        ADR(patch->blob,patch->bloblen);	/* blob */
     if (patch->numrelocs > 0)
         ADA(patch->relocs, patch->numrelocs);	/* relocs */
     if (numwrites > 0)

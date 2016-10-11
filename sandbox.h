@@ -301,7 +301,7 @@ struct applied_patch {
 struct xenlp_apply {
     unsigned char sha1[20];	/* SHA1 of patch file (binary) */
     char __pad0[4];
-    ptrdiff_t  bloblen;		/* Length of blob */
+    uint32_t  bloblen;		/* Length of blob */
     uint32_t numrelocs;		/* Number of relocations */
     uint32_t numwrites;		/* Number of writes */
     char __pad1[4];
@@ -341,10 +341,10 @@ struct xpatch {
 	char xencompiledate[INFO_STRING_LEN]; 
 	uint64_t crowbarabs; /* don't need this */
 	uintptr_t refabs; /* qemu start of .txt */
-	ptrdiff_t bloblen;
-	uintptr_t blob;
+	uint32_t bloblen;
+	unsigned char  *blob;
 	uint16_t numrelocs;
-	uintptr_t relocs;
+	uint32_t *relocs;
 	uint16_t numchecks;  /*  not currently used */
 	struct check *checks; /* same purpose as the canary in the classic patch struct */
 	uint16_t numfuncs;
