@@ -1,69 +1,9 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <unistd.h>
+
 #include "util.h"
-
-
-ssize_t	readn(int fd, void *vptr, size_t n);
-
-
-int _read(const char *filename, int fd, void *buf, size_t buflen)
-{
-    int ret = readn(fd, buf, buflen);
-    if (ret < 0) {
-        fprintf(stderr, "%s: %m\n", filename);
-        return -1;
-    }
-    if (ret < buflen) {
-	    fprintf(stderr, "%s: expected %d bytes, read %d\n",
-                filename, (int)buflen, ret);
-        return -1;
-    }
-
-    return 0;
-}
-
-
-int _readu64(const char *filename, int fd, uint64_t *value)
-{
-    unsigned char buf[sizeof(uint64_t)];
-
-    if (_read(filename, fd, buf, sizeof(buf)) < 0)
-        return -1;
-
-    *value = ((uint64_t)buf[0]) << 56 | ((uint64_t)buf[1]) << 48 |
-             ((uint64_t)buf[2]) << 40 | ((uint64_t)buf[3]) << 32 |
-             ((uint64_t)buf[4]) << 24 | ((uint64_t)buf[5]) << 16 |
-             ((uint64_t)buf[6]) << 8 | ((uint64_t)buf[7]);
-    return 0;
-}
-
-
-int _readu32(const char *filename, int fd, uint32_t *value)
-{
-    unsigned char buf[sizeof(uint32_t)];
-
-    if (_read(filename, fd, buf, sizeof(buf)) < 0)
-        return -1;
-
-    *value = ((uint32_t)buf[0]) << 24 | ((uint32_t)buf[1]) << 16 |
-             ((uint32_t)buf[2]) << 8 | ((uint32_t)buf[3]);
-    return 0;
-}
-
-
-int _readu16(const char *filename, int fd, uint16_t *value)
-{
-    unsigned char buf[sizeof(uint16_t)];
-
-    if (_read(filename, fd, buf, sizeof(buf)) < 0)
-        return -1;
-
-    *value = ((uint16_t)buf[0]) << 8 | ((uint16_t)buf[1]);
-    return 0;
-}
 
 
 void *_zalloc(size_t size)
@@ -142,4 +82,38 @@ int get_xen_version(char *buf, size_t bufsize)
 int get_xen_compile_date(char *buf, size_t bufsize)
 {
     return _read_line(COMPILEDATEFILE, buf, bufsize);
+}
+
+void bin2hex(unsigned char *bin, size_t binlen, char *buf,
+                    size_t buflen)
+{
+    static const char hexchars[] = "0123456789abcdef";
+    size_t i;
+
+    for (i = 0; i < binlen; i++, bin++) {
+        /* Ensure we can fit two characters and the terminating nul */
+        if (buflen >= 3) {
+            *buf++ = hexchars[(*bin >> 4) & 0x0f];
+            *buf++ = hexchars[*bin & 0x0f];
+
+            buflen -= 2;
+        }
+    }
+
+    if (buflen)
+        *buf = 0;
+}
+
+
+int string2sha1(const char *string, unsigned char *sha1)
+{
+    int i;
+    /* Make sure first 40 chars of string are composed of only hex digits */
+    for (i = 0; i < 40; i += 2) {
+        if (sscanf(string + i, "%02x", (int*)(&sha1[i / 2])) != 1) {
+            fprintf(stderr, "error: not a valid sha1 string: %s\n", string);
+            return -1;
+        }
+    }
+    return 0;
 }
