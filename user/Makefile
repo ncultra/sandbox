@@ -5,9 +5,8 @@ MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
 
-CLEAN=rm -f raxlpxs*.o *.a *.soi
+CLEAN=rm -f raxlpxs*.o *.a *.so
 
-
-.PHONY raxlpxs
-raxlpxs: patch_file.c patch_file.c util.c util.h raxlpxs.c raxlpxs.h
-		$(CC) $(CFLAGS) -o raxlpxs raxlpxs.o patch_file.o util.o
+.PHONY: raxlpxs
+raxlpxs: raxlpxs.o patch_file.o util.o portability.o
+	$(CC) $(CFLAGS) -o raxlpxs raxlpxs.o patch_file.o util.o portability.o
