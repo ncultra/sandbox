@@ -17,7 +17,7 @@
 
 #include <xenctrl.h>
 #include <xen/xen.h>
-#include <public/live_patch.h>
+#include "../live_patch.h"
 
 #include "util.h"
 #include "patch_file.h"
@@ -218,8 +218,9 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
         int i;
         for (i = 0; i < list.numpatches; i++) {
             struct xenlp_patch_info *pi = &list.patches[i];
-            int j;
 
+            /* int j; this is from the original file, appears to be extraneous */
+            
             if (memcmp(pi->sha1, sha1, sha1_size) == 0) {
                 *patch = pi;
                 return 0;
@@ -260,7 +261,7 @@ int find_patch3(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
         int i;
         for (i = 0; i < list.numpatches; i++) {
             struct xenlp_patch_info3 *pi = &list.patches[i];
-            int j;
+            /* int j; this is from the original file, appears to be extraneous */
 
             if (memcmp(pi->sha1, sha1, sha1_size) == 0) {
                 *patch = pi;
@@ -392,7 +393,8 @@ void patch_writes(struct patch *patch, struct xenlp_patch_write *writes)
         pw->reloctype = XENLP_RELOC_INT32;
         pw->dataoff = 1;
 
-        printf("Patching function %s @ %llx\n", func->funcname, func->oldabs);
+        printf("Patching function %s @ %llx\n", func->funcname,
+               (long long unsigned int)func->oldabs);
     }
 }
 
@@ -535,7 +537,7 @@ int _cmd_apply3(xc_interface_t xch, struct patch3 *patch)
 
 int cmd_apply(int argc, char *argv[])
 {
-    size_t i;
+    /*size_t i; apparently unused in original file */
     if (argc < 3)
         return usage(argv[0]);
 
@@ -669,9 +671,9 @@ int _cmd_list2(xc_interface_t xch)
 
             if (json)
                 printf("\", \"hvaddr\": \"0x%llx\"}%s",
-                       pi->hvaddr, ((last) ? "\n" : ","));
+                       (long long unsigned)pi->hvaddr, ((last) ? "\n" : ","));
             else
-                printf(" @ %llx\n", pi->hvaddr);
+                printf(" @ %llx\n", (long long unsigned)pi->hvaddr);
 
             totalpatches++;
         }
@@ -721,9 +723,9 @@ void print_patch_info3(struct xenlp_patch_info3 *pi, int last)
     }
     if (json)
         printf(" \"hvaddr\": \"0x%llx\"}%s",
-               pi->hvaddr, ((last) ? "\n" : ","));
+               (long long unsigned)pi->hvaddr, ((last) ? "\n" : ","));
     else
-        printf(" @ %llx\n", pi->hvaddr);
+        printf(" @ %llx\n", (long long unsigned)pi->hvaddr);
 }
 
 
@@ -784,7 +786,7 @@ int cmd_list(int argc, char *argv[])
 int info_patch_file(int fd, const char *filename)
 {
     struct patch3 patch;
-    size_t i;
+    /* size_t i; is apparently unused in the upstream file */
     if (load_patch_file3(fd, filename, &patch) < 0)
         return -1;
     close(fd);
@@ -1067,7 +1069,7 @@ void extract_symbols_names(Elf_Data *data, struct symbols *symbols)
 
     unsigned char *buf = data->d_buf;
     size_t off = symbols->_names;
-    size_t end = off + symbols->_names_size;
+    /* size_t end = off + symbols->_names_size; is apparently unused in the upstream file */
     size_t i;
     for (i = 0; i < symbols->count; i++) {
         unsigned char numtoks = buf[off];
@@ -1181,7 +1183,7 @@ int info_xen_gz(int origfd, const char *filename)
         bytesread += ret;
     }
 
-    Elf *elf = elf_memory(buf, bytesread);
+    Elf *elf = elf_memory((char *)buf, bytesread);
 
     if (elf_kind(elf) != ELF_K_ELF) {
         fprintf(stderr, "%s: not an ELF file\n", filename);
@@ -1389,7 +1391,8 @@ int cmd_undo(int argc, char *argv[])
     if (open_xc(&xch) < 0)
         return -1;
 
-    struct xenlp_hash hash = { 0 };
+    struct xenlp_hash hash = {{0}};
+    
     memcpy(hash.sha1, sha1, SHA_DIGEST_LENGTH);
 
     struct xenlp_caps caps = { .flags = 0 };
