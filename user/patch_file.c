@@ -9,17 +9,16 @@
 #include "patch_file.h"
 #include "util.h"
 
-
+/* TODO: change buflen to type int. size_t is best used for offsetof(), etc. */
 int _read(int fd, const char *filename, void *buf, size_t buflen)
 {
-    ssize_t ret = read(fd, buf, buflen);
+    int ret = read(fd, buf, buflen);
     if (ret < 0) {
         fprintf(stderr, "%s: %m\n", filename);
         return -1;
     }
     if (ret < buflen) {
-        fprintf(stderr, "%s: expected %d bytes, read %d\n",
-                filename, buflen, ret);
+        fprintf(stderr, "%s: expected %d bytes, read %d\n",filename, (int)buflen, ret);
         return -1;
     }
 
@@ -70,7 +69,7 @@ int _readu16(int fd, const char *filename, uint16_t *value)
 static int extract_sha1_from_filename(unsigned char *sha1, size_t sha1len,
                                const char *filename)
 {
-    size_t i;
+    /*  size_t i; unused upstream */
 
     /* Make sure suffix is .raxlpxs */
     if (strstr(filename, ".raxlpxs") == NULL) {
@@ -536,7 +535,7 @@ void print_patch_file_info(struct patch3 *patch)
     for (i = 0; i < patch->numdeps; i++) {
         struct dependency *dep = &patch->deps[i];
         bin2hex(dep->sha1, SHA_DIGEST_LENGTH, hex, sizeof(hex));
-        printf("  patch: %s @ %llx\n", hex, dep->refabs);
+        printf("  patch: %s @ %llx\n", hex, (long long unsigned)dep->refabs);
     }
     printf("\n");
 
@@ -546,13 +545,13 @@ void print_patch_file_info(struct patch3 *patch)
     for (i = 0; i < patch->numfuncs; i++) {
         struct function_patch *func = &patch->funcs[i];
 
-        printf("Patch function %s @ %llx\n", func->funcname, func->oldabs);
+        printf("Patch function %s @ %llx\n", func->funcname, (long long unsigned)func->oldabs);
     }
 
     for (i = 0; i < patch->numtables; i++) {
         struct table_patch *table = &patch->tables[i];
 
-        printf("Patch table %s @ %llx\n", table->tablename, table->hvabs);
+        printf("Patch table %s @ %llx\n", table->tablename, (long long unsigned)table->hvabs);
     }
 
     if (patch->numsymbols > 0)
@@ -581,7 +580,7 @@ void print_json_patch_info(struct patch3 *patch)
         struct dependency *dep = &patch->deps[i];
         bin2hex(dep->sha1, SHA_DIGEST_LENGTH, hex, sizeof(hex));
         printf("    {\"sha1\": \"%s\", \"refabs\": \"0x%llx\"}",
-               hex, dep->refabs);
+               hex, (long long unsigned)dep->refabs);
         printf("%s\n", ((i == patch->numdeps - 1) ? "" : ","));
     }
     printf("  ],\n");
@@ -590,7 +589,7 @@ void print_json_patch_info(struct patch3 *patch)
     for (i = 0; i < patch->numfuncs; i++) {
         struct function_patch *func = &patch->funcs[i];
         printf("    {\"name\": \"%s\", \"addr\": \"0x%llx\"}",
-               func->funcname, func->oldabs);
+               func->funcname, (long long unsigned)func->oldabs);
         printf("%s\n", ((i == patch->numfuncs - 1) ? "" : ","));
     }
     printf("  ],\n");
@@ -598,7 +597,8 @@ void print_json_patch_info(struct patch3 *patch)
     for (i = 0; i < patch->numtables; i++) {
         struct table_patch *table = &patch->tables[i];
         printf("    {\"name\": \"%s\", \"addr\": \"0x%llx\"}",
-               table->tablename, table->hvabs);
+
+               table->tablename, (long long unsigned)table->hvabs);
         printf("%s\n", ((i == patch->numtables - 1) ? "" : ","));
     }
     printf("  ],\n");
