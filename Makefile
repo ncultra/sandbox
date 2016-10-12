@@ -1,6 +1,7 @@
 BUILD_ROOT := "/home/$(shell id -n -u)/src/sandbox/"
 CC	:= gcc
-CFLAGS = -g  -Wall -Werror -fPIC -ffunction-sections -fdata-sections -fkeep-static-consts -fkeep-inline-functions -pthread
+CFLAGS = -g  -Wall -Werror -fPIC -std=gnu11 -ffunction-sections -fdata-sections -fkeep-static-consts -fno-inline  -fms-extensions -pthread
+
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
