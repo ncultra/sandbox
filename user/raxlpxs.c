@@ -21,7 +21,7 @@
 
 #include "util.h"
 #include "patch_file.h"
-
+#include "../sandbox.h"
 
 /* stuff from private xen headers */
 #ifdef HYPERCALL_BUFFER_AS_ARG
@@ -72,6 +72,10 @@ static int json = 0;
 
 int do_xen_hypercall(xc_interface_t xch, privcmd_hypercall_t *hypercall);
 
+#ifndef __SANDBOX_H
+/* if this is a portable build for the sandbox, this function
+ * is defined in portability.o
+ */
 
 int open_xc(xc_interface_t *xch)
 {
@@ -87,7 +91,7 @@ int open_xc(xc_interface_t *xch)
 
     return 0;
 }
-
+#endif
 
 int _do_lp_buf_op_both(xc_interface_t xch, void *buf, size_t buflen, uint64_t op)
 {

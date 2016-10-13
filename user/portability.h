@@ -10,8 +10,7 @@
 #ifndef __SANDBOX_PORT_H
 #define __SANDBOX_PORT_H
 
-
-
+#undef XEN_GUEST_HANDLE
 #define XEN_GUEST_HANDLE(a) int a
 
 int copy_from_guest(void *dest, int fd, int size);

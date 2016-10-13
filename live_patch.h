@@ -12,13 +12,21 @@
 #ifndef __XEN_PUBLIC_LIVE_PATCH_H__
 #define __XEN_PUBLIC_LIVE_PATCH_H__
 
-
+#ifdef sandbox_port
+#include "user/portability.h"
+#endif
 /* The ABI version must match `extract_patch` and `raxlpxs` */
+
+#ifndef MAX_LIST_PATCHES
 #define MAX_LIST_PATCHES	64
+#endif
 #define MAX_PATCH_SIZE		1048576	/* FIXME: is 1MB too small? */
+
 #define MAX_TAGS_LEN	    128
 #define MAX_LIST_DEPS       8
+
 #define MAX_LIST_PATCHES3	16
+
 
 
 /* Any change to the userspace to hypervisor ABI should result in using a

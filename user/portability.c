@@ -50,7 +50,6 @@ int connect_to_sandbox(char *sandbox_name)
 }
 
 
-/* TODO: use a weak alias to allow two different implementations of open_xc */
 typedef int xc_interface_t;
 int open_xc(xc_interface_t *xch)
 {

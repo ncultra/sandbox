@@ -28,8 +28,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <libgen.h>
-#include "platform.h"
-
+#include "platform.h" 
 
 #ifndef __SANDBOX_H
 #define __SANDBOX_H 1
@@ -255,9 +254,15 @@ typedef uint8_t * reloc_ptr_t;
 
 
 #define INFO_STRING_LEN 255
+
+#ifndef __XEN_PUBLIC_LIVE_PATCH_H__
 #define MAX_LIST_PATCHES 255
+#endif
 
-
+#ifndef XEN_LIVEPATCH_PATCH_FILE_H_H
+/* NOTE: defined externally in patch_file.h 
+ * must guarantee commonality with original struct definition
+ */
 struct check {
     uint64_t hvabs;
     uint16_t datalen;
@@ -269,9 +274,8 @@ struct function_patch {
     char *funcname;
     uint64_t oldabs;
     uint32_t newrel;
-};
-
-
+}
+    
 struct table_patch {
     char *tablename;
     uint64_t hvabs;
@@ -279,7 +283,7 @@ struct table_patch {
     unsigned char *data;
 };
 
-
+#endif
 /*
  *
  * XENLP_apply (cmd 11)
@@ -298,6 +302,11 @@ struct applied_patch {
 };
 
 
+
+#ifndef XEN_LIVEPATCH_PATCH_FILE_H_H
+/* NOTE: defined externally in patch_file.h 
+ * must guarantee commonality with original struct definition
+ */
 struct xenlp_apply {
     unsigned char sha1[20];	/* SHA1 of patch file (binary) */
     char __pad0[4];
@@ -333,6 +342,8 @@ struct xenlp_list {
     char __pad[4];
     struct xenlp_patch_info patches[MAX_LIST_PATCHES];	/* output */
 };
+
+#endif
 
 
 struct xpatch {
