@@ -13,7 +13,20 @@
 #undef XEN_GUEST_HANDLE
 #define XEN_GUEST_HANDLE(a) int a
 
+#undef XENCTRL_HAS_XC_INTERFACE
+typedef int xc_interface_t_qemu;
+typedef int* xc_interface_qemu;
+
+typedef int xc_interface_t;
+typedef int* xc_interface;
+
+#define __HYPERVISOR_arch_2 SANDBOX_MSG_APPLY
+
 int copy_from_guest(void *dest, int fd, int size);
 int copy_to_guest(int fd, void *src, int size);
+
+int open_xc(xc_interface_t *xch);
+int do_xen_hypercall(xc_interface_t, void *);
+
 
 #endif /* __SANDBOX_PORT_H */

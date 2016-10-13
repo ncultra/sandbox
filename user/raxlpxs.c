@@ -15,8 +15,8 @@
 
 #include <openssl/sha.h>
 
-#include <xenctrl.h>
-#include <xen/xen.h>
+//#include <xenctrl.h>
+//#include <xen/xen.h>
 #include "../live_patch.h"
 
 #include "util.h"
@@ -61,18 +61,16 @@ typedef struct privcmd_hypercall {
 
 #define DECLARE_HYPERCALL privcmd_hypercall_t hypercall
 
-
 #ifdef XENCTRL_HAS_XC_INTERFACE
 typedef xc_interface* xc_interface_t;
 #else
 typedef int xc_interface_t;
 #endif
-
 static int json = 0;
 
 int do_xen_hypercall(xc_interface_t xch, privcmd_hypercall_t *hypercall);
 
-#ifndef __SANDBOX_H
+#ifndef sandbox_port
 /* if this is a portable build for the sandbox, this function
  * is defined in portability.o
  */
@@ -91,7 +89,7 @@ int open_xc(xc_interface_t *xch)
 
     return 0;
 }
-#endif
+#endif /* sandbox_port */
 
 int _do_lp_buf_op_both(xc_interface_t xch, void *buf, size_t buflen, uint64_t op)
 {

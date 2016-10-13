@@ -274,7 +274,7 @@ struct function_patch {
     char *funcname;
     uint64_t oldabs;
     uint32_t newrel;
-}
+};    
     
 struct table_patch {
     char *tablename;

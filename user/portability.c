@@ -50,7 +50,7 @@ int connect_to_sandbox(char *sandbox_name)
 }
 
 
-typedef int xc_interface_t;
+
 int open_xc(xc_interface_t *xch)
 {
 
@@ -66,3 +66,9 @@ int open_xc(xc_interface_t *xch)
     }   
     return 0;
 }
+
+int do_xen_hypercall(xc_interface_t xc, void *buf)
+{
+    return 0;
+}
+
