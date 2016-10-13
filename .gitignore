@@ -5,6 +5,7 @@ a.out
 *decls.h
 *.o
 *.a
+*.so
 sandbox
 platform.h
 gdb-command
@@ -23,3 +24,18 @@ memcpy.asm
 perf.data
 perf.data.old
 server.log
+
+Makefile.good
+Makefile.orig
+Makefile.rej
+config.status
+linux-headers/
+makefile.patch
+merge.patch
+pc-bios/
+qdict-test-data.txt
+qemu-version.sh
+roms/
+sand_log_*
+tests/
+version.mak
