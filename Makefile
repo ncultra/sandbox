@@ -47,6 +47,7 @@ sandbox-listen.o: sandbox-listen.c platform.h gitsha
 .PHONY: clean
 clean:
 	$(shell $(CLEAN) &> /dev/null)
+	cd user && make $@ > /dev/null
 	@echo "repo is clean"
 
 *.c: platform.h
@@ -59,6 +60,10 @@ raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
 	$(CC) $(CFLAGS) -c raxlpqemu.c util.c
 #TODO: might need to link libraries statically (probably not)
 	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o util.o libsandbox.a -lcrypto -lpthread -lz -lelf
+
+.PHONY: raxlpxs
+raxlpxs:
+	cd user && make $@
 
 
 .PHONY: gitsha.txt
