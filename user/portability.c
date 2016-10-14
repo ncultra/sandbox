@@ -75,6 +75,80 @@ int do_xen_hypercall(xc_interface_t xc, void *buf)
     return 0;
 }
 
+
+/* TODO remove list_response, it's redundant with xenlp_patch_info */
+
+#ifdef 0
+struct xenlp_patch_info {
+    uint64_t hvaddr;		/* virtual address in hypervisor memory */
+    unsigned char sha1[20];	/* binary encoded */
+    char __pad[4];
+};
+
+typedef xenlp_patch_info list_response;
+
+struct list_response {
+    uint64_t hvaddr;
+    uint8_t sha1[20];
+    uint8_t name[128]; /* we don't store the patch name anywhere */
+};
+#endif
+
+
+/* return: < 0 for error; zero if patch applied; one if patch not applied */
+/* if sha1 is NULL return all applied patches
+ * return an array of xenlp_patch_info structs
+ */
+int __find_patch(int fd, uint8_t sha1[20], struct list_response **info)
+{
+	uint32_t *count = NULL, i = 0, ccode = SANDBOX_MSG_APPLY;
+	struct list_response *response;
+	char *rbuf = NULL;
+	
+	
+	/* return buffer format:*/
+        /* uint32_t count;
+         * struct list_response[count];
+	 * buffer needs to be freed by caller 
+	*/
+	count = (uint32_t *)sandbox_list_patches(fd);
+	DMSG("list path response buf %p\n", count);
+	dump_sandbox(count, 32);
+	
+	
+	if (*count == 0) {
+		LMSG("currently there are no applied patches\n");
+		goto exit;
+	}
+	
+	LMSG("%d applied patches...\n", *count);
+	rbuf = (char *)count;
+	rbuf += sizeof(uint32_t);
+	
+	response = (struct list_response *)rbuf;
+	dump_sandbox(response, 32);
+	
+	for (i = 0; i < *count; i++) {
+		if (sha1 == NULL) {
+			char sha1str[41];
+			DMSG("extracting sha1\n");
+			dump_sandbox(response[i].sha1, 20);
+			
+			bin2hex(response[i].sha1, sizeof(response[i].sha1),
+				sha1str, sizeof(sha1str));
+			LMSG("%s\n", sha1str);
+		} else if (memcmp(sha1, response[i].sha1, 20) == 0) {
+			goto exit;
+		}
+	}
+	
+	ccode = SANDBOX_MSG_APPLY;
+exit:
+	free(count);
+	return ccode;
+}
+
+
 /* return zero for success, -1 on failure */
 /* TODO: allow for list (call with NULL sha1, return a list of all applied patches.
  */

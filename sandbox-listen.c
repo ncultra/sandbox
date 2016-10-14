@@ -677,7 +677,7 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 				break;
 		}
 		ccode = send_rr_buf(fd, SANDBOX_MSG_LISTRSP,
-				   rsize, rbuf, SANDBOX_LAST_ARG);
+				   rsize, rbuf, git SANDBOX_LAST_ARG);
 		free(rbuf);	
 	} else {
 		DMSG("applied patch list empty, sending null response list\n");

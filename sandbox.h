@@ -329,13 +329,13 @@ struct xenlp_patch_write {
 
     char __pad[6];
 };
-
 struct xenlp_patch_info {
     uint64_t hvaddr;		/* virtual address in hypervisor memory */
     unsigned char sha1[20];	/* binary encoded */
     char __pad[4];
 };
 
+typedef xenlp_patch_info list_response;
 
 struct xenlp_list {
     uint16_t skippatches;	/* input, number of patches to skip */
@@ -403,12 +403,6 @@ uintptr_t get_sandbox_end(void);
 #define SANDBOX_MSG_PUT_LEN(b, l) ((*(uint32_t *)((uint8_t *)b + 8)) = (uint32_t)l)
 
 #define SANDBOX_MSG_LIST_BUFSIZE 512
-struct list_response {
-    uint8_t sha1[20];
-    uint8_t name[128];
-    uint64_t hvaddr;
-};
-
 #define SANDBOX_MSG_APPLY 1
 #define SANDBOX_MSG_APPLYRSP 2
 #define SANDBOX_MSG_LIST 3
