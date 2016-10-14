@@ -388,6 +388,7 @@ ptrdiff_t get_sandbox_free(void);
 
 uintptr_t get_sandbox_start(void);
 uintptr_t get_sandbox_end(void);
+
 /* TODO: add a msg nonce (transaction id)
  from sandbox-listen.h
 */
@@ -400,11 +401,7 @@ uintptr_t get_sandbox_end(void);
 #define SANDBOX_MSG_MAX_LEN (MAX_PATCH_SIZE + SANDBOX_MSG_HDRLEN)
 #define SANDBOX_MSG_GET_LEN(b) (*(uint32_t *)((uint8_t *)b + 8))
 #define SANDBOX_MSG_PUT_LEN(b, l) ((*(uint32_t *)((uint8_t *)b + 8)) = (uint32_t)l)
-#define SANDBOX_MSG_APPLY 1
 
-#define SANDBOX_MSG_APPLYRSP 2
-#define SANDBOX_MSG_LIST 3
-#define SANDBOX_MSG_LISTRSP 4
 #define SANDBOX_MSG_LIST_BUFSIZE 512
 struct list_response {
 	uint8_t sha1[20];
@@ -412,6 +409,10 @@ struct list_response {
 
 };
 
+#define SANDBOX_MSG_APPLY 1
+#define SANDBOX_MSG_APPLYRSP 2
+#define SANDBOX_MSG_LIST 3
+#define SANDBOX_MSG_LISTRSP 4
 #define SANDBOX_MSG_GET_BLD 5
 #define SANDBOX_MSG_GET_BLDRSP 6
 #define SANDBOX_MSG_BLD_BUFSIZE 512
@@ -421,8 +422,7 @@ struct list_response {
 #define SANDBOX_MSG_FIRST SANDBOX_MSG_APPLY
 #define SANDBOX_MSG_LAST SANDBOX_TEST_REP
 
-
-#define SANDBOX_LAST_ARG -1
+#define SANDBOX_LAST_ARG -1 /* to terminate var args in buffer */
 #define SANDBOX_OK 0
 #define SANDBOX_ERR_BAD_HDR -2
 #define SANDBOX_ERR_BAD_VER -3

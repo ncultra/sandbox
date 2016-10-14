@@ -12,8 +12,8 @@
 #include <sys/un.h>
 #include <errno.h>
 #include <linux/limits.h>
-
-#include "util.h"
+/* TODO: move this and other user programs into "user" subdir */
+#include "user/util.h"
 
 #include "sandbox.h"
 
