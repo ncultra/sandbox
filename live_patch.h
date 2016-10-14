@@ -20,7 +20,10 @@
 #ifndef MAX_LIST_PATCHES
 #define MAX_LIST_PATCHES	64
 #endif
+#ifndef MAX_PATCH_SIZE
 #define MAX_PATCH_SIZE		1048576	/* FIXME: is 1MB too small? */
+#endif
+
 
 #define MAX_TAGS_LEN	    128
 #define MAX_LIST_DEPS       8
@@ -58,8 +61,8 @@
  * XENLP_list (cmd 10)
  *
  */
-
-struct xenlp_patch_info {
+#ifndef sandbox_port
+struct xenlp_patch_info { 
     uint64_t hvaddr;		/* virtual address in hypervisor memory */
     unsigned char sha1[20];	/* binary encoded */
     char __pad[4];
@@ -93,7 +96,6 @@ struct xenlp_patch_write {
     char __pad[6];
 };
 
-
 /* layout in memory:
  *
  * struct xenlp_apply
@@ -115,6 +117,7 @@ struct xenlp_apply {
 
     uint64_t refabs;		/* Reference address for relocations */
 };
+#endif
 
 struct xenlp_hash {
     unsigned char sha1[20];

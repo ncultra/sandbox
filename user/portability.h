@@ -6,7 +6,8 @@
 * Copyright 2015-16 Rackspace, Inc.
 ***************************************************************/
 #include <sys/socket.h>
-
+#include "../sandbox.h"
+#include "../live_patch.h"
 #ifndef __SANDBOX_PORT_H
 #define __SANDBOX_PORT_H
 
@@ -27,6 +28,13 @@ int copy_to_guest(int fd, void *src, int size);
 
 int open_xc(xc_interface_t *xch);
 int do_xen_hypercall(xc_interface_t, void *);
+
+
+int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
+               struct
+               xenlp_patch_info **patch);
+
+
 
 
 #endif /* __SANDBOX_PORT_H */

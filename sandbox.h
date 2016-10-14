@@ -252,12 +252,14 @@ static __inline__ int list_empty(const struct list_head *head)
 
 typedef uint8_t * reloc_ptr_t;
 
-
+#ifdef sandbox_port
 #define INFO_STRING_LEN 255
-
-#ifndef __XEN_PUBLIC_LIVE_PATCH_H__
 #define MAX_LIST_PATCHES 255
+
+/* #define MAX_PATCH_SIZE PLATFORM_PAGE_SIZE defined in platform.h */
+
 #endif
+
 
 #ifndef XEN_LIVEPATCH_PATCH_FILE_H_H
 /* NOTE: defined externally in patch_file.h 
@@ -303,7 +305,7 @@ struct applied_patch {
 
 
 
-#ifndef XEN_LIVEPATCH_PATCH_FILE_H_H
+
 /* NOTE: defined externally in patch_file.h 
  * must guarantee commonality with original struct definition
  */
@@ -328,7 +330,6 @@ struct xenlp_patch_write {
     char __pad[6];
 };
 
-
 struct xenlp_patch_info {
     uint64_t hvaddr;		/* virtual address in hypervisor memory */
     unsigned char sha1[20];	/* binary encoded */
@@ -343,7 +344,6 @@ struct xenlp_list {
     struct xenlp_patch_info patches[MAX_LIST_PATCHES];	/* output */
 };
 
-#endif
 
 
 struct xpatch {

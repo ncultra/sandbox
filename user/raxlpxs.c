@@ -17,11 +17,12 @@
 
 //#include <xenctrl.h>
 //#include <xen/xen.h>
-#include "../live_patch.h"
+//#include "../live_patch.h"
 
 #include "util.h"
 #include "patch_file.h"
 #include "../sandbox.h"
+#include "portability.h"
 
 /* stuff from private xen headers */
 #ifdef HYPERCALL_BUFFER_AS_ARG
@@ -68,9 +69,10 @@ typedef int xc_interface_t;
 #endif
 static int json = 0;
 
+#ifndef sandbox_port
 int do_xen_hypercall(xc_interface_t xch, privcmd_hypercall_t *hypercall);
 
-#ifndef sandbox_port
+
 /* if this is a portable build for the sandbox, this function
  * is defined in portability.o
  */
@@ -202,7 +204,7 @@ int usage(char *argv0)
     return 1;
 }
 
-
+#ifndef sandbox_port
 int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
                struct xenlp_patch_info **patch)
 {
@@ -245,6 +247,7 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
     return 0;
 }
 
+#endif
 
 int find_patch3(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
                struct xenlp_patch_info3 **patch)

@@ -72,3 +72,12 @@ int do_xen_hypercall(xc_interface_t xc, void *buf)
     return 0;
 }
 
+/* return zero for success, -1 on failure */
+int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
+               struct xenlp_patch_info **patch) 
+{
+
+
+    return SANDBOX_OK;
+    
+}
