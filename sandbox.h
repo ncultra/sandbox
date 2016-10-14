@@ -400,8 +400,8 @@ uintptr_t get_sandbox_end(void);
 #define SANDBOX_MSG_MAX_LEN (MAX_PATCH_SIZE + SANDBOX_MSG_HDRLEN)
 #define SANDBOX_MSG_GET_LEN(b) (*(uint32_t *)((uint8_t *)b + 8))
 #define SANDBOX_MSG_PUT_LEN(b, l) ((*(uint32_t *)((uint8_t *)b + 8)) = (uint32_t)l)
-
 #define SANDBOX_MSG_APPLY 1
+
 #define SANDBOX_MSG_APPLYRSP 2
 #define SANDBOX_MSG_LIST 3
 #define SANDBOX_MSG_LISTRSP 4
@@ -418,6 +418,8 @@ struct list_response {
 #define SANDBOX_TEST_REQ 7
 #define SANDBOX_TEST_REP 8
 
+#define SANDBOX_MSG_FIRST SANDBOX_MSG_APPLY
+#define SANDBOX_MSG_LAST SANDBOX_TEST_REP
 
 
 #define SANDBOX_LAST_ARG -1

@@ -451,7 +451,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	*id = SANDBOX_MSG_GET_ID(hbuf);
 	DMSG("reading message type: %d\n", *id);
 	
-	if (*id < SANDBOX_MSG_APPLY || *id > SANDBOX_TEST_REP) {
+	if (*id < SANDBOX_MSG_FIRST || *id > SANDBOX_MSG_LAST) {
 		ccode = SANDBOX_ERR_BAD_MSGID;
 		goto errout;
 	}
