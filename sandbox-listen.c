@@ -670,7 +670,8 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 			memcpy(&r[current].sha1, ap->sha1, sizeof(ap->sha1));
 			DMSG("reading %d patch sha1: \n", current);
 			dump_sandbox(&r[current].sha1, 24);
-			
+                        r[current].hvaddr = ap->blob;
+                        
 			current++;
 			if (current == count)
 				break;

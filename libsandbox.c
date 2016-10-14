@@ -308,8 +308,8 @@ int xenlp_apply(void *arg)
     
 	/* Copy blob to hypervisor was */
 	memcpy((void *)blob, (void *)p, apply->bloblen);
-    
-	/* Skip over blob */
+        
+       /* Skip over blob */
 	p += apply->bloblen;
     
 	/* Calculate offset of relocations */

@@ -67,12 +67,17 @@ int open_xc(xc_interface_t *xch)
     return 0;
 }
 
+/* TODO: conditionally compile i raxlpxs.c, remove from this file 
+ * right now its only a stub
+ */
 int do_xen_hypercall(xc_interface_t xc, void *buf)
 {
     return 0;
 }
 
 /* return zero for success, -1 on failure */
+/* TODO: allow for list (call with NULL sha1, return a list of all applied patches.
+ */
 int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
                struct xenlp_patch_info **patch) 
 {

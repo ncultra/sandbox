@@ -46,6 +46,7 @@ void bin2hex(unsigned char *, size_t, char *, size_t);
 
 /* return: < 0 for error; zero if patch applied; one if patch not applied */
 /* if sha1 is NULL print all applied patches */
+ */
 int find_patch(int fd, uint8_t sha1[20])
 {
 	uint32_t *count = NULL, i = 0, ccode = SANDBOX_MSG_APPLY;

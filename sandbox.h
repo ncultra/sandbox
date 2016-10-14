@@ -297,7 +297,7 @@ struct table_patch {
 
 struct applied_patch {
     struct list_head l;
-    uintptr_t blob;
+    uintptr_t blob; /* address of the patch in memory (in the sandbox) */
     unsigned char sha1[20];		/* binary encoded */
     uint32_t numwrites;
     struct xenlp_patch_write *writes;
@@ -404,9 +404,9 @@ uintptr_t get_sandbox_end(void);
 
 #define SANDBOX_MSG_LIST_BUFSIZE 512
 struct list_response {
-	uint8_t sha1[20];
-	uint8_t name[128];
-
+    uint8_t sha1[20];
+    uint8_t name[128];
+    uint64_t hvaddr;
 };
 
 #define SANDBOX_MSG_APPLY 1
@@ -488,6 +488,7 @@ struct list_response {
    2) uint64_t 0L "OK, or error code.
    3) patch name (if found)
    4) sha1 of the patch
+   5) address of patch blob in sandbox
 */
 
 /* Message ID 5: get build info ********************************************/
