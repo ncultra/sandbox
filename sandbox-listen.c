@@ -875,15 +875,17 @@ void  *sandbox_list_patches(int fd)
 
 	/* return buffer format:*/
         /* uint32_t count;
-         * struct list_response[count];
+        you * struct list_response[count];
 	 * buffer needs to be freed by caller 
 	*/
 	return listen_buf;
 
 errout:
-	listen_buf = realloc(listen_buf, 0);
-	
-	return NULL;
+        if (listen_buf != NULL) {    
+            free(listen_buf);
+            listen_buf = NULL;
+        }
+        return NULL;
 }
 
 

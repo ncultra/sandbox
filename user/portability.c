@@ -78,7 +78,7 @@ int do_xen_hypercall(xc_interface_t xc, void *buf)
 
 /* TODO remove list_response, it's redundant with xenlp_patch_info */
 
-#ifdef 0
+#ifdef DONT_INCLUDE
 struct xenlp_patch_info {
     uint64_t hvaddr;		/* virtual address in hypervisor memory */
     unsigned char sha1[20];	/* binary encoded */
@@ -95,54 +95,85 @@ struct list_response {
 #endif
 
 
-/* return: < 0 for error; zero if patch applied; one if patch not applied */
+/* return: < 0 for error; zero if patch not applied; one if patch applied */
 /* if sha1 is NULL return all applied patches
  * return an array of xenlp_patch_info structs
  */
-int __find_patch(int fd, uint8_t sha1[20], struct list_response **info)
+int __find_patch(int fd, uint8_t sha1[20], struct xenlp_patch_info **info)
 {
-	uint32_t *count = NULL, i = 0, ccode = SANDBOX_MSG_APPLY;
-	struct list_response *response;
+    uint32_t *count = NULL, i = 0, ccode = SANDBOX_OK;
+	struct  xenlp_patch_info *response;
 	char *rbuf = NULL;
 	
 	
 	/* return buffer format:*/
         /* uint32_t count;
-         * struct list_response[count];
+         * struct struct xenlp_patch_info[count];
 	 * buffer needs to be freed by caller 
 	*/
 	count = (uint32_t *)sandbox_list_patches(fd);
-	DMSG("list path response buf %p\n", count);
-	dump_sandbox(count, 32);
-	
-	
+        DMSG("list path response buf %p\n", count);
+        if (count == NULL) {
+            DMSG("sandbox_list_patches returned a NULL address\n");
+            return -1;
+        }
+        
+        dump_sandbox(count, 32);
+        
 	if (*count == 0) {
 		LMSG("currently there are no applied patches\n");
+                ccode = 0;
 		goto exit;
 	}
-	
+
+        if (count && info) {
+            if (sha1 == NULL) {
+                /* "find" every patch - aka list */
+                /* realloc behaves as malloc when ptr is null */
+                *info = realloc(*info, sizeof(struct xenlp_patch_info) * (*count));
+            } else {
+                /* will return at most 1 struct xenlp_patch_info */
+                *info = realloc(*info, sizeof(struct xenlp_patch_info));    
+            }
+        }
+
+        if (info && *info == NULL) {
+            ccode = -1;
+            DMSG("unable to (re)allocate memory in _find_patch\n");
+            goto exit;
+        }
+        
 	LMSG("%d applied patches...\n", *count);
 	rbuf = (char *)count;
 	rbuf += sizeof(uint32_t);
 	
-	response = (struct list_response *)rbuf;
+	response = (struct xenlp_patch_info *)rbuf;
 	dump_sandbox(response, 32);
 	
-	for (i = 0; i < *count; i++) {
-		if (sha1 == NULL) {
-			char sha1str[41];
-			DMSG("extracting sha1\n");
-			dump_sandbox(response[i].sha1, 20);
-			
-			bin2hex(response[i].sha1, sizeof(response[i].sha1),
-				sha1str, sizeof(sha1str));
-			LMSG("%s\n", sha1str);
-		} else if (memcmp(sha1, response[i].sha1, 20) == 0) {
-			goto exit;
-		}
+	for (i = 0, ccode = 0; i < *count; i++) {
+            if (sha1 == NULL) {
+                char sha1str[41];
+                DMSG("extracting sha1\n");
+                dump_sandbox(response[i].sha1, 20);
+		
+                bin2hex(response[i].sha1, sizeof(response[i].sha1),
+                        sha1str, sizeof(sha1str));
+                LMSG("%s\n", sha1str);
+                memcpy(&*info[i], &response[i], sizeof(**info));
+                ccode = 1;
+            } else if (memcmp(sha1, response[i].sha1, 20) == 0) {
+                memcpy(*info, &response[i], sizeof(**info));
+                ccode = 1;
+                goto exit;
+            }
+            if (ccode == 0) {
+                DMSG("no matching applied live patches\n");
+                if (info && *info) {
+                    free(*info);
+                    *info = NULL;
+                }
+            }
 	}
-	
-	ccode = SANDBOX_MSG_APPLY;
 exit:
 	free(count);
 	return ccode;

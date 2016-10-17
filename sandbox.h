@@ -255,9 +255,6 @@ typedef uint8_t * reloc_ptr_t;
 #ifdef sandbox_port
 #define INFO_STRING_LEN 255
 #define MAX_LIST_PATCHES 255
-
-/* #define MAX_PATCH_SIZE PLATFORM_PAGE_SIZE defined in platform.h */
-
 #endif
 
 
@@ -335,7 +332,6 @@ struct xenlp_patch_info {
     char __pad[4];
 };
 
-typedef xenlp_patch_info list_response;
 
 struct xenlp_list {
     uint16_t skippatches;	/* input, number of patches to skip */
