@@ -76,25 +76,6 @@ int do_xen_hypercall(xc_interface_t xc, void *buf)
 }
 
 
-/* TODO remove list_response, it's redundant with xenlp_patch_info */
-
-#ifdef DONT_INCLUDE
-struct xenlp_patch_info {
-    uint64_t hvaddr;		/* virtual address in hypervisor memory */
-    unsigned char sha1[20];	/* binary encoded */
-    char __pad[4];
-};
-
-typedef xenlp_patch_info list_response;
-
-struct list_response {
-    uint64_t hvaddr;
-    uint8_t sha1[20];
-    uint8_t name[128]; /* we don't store the patch name anywhere */
-};
-#endif
-
-
 /* return: < 0 for error; zero if patch not applied; one if patch applied */
 /* if sha1 is NULL return all applied patches
  * return an array of xenlp_patch_info structs
