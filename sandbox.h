@@ -33,6 +33,18 @@
 #ifndef __SANDBOX_H
 #define __SANDBOX_H 1
 
+
+#define __max(a,b)                              \
+    ({ __typeof__ (a) _a = (a);                 \
+        __typeof__ (b) _b = (b);                \
+        _a > _b ? _a : _b; })
+
+#define __min(a,b)                              \
+    ({ __typeof__ (a) _a = (a);                 \
+        __typeof__ (b) _b = (b);                \
+        _a < _b ? _a : _b; })
+
+
 #define container_of(ptr, type, member) ({ \
                 const typeof( ((type *)0)->member ) *__mptr = (ptr);  \
 		(type *)( (char *)__mptr - offsetof(type,member) );})
@@ -254,7 +266,8 @@ typedef uint8_t * reloc_ptr_t;
 
 #ifdef sandbox_port
 #define INFO_STRING_LEN 255
-#define MAX_LIST_PATCHES 255
+#define MAX_LIST_PATCHES 1024 /* size of a list returned by __find_patch */
+
 #endif
 
 
@@ -414,6 +427,7 @@ uintptr_t get_sandbox_end(void);
 
 #define SANDBOX_LAST_ARG -1 /* to terminate var args in buffer */
 #define SANDBOX_OK 0
+#define SANDBOX_ERR -1
 #define SANDBOX_ERR_BAD_HDR -2
 #define SANDBOX_ERR_BAD_VER -3
 #define SANDBOX_ERR_BAD_LEN -4
@@ -423,7 +437,7 @@ uintptr_t get_sandbox_end(void);
 #define SANDBOX_ERR_BAD_FD -8
 #define SANDBOX_ERR_CLOSED -9
 #define SANDBOX_ERR_PARSE -10
-
+#define SANDBOX_SUCCESS 1
 
 /*************************************************************************/
 /*                 Message format                                        */

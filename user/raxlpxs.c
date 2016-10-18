@@ -121,12 +121,12 @@ int _do_lp_buf_op_both(xc_interface_t xch, void *buf, size_t buflen, uint64_t op
     return rc;
 }
 
-
+#ifndef sandbox_port
 int do_lp_list(xc_interface_t xch, struct xenlp_list *list)
 {
     return _do_lp_buf_op_both(xch, list, sizeof(*list), XENLP_list);
 }
-
+#endif
 
 int do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list)
 {
