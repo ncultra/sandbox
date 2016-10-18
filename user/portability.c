@@ -193,13 +193,16 @@ int do_lp_list(xc_interface_t xch, struct xenlp_list *list)
 }
 
 I don't think we need the skip patches mechanism, because we are using a socket 
-instead of a hypercall (which is limited to one page of data. But will implement
-it anyway to support existing xen behaviour.
+instead of a hypercall which is limited to one page of data. 
 
 *************/
 
 int do_lp_list(xc_interface_t xch, struct xenlp_list *list) 
 {
-    return SANDBOX_OK;
-    
+    if (list == NULL) {
+        DMSG("error bad list parameter to do_lp_list\n");
+        return SANDBOX_ERR;
+    }
+
+    return __find_patch((int)xch, NULL, list);
 }
