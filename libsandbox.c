@@ -394,7 +394,7 @@ int xenlp_apply(void *arg)
 		}
 	}
 
-
+/* up to here is moved into read_patch_data2 */
 	make_text_writeable(writes, apply->numwrites);
     
 	/* Nothing should be possible to fail now, so do all of the writes */
@@ -497,107 +497,123 @@ void dump_sandbox(const void* data, size_t size) {
 
 #ifndef sandbox_port
 
-static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *apply,
+
+
+/* convert arg to void *arg */
+/* by the time this code executes we have already read and buffered the memory */
+static int read_patch_data2(void *arg, struct xenlp_apply *apply,
                             unsigned char **blob_p, struct xenlp_patch_write **writes_p)
 {
     size_t i;
     int32_t relocrel = 0;
+    ptrdiff_t p;
+
+
+    p = (ptrdiff_t) arg + sizeof(struct xenlp_apply);
+
+    /* Do some initial sanity checking */
+    if (apply->bloblen > MAX_PATCH_SIZE) {
+        LMSG("live patch size %u is too large\n", apply->bloblen);
+        return -EINVAL;
+    }
+    
+    DMSG("live patch size: %u\n", apply->bloblen);
+
+    
     /* Blobs are optional */
+    /* FIXME: the code does not treat blobs as optional, so remove conditional */
     if (apply->bloblen) {
-        unsigned int pageorder;
+        /* use sandbox memory */
+	blob = get_sandbox_memory(apply->bloblen);
+	if (!blob)
+		return SANDBOX_ERR_NOMEM;
+    
+	/* FIXME: Memory allocated for blob can leak in case of error */
+    
+	/* Copy blob to sandbox */
+	memcpy((void *)blob, (void *)p, apply->bloblen);
 
-        pageorder = get_order_from_bytes(apply->bloblen);
-        *blob_p = allocate_map_mem(pageorder);
-        if (!(*blob_p))
-            return -ENOMEM;
-
-        /* FIXME: Memory allocated for blob can leak in case of error */
-
-        /* Copy blob to hypervisor */
-        if (copy_from_guest(*blob_p, *arg, apply->bloblen))
-            return -EFAULT;
-
-        /* Skip over blob */
-        arg->p = (unsigned char *)arg->p + apply->bloblen;
-
+       /* Skip over blob */
+	p += apply->bloblen;
+        
         /* Calculate offset of relocations */
-        relocrel = (uint64_t)(*blob_p) - apply->refabs;
+        relocrel = (ptrdiff_t) blob - apply->refabs;
     }
 
-    /* Read relocs */
+    DMSG("number of relocs: %d\n", apply->numrelocs);
+    
     if (apply->numrelocs) {
-        uint32_t *relocs;
-
-        relocs = xmalloc_array(uint32_t, apply->numrelocs);
+        uintptr_t relocs;
+	
+        relocs = (uintptr_t) calloc(apply->numrelocs, sizeof(uintptr_t));
+        
         if (!relocs)
-            return -ENOMEM;
-
-        if (copy_from_guest(relocs, *arg, apply->numrelocs))
-            return -EFAULT;
-
-        arg->p = (unsigned char *)arg->p + (apply->numrelocs * sizeof(relocs[0]));
-
+            return SANDBOX_ERR_NOMEM;
+        
+        /* was copy from guest */
+        
+        p += (apply->numrelocs * sizeof(uintptr_t));
+        
         for (i = 0; i < apply->numrelocs; i++) {
-            uint32_t off = relocs[i];
-            if (off > apply->bloblen - sizeof(int32_t)) {
-                printk("invalid off value %d\n", off);
-                return -EINVAL;
+            ptrdiff_t off = relocs + i;
+            if (off > apply->bloblen - sizeof(uintptr_t)) {
+                DMSG("invalid off value %d\n", off);
+                return SANDBOX_ERR_PARSE;
             }
-
+            
             /* blob -> HV .text */
-            *((int32_t *)(*blob_p + off)) -= relocrel;
+            
+            *((uintptr_t *)(blob + off)) -= relocrel;
         }
-
-        xfree(relocs);
+        
+        free((void *)relocs);
     }
-
+    
     /* Read writes */
-    *writes_p = xmalloc_array(struct xenlp_patch_write, apply->numwrites);
-    if (!(*writes_p))
-        return -ENOMEM;
+    writes = calloc(apply->numwrites, sizeof(struct xenlp_patch_write));
+    if (!writes)
+        return SANDBOX_ERR_NOMEM;
 
-    if (copy_from_guest(*writes_p, *arg, apply->numwrites))
-        return -EFAULT;
-
+    memcpy(writes, (void *)p, apply->numwrites * sizeof(writes[0]));
+    
     /* Move over all of the writes */
-    arg->p = (unsigned char *)arg->p + (apply->numwrites * sizeof((*writes_p)[0]));
+    p += (apply->numwrites * sizeof(writes[0]));
 
     /* Verify writes and apply any relocations in writes */
     for (i = 0; i < apply->numwrites; i++) {
-        struct xenlp_patch_write *pw = &((*writes_p)[i]);
+        struct xenlp_patch_write *pw = &writes[i];
         char off = pw->dataoff;
-
-        if (pw->hvabs < (uint64_t)_start || pw->hvabs >= lp_tail) {
-            printk("invalid hvabs value %lx\n", pw->hvabs);
-            return -EINVAL;
-        }
-
+/* removed the validation test that used to be here because we don't 
+ * need it (we have a sandbox) */
         if (off < 0)
             continue;
 
         /* HV .text -> blob */
         switch (pw->reloctype) {
-            case XENLP_RELOC_UINT64:
-                if (off > sizeof(pw->data) - sizeof(uint64_t)) {
-                    printk("invalid dataoff value %d\n", off);
-                    return -EINVAL;
-                }
+        case XENLP_RELOC_UINT64:
+            DMSG("write is a 64-bit reloc\n");
+            if (off > sizeof(pw->data) - sizeof(uint64_t)) {
+                DMSG("invalid dataoff value %d\n", off);
+                return SANDBOX_ERR_PARSE;
+            }
 
-                *((uint64_t *)(pw->data + off)) += relocrel;
-                break;
-            case XENLP_RELOC_INT32:
-                if (off > sizeof(pw->data) - sizeof(int32_t)) {
-                    printk("invalid dataoff value %d\n", off);
-                    return -EINVAL;
-                }
+            *((uint64_t *)(pw->data + off)) += relocrel;
+            break;
+        case XENLP_RELOC_INT32:
+            DMSG("write is a 32-bit reloc\n");
+            if (off > sizeof(pw->data) - sizeof(int32_t)) {
+                DMSG("invalid dataoff value %d\n", off);
+                return SANDBOX_ERR_PARSE;
+            }
 
-                *((int32_t *)(pw->data + off)) += relocrel;
-                break;
-            default:
-                printk("unknown reloctype value %u\n", pw->reloctype);
-                return -EINVAL;
+            *((int32_t *)(pw->data + off)) += relocrel;
+            break;
+        default:
+            DMSG("unknown reloctype value %u\n", pw->reloctype);
+            return SANDBOX_ERR_PARSE;
         }
     }
+    
     return 0;
 }
 
