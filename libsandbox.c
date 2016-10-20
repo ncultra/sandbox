@@ -487,3 +487,258 @@ void dump_sandbox(const void* data, size_t size) {
 		}
 	}
 }
+
+
+
+/*******************************************
+ * COMPATIBILITY code from xen-livepatch
+ *
+ ******************************************/
+
+#ifndef sandbox_port
+
+static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *apply,
+                            unsigned char **blob_p, struct xenlp_patch_write **writes_p)
+{
+    size_t i;
+    int32_t relocrel = 0;
+    /* Blobs are optional */
+    if (apply->bloblen) {
+        unsigned int pageorder;
+
+        pageorder = get_order_from_bytes(apply->bloblen);
+        *blob_p = allocate_map_mem(pageorder);
+        if (!(*blob_p))
+            return -ENOMEM;
+
+        /* FIXME: Memory allocated for blob can leak in case of error */
+
+        /* Copy blob to hypervisor */
+        if (copy_from_guest(*blob_p, *arg, apply->bloblen))
+            return -EFAULT;
+
+        /* Skip over blob */
+        arg->p = (unsigned char *)arg->p + apply->bloblen;
+
+        /* Calculate offset of relocations */
+        relocrel = (uint64_t)(*blob_p) - apply->refabs;
+    }
+
+    /* Read relocs */
+    if (apply->numrelocs) {
+        uint32_t *relocs;
+
+        relocs = xmalloc_array(uint32_t, apply->numrelocs);
+        if (!relocs)
+            return -ENOMEM;
+
+        if (copy_from_guest(relocs, *arg, apply->numrelocs))
+            return -EFAULT;
+
+        arg->p = (unsigned char *)arg->p + (apply->numrelocs * sizeof(relocs[0]));
+
+        for (i = 0; i < apply->numrelocs; i++) {
+            uint32_t off = relocs[i];
+            if (off > apply->bloblen - sizeof(int32_t)) {
+                printk("invalid off value %d\n", off);
+                return -EINVAL;
+            }
+
+            /* blob -> HV .text */
+            *((int32_t *)(*blob_p + off)) -= relocrel;
+        }
+
+        xfree(relocs);
+    }
+
+    /* Read writes */
+    *writes_p = xmalloc_array(struct xenlp_patch_write, apply->numwrites);
+    if (!(*writes_p))
+        return -ENOMEM;
+
+    if (copy_from_guest(*writes_p, *arg, apply->numwrites))
+        return -EFAULT;
+
+    /* Move over all of the writes */
+    arg->p = (unsigned char *)arg->p + (apply->numwrites * sizeof((*writes_p)[0]));
+
+    /* Verify writes and apply any relocations in writes */
+    for (i = 0; i < apply->numwrites; i++) {
+        struct xenlp_patch_write *pw = &((*writes_p)[i]);
+        char off = pw->dataoff;
+
+        if (pw->hvabs < (uint64_t)_start || pw->hvabs >= lp_tail) {
+            printk("invalid hvabs value %lx\n", pw->hvabs);
+            return -EINVAL;
+        }
+
+        if (off < 0)
+            continue;
+
+        /* HV .text -> blob */
+        switch (pw->reloctype) {
+            case XENLP_RELOC_UINT64:
+                if (off > sizeof(pw->data) - sizeof(uint64_t)) {
+                    printk("invalid dataoff value %d\n", off);
+                    return -EINVAL;
+                }
+
+                *((uint64_t *)(pw->data + off)) += relocrel;
+                break;
+            case XENLP_RELOC_INT32:
+                if (off > sizeof(pw->data) - sizeof(int32_t)) {
+                    printk("invalid dataoff value %d\n", off);
+                    return -EINVAL;
+                }
+
+                *((int32_t *)(pw->data + off)) += relocrel;
+                break;
+            default:
+                printk("unknown reloctype value %u\n", pw->reloctype);
+                return -EINVAL;
+        }
+    }
+    return 0;
+}
+
+static int xenlp_apply3(XEN_GUEST_HANDLE(void) arg)
+{
+    struct xenlp_apply3 apply;
+    unsigned char *blob = NULL;
+    struct xenlp_patch_write *writes;
+    struct applied_patch3 *patch;
+    char sha1[41];
+    int res;
+    int err = xenlp_upgrade_patch_list();
+    if (err != 0)
+        return err;
+
+    if (copy_from_guest(&apply, arg, 1))
+        return -EFAULT;
+
+    /* FIXME: Manipulating arg.p seems a bit ugly */
+
+    /* Skip over struct xenlp_apply */
+    arg.p = (unsigned char *)arg.p + sizeof(apply);
+
+    /* Do some initial sanity checking */
+    if (apply.bloblen > MAX_PATCH_SIZE) {
+        printk("live patch size %u is too large\n", apply.bloblen);
+        return -EINVAL;
+    }
+
+    if (apply.numwrites == 0) {
+        printk("need at least one patch\n");
+        return -EINVAL;
+    }
+
+    patch = xmalloc(struct applied_patch3);
+    if (!patch)
+        return -ENOMEM;
+
+    /* FIXME: Memory allocated for patch can leak in case of error */
+
+    res = read_patch_data2(&arg, (struct xenlp_apply *)&apply, &blob, &writes);
+    if (res < 0)
+        return res;
+
+    /* Read dependencies */
+    patch->numdeps = apply.numdeps;
+    printk("numdeps: %d\n", apply.numdeps);
+    if (apply.numdeps > 0) {
+        patch->deps = xmalloc_array(struct xenlp_hash, apply.numdeps);
+        if (!patch->deps)
+            return -ENOMEM;
+        if (copy_from_guest(patch->deps, arg, apply.numdeps))
+            return -EFAULT;
+        arg.p = (unsigned char *) arg.p + (apply.numdeps * sizeof(patch->deps[0]));
+    }
+
+    /* Read tags */
+    patch->tags = "";
+    printk("taglen: %d\n", apply.taglen);
+    if (apply.taglen > 0) {
+        patch->tags = xmalloc_array(char, apply.taglen + 1);
+        if (copy_from_guest(patch->tags, arg, apply.taglen))
+            return -EFAULT;
+        patch->tags[apply.taglen] = '\0';
+        arg.p = (unsigned char *) arg.p + (apply.taglen * sizeof(char));
+        printk("tags: %s\n", patch->tags);
+    }
+
+    /* Nothing should be possible to fail now, so do all of the writes */
+    swap_trampolines(writes, apply.numwrites);
+
+    /* Record applied patch */
+    patch->blob = blob;
+    memcpy(patch->sha1, apply.sha1, sizeof(patch->sha1));
+    patch->numwrites = apply.numwrites;
+    patch->writes = writes;
+
+    patch->next = NULL;
+    if (!lp_patch_head3)
+        lp_patch_head3 = patch;
+    if (lp_patch_tail3)
+        lp_patch_tail3->next = patch;
+    lp_patch_tail3 = patch;
+
+    bin2hex(apply.sha1, sizeof(apply.sha1), sha1, sizeof(sha1));
+    printk("successfully applied patch %s\n", sha1);
+
+    return 0;
+}
+
+static int has_dependent_patches(struct applied_patch3 *patch)
+{
+    /* Starting from current patch, looking down the linked list
+     * Find if any later patches depend on this one */
+    struct applied_patch3 *ap = patch->next;
+    while (ap != NULL) {
+        size_t i;
+        for (i = 0; i < ap->numdeps; i++) {
+            struct xenlp_hash *dep = &ap->deps[i];
+            if (memcmp(dep->sha1, patch->sha1, sizeof(patch->sha1)) == 0)
+                return 1;
+        }
+        ap = ap->next;
+    }
+    return 0;
+}
+
+static int xenlp_undo3(XEN_GUEST_HANDLE(void) arg)
+{
+    struct xenlp_hash hash;
+    struct applied_patch3 *ap;
+    struct applied_patch3 *prev_ap = NULL;
+    int err = xenlp_upgrade_patch_list();
+    if (err != 0)
+        return err;
+    ap = lp_patch_head3;
+
+    if (copy_from_guest(&hash, arg, 1))
+        return -EFAULT;
+
+    while (ap != NULL) {
+        if (memcmp(ap->sha1, hash.sha1, sizeof(hash.sha1)) == 0) {
+            if (has_dependent_patches(ap) || ap->numwrites == 0)
+                return -ENXIO;
+            swap_trampolines(ap->writes, ap->numwrites);
+            if (lp_patch_head3 == ap)
+                lp_patch_head3 = ap->next;
+            else
+                prev_ap->next = ap->next;
+            if (lp_patch_tail3 == ap)
+                lp_patch_tail3 = prev_ap;
+            xfree(ap->writes);
+            xfree(ap->deps);
+            xfree(ap->tags);
+            xfree(ap);
+            return 0;
+        }
+        prev_ap = ap;
+        ap = ap->next;
+    }
+    return -ENOENT;
+}
+
+#endif /* sandbox_port */

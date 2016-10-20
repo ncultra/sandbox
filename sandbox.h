@@ -313,12 +313,32 @@ struct applied_patch {
     struct xenlp_patch_write *writes;
 };
 
-
+struct applied_patch3 {
+    void *blob;
+    unsigned char sha1[20];		/* binary encoded */
+    uint32_t numwrites;
+    struct xenlp_patch_write *writes;
+    uint32_t numdeps;
+    struct xenlp_hash *deps;
+    char *tags;
+    struct applied_patch3 *next;
+};
 
 
 /* NOTE: defined externally in patch_file.h 
  * must guarantee commonality with original struct definition
  */
+
+#define MAX_TAGS_LEN	       128
+#define MAX_LIST_DEPS            8
+#define MAX_LIST_PATCHES3	16
+
+struct xenlp_hash {
+    unsigned char sha1[20];
+
+    char __pad0[4];
+};
+
 struct xenlp_apply {
     unsigned char sha1[20];	/* SHA1 of patch file (binary) */
     char __pad0[4];
@@ -345,7 +365,6 @@ struct xenlp_patch_info {
     char __pad[4];
 };
 
-
 struct xenlp_list {
     uint16_t skippatches;	/* input, number of patches to skip */
     uint16_t numpatches;	/* output, number of patches returned */
@@ -353,7 +372,54 @@ struct xenlp_list {
     struct xenlp_patch_info patches[MAX_LIST_PATCHES];	/* output */
 };
 
+struct xenlp_patch_info3 {
+    uint64_t hvaddr;		/* virtual address in hypervisor memory */
+    unsigned char sha1[20];	/* binary encoded */
+    char __pad[4];
+    char tags[MAX_TAGS_LEN];
+    struct xenlp_hash deps[MAX_LIST_DEPS];
+};
 
+struct xenlp_list3 {
+    uint16_t skippatches;	/* input, number of patches to skip */
+    uint16_t numpatches;	/* output, number of patches returned */
+    char __pad[4];
+    struct xenlp_patch_info3 patches[MAX_LIST_PATCHES3];	/* output */
+};
+
+
+/* layout in memory:
+ *
+ * struct xenlp_apply
+ * blob (bloblen)
+ * relocs (numrelocs * uint32_t)
+ * writes (numwrites * struct xenlp_patch_write)
+ * deps (numdeps * struct xenlp_dep)
+ * tags (taglen) */
+struct xenlp_apply3 {
+    unsigned char sha1[20];	/* SHA1 of patch file (binary) */
+
+    char __pad0[4];
+
+    uint32_t bloblen;		/* Length of blob */
+
+    uint32_t numrelocs;		/* Number of relocations */
+
+    uint32_t numwrites;		/* Number of writes */
+
+    char __pad1[4];
+
+    uint64_t refabs;		/* Reference address for relocations */
+
+    uint32_t numdeps;       /* Number of dependendencies */
+
+    uint32_t taglen;        /* length of tags string */
+};
+
+
+struct xenlp_caps {
+    uint64_t flags;
+};
 
 struct xpatch {
 	unsigned char sha1[20];	
@@ -373,6 +439,7 @@ struct xpatch {
 	struct table_patch *tables;
 	struct list_head l; /* list handle */
 };
+
 
 
 /* these const strings contain information generated at build time. */

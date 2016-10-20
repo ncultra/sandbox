@@ -24,12 +24,12 @@
 #define MAX_PATCH_SIZE		1048576	/* FIXME: is 1MB too small? */
 #endif
 
-
+#ifndef sandbox_port
 #define MAX_TAGS_LEN	    128
 #define MAX_LIST_DEPS       8
 
 #define MAX_LIST_PATCHES3	16
-
+#endif
 
 
 /* Any change to the userspace to hypervisor ABI should result in using a
@@ -117,7 +117,7 @@ struct xenlp_apply {
 
     uint64_t refabs;		/* Reference address for relocations */
 };
-#endif
+
 
 struct xenlp_hash {
     unsigned char sha1[20];
@@ -172,4 +172,5 @@ struct xenlp_caps {
     uint64_t flags;
 };
 
+#endif /* sandbox_port */
 #endif /* __XEN_PUBLIC_LIVE_PATCH_H__ */

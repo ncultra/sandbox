@@ -185,18 +185,6 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
     return ccode;
 }
 
-
-/*************
-int do_lp_list(xc_interface_t xch, struct xenlp_list *list)
-{
-    return _do_lp_buf_op_both(xch, list, sizeof(*list), XENLP_list);
-}
-
-I don't think we need the skip patches mechanism, because we are using a socket 
-instead of a hypercall which is limited to one page of data. 
-
-*************/
-
 int do_lp_list(xc_interface_t xch, struct xenlp_list *list) 
 {
     if (list == NULL) {
