@@ -9,12 +9,12 @@
 #include "../sandbox.h"
 #include "portability.h"
 
-int copy_from_guest(void *dest, XEN_GUEST_HANDLE(fd), int size)
+int copy_from_guest(void *dest, XEN_GUEST_HANDLE(int) fd, int size)
 {
     return readn(fd, dest, (size_t)size);
 }
 
-int copy_to_guest(XEN_GUEST_HANDLE(fd), void *src, int size)
+int copy_to_guest(XEN_GUEST_HANDLE(int) fd, void *src, int size)
 {
     return writen(fd, src, (size_t)size);
     
@@ -193,4 +193,17 @@ int do_lp_list(xc_interface_t xch, struct xenlp_list *list)
     }
 
     return __find_patch((int)xch, NULL, list);
+}
+
+
+int _do_lp_buf_op_both(xc_interface_t xch, void *list, size_t buflen, uint64_t op)
+{
+/*#warning "using deprecated function\n" */
+    return 0;
+}
+
+
+unsigned int __attribute__((deprecated)) get_order_from_bytes(int len)
+{
+    return (len & 0x10);
 }

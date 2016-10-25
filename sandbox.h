@@ -259,6 +259,39 @@ static __inline__ int list_empty(const struct list_head *head)
 
 
 
+/* compatibility */
+
+#define xmalloc(_type) ((_type *)aligned_alloc(__alignof__(_type), sizeof(_type)))
+#define xfree(a) if(a) free(a)
+
+
+static inline uintptr_t ___align(uintptr_t p, uintptr_t align)
+ { 
+     p += (align - 1);
+     p &= ~(align - 1);
+     return p;
+ }
+
+static inline void *aligned_zalloc(int align, int size)
+{
+    return  (void *)___align((uintptr_t)calloc(size + (align - 1), sizeof(char)), align);
+}
+
+#define xzalloc(_type) ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type)))
+
+
+/* Allocate space for array of typed objects. */
+#define xmalloc_array(_type, _num) \
+    ((_type *)aligned_alloc(__alignof__(_type), sizeof(_type) * _num))
+
+
+#define xzalloc_array(_type, _num) \
+    ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type) * num))
+
+#undef XEN_GUEST_HANDLE
+#define XEN_GUEST_HANDLE(a) a
+
+
 /* must be page-aligned. */
 #define SANDBOX_ALLOC_SIZE PLATFORM_PAGE_SIZE
 
@@ -322,6 +355,7 @@ struct applied_patch3 {
     struct xenlp_hash *deps;
     char *tags;
     struct applied_patch3 *next;
+    struct list_head l;
 };
 
 
@@ -365,6 +399,9 @@ struct xenlp_patch_info {
     char __pad[4];
 };
 
+#ifndef MAX_LIST_PATCHES
+#define MAX_LIST_PATCHES 128
+#endif
 struct xenlp_list {
     uint16_t skippatches;	/* input, number of patches to skip */
     uint16_t numpatches;	/* output, number of patches returned */
@@ -420,6 +457,10 @@ struct xenlp_apply3 {
 struct xenlp_caps {
     uint64_t flags;
 };
+
+#ifndef INFO_STRING_LEN
+#define INFO_STRING_LEN 255
+#endif
 
 struct xpatch {
 	unsigned char sha1[20];	
@@ -504,6 +545,7 @@ uintptr_t get_sandbox_end(void);
 #define SANDBOX_ERR_BAD_FD -8
 #define SANDBOX_ERR_CLOSED -9
 #define SANDBOX_ERR_PARSE -10
+#define SANDBOX_ERR_INVALID -11
 #define SANDBOX_SUCCESS 1
 
 /*************************************************************************/
