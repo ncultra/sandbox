@@ -7,6 +7,10 @@
 #define str1(s) #s
 #define str(s) str1(s)
 
+
+extern uint64_t _start, _end;
+
+
 /************************************************************
  * The .align instruction has a different syntax on X86_64
  * than it does on PPC64. 
@@ -165,7 +169,7 @@ void LMSG(char *fmt, ...)
 /* this is the 'new'patch struct */
 
 /* Linked list of applied patches */
-LIST_HEAD(lp_patch_head);
+LIST_HEAD(lp_patch_head2);
 LIST_HEAD(lp_patch_head3);
 
 
@@ -409,7 +413,7 @@ int xenlp_apply(void *arg)
         patch->writes = writes;
         INIT_LIST_HEAD(&patch->l);
 	
-	list_add(&patch->l, &lp_patch_head);
+	list_add(&patch->l, &lp_patch_head2);
         
 	bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
 	LMSG("successfully applied patch %s\n", sha1);
@@ -443,7 +447,7 @@ uintptr_t make_sandbox_writeable(void)
 void init_sandbox(void)
 {
 	make_sandbox_writeable(); 
-	uintptr_t p  = (uintptr_t) &lp_patch_head;
+	uintptr_t p  = (uintptr_t) &lp_patch_head2;
 	p &= PLATFORM_PAGE_MASK;
 	if (
             mprotect((void *)p, PLATFORM_PAGE_SIZE,
@@ -502,7 +506,7 @@ static int __attribute__((used)) xenlp_upgrade_patch_list(void)
 {
     struct applied_patch *ap;
 
-    ap = list_first_entry_or_null(&lp_patch_head, struct applied_patch, l);
+    ap = list_first_entry_or_null(&lp_patch_head2, struct applied_patch, l);
     while (ap != NULL) {
         struct applied_patch3 *patch3 = xmalloc(struct applied_patch3);
         if (!patch3) {
@@ -517,11 +521,10 @@ static int __attribute__((used)) xenlp_upgrade_patch_list(void)
         memcpy(patch3->sha1, ap->sha1, sizeof(ap->sha1));
         patch3->numwrites = 0;
         patch3->writes = NULL;
-        patch3->next = NULL;        
         list_add(&patch3->l, &lp_patch_head3);
         list_del(&ap->l);
         xfree(ap);
-        ap = list_first_entry_or_null(&lp_patch_head, struct applied_patch, l);
+        ap = list_first_entry_or_null(&lp_patch_head2, struct applied_patch, l);
     }
     
     return 0;
@@ -575,7 +578,7 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
             return SANDBOX_ERR_NOMEM;
         }
         
-        if (memcpy(relocs, arg, apply->numrelocs) * sizeof(relocs[0])) {
+        if (memcpy(relocs, arg, apply->numrelocs * sizeof(relocs[0]))) {
             DMSG("error copying memory in read_patch_data2\n");
             return -EFAULT;
         }
@@ -616,7 +619,7 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
         struct xenlp_patch_write *pw = &((*writes_p)[i]);
         char off = pw->dataoff;
 
-        if (pw->hvabs < (uint64_t)_start || pw->hvabs >= (uint64_t)_end) {
+        if (pw->hvabs < _start || pw->hvabs >= _end) {
             printk("invalid hvabs value %lx\n", pw->hvabs);
             return -EINVAL;
         }
@@ -624,7 +627,7 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
         if (off < 0)
             continue;
 
-        STOPPED HERE
+        
         /* HV .text -> blob */
         switch (pw->reloctype) {
             case XENLP_RELOC_UINT64:
@@ -649,11 +652,11 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
                 return -EINVAL;
         }
     }
-    return 0;
+    return SANDBOX_OK;
 }
 
 #ifndef sandbox_port
-static int xenlp_apply3(XEN_GUEST_HANDLE(void) arg)
+static int __attribute__((used)) xenlp_apply3(XEN_GUEST_HANDLE(void *)arg)
 {
     struct xenlp_apply3 apply;
     unsigned char *blob = NULL;
@@ -665,57 +668,72 @@ static int xenlp_apply3(XEN_GUEST_HANDLE(void) arg)
     if (err != 0)
         return err;
 
-    if (copy_from_guest(&apply, arg, 1))
+    if (memcpy(&apply, arg, sizeof(struct xenlp_apply3))) {
+        DMSG("fault while copying memory in xenlp_apply3\n");
         return -EFAULT;
-
+    }
+    
     /* FIXME: Manipulating arg.p seems a bit ugly */
 
     /* Skip over struct xenlp_apply */
-    arg.p = (unsigned char *)arg.p + sizeof(apply);
+    arg = (unsigned char *)arg + sizeof(struct xenlp_apply3);
 
     /* Do some initial sanity checking */
     if (apply.bloblen > MAX_PATCH_SIZE) {
         printk("live patch size %u is too large\n", apply.bloblen);
-        return -EINVAL;
+        return SANDBOX_ERR_INVALID;
     }
 
     if (apply.numwrites == 0) {
-        printk("need at least one patch\n");
-        return -EINVAL;
+        DMSG("need at least one patch\n");
+        return SANDBOX_ERR_INVALID;
     }
 
     patch = xmalloc(struct applied_patch3);
-    if (!patch)
-        return -ENOMEM;
-
+    if (!patch) {
+        DMSG("unable to allocate %d bytes in xenlp_apply3\n",
+             sizeof(struct xenlp_apply3));
+        return SANDBOX_ERR_NOMEM;
+    }
     /* FIXME: Memory allocated for patch can leak in case of error */
 
     res = read_patch_data2(&arg, (struct xenlp_apply *)&apply, &blob, &writes);
-    if (res < 0)
+    if (res < 0) {
+        DMSG("fault %d reading patch data\n", res);
         return res;
-
+    }
+    
     /* Read dependencies */
     patch->numdeps = apply.numdeps;
-    printk("numdeps: %d\n", apply.numdeps);
+    DMSG("numdeps: %d\n", apply.numdeps);
     if (apply.numdeps > 0) {
         patch->deps = xmalloc_array(struct xenlp_hash, apply.numdeps);
-        if (!patch->deps)
-            return -ENOMEM;
-        if (copy_from_guest(patch->deps, arg, apply.numdeps))
-            return -EFAULT;
-        arg.p = (unsigned char *) arg.p + (apply.numdeps * sizeof(patch->deps[0]));
+        if (!patch->deps) {
+            DMSG("error allocating memory for patch dependencies\n");
+            return SANDBOX_ERR_NOMEM;
+        }
+        
+        if (memcpy(patch->deps, arg, apply.numdeps * sizeof(struct xenlp_hash))) {
+            DMSG("fault copying memory in xenlp_apply3\n"); 
+            return SANDBOX_ERR_INVALID;
+        }
+        
+        arg = (unsigned char *)arg + (apply.numdeps * sizeof(struct xenlp_hash));
     }
 
     /* Read tags */
     patch->tags = "";
-    printk("taglen: %d\n", apply.taglen);
+    DMSG("taglen: %d\n", apply.taglen);
     if (apply.taglen > 0) {
         patch->tags = xmalloc_array(char, apply.taglen + 1);
-        if (copy_from_guest(patch->tags, arg, apply.taglen))
+        if (memcpy(patch->tags, arg, apply.taglen)) {
+            DMSG("fault while copying memory in xenlp_apply3\n");
             return -EFAULT;
+        }
+        
         patch->tags[apply.taglen] = '\0';
-        arg.p = (unsigned char *) arg.p + (apply.taglen * sizeof(char));
-        printk("tags: %s\n", patch->tags);
+        arg = (unsigned char *)arg + (apply.taglen * sizeof(char));
+        DMSG("tags: %s\n", patch->tags);
     }
 
     /* Nothing should be possible to fail now, so do all of the writes */
@@ -727,7 +745,7 @@ static int xenlp_apply3(XEN_GUEST_HANDLE(void) arg)
     patch->numwrites = apply.numwrites;
     patch->writes = writes;
 
-    patch->next = NULL;
+//    patch->next = NULL;
     list_add(&patch->l, &lp_patch_head3);
    
     bin2hex(apply.sha1, sizeof(apply.sha1), sha1, sizeof(sha1));
@@ -740,20 +758,20 @@ static int has_dependent_patches(struct applied_patch3 *patch)
 {
     /* Starting from current patch, looking down the linked list
      * Find if any later patches depend on this one */
-    struct applied_patch3 *ap = patch->next;
-    while (ap != NULL) {
+    struct applied_patch3 *ap = list_next_entry(patch, l);
+    while (ap && ap != list_first_entry(&lp_patch_head3, struct applied_patch3, l)) {
         size_t i;
         for (i = 0; i < ap->numdeps; i++) {
             struct xenlp_hash *dep = &ap->deps[i];
             if (memcmp(dep->sha1, patch->sha1, sizeof(patch->sha1)) == 0)
                 return 1;
         }
-        ap = ap->next;
+        ap = list_next_entry(ap, l);
     }
     return 0;
 }
 
-static int xenlp_undo3(XEN_GUEST_HANDLE(void) arg)
+static int __attribute__((used)) xenlp_undo3(XEN_GUEST_HANDLE(void *) arg)
 {
     struct xenlp_hash hash;
     struct applied_patch3 *ap;
@@ -762,7 +780,7 @@ static int xenlp_undo3(XEN_GUEST_HANDLE(void) arg)
     if (err != 0)
         return err;
 
-    if (copy_from_guest(&hash, arg, 1))
+    if (memcpy(&hash, arg, sizeof(struct xenlp_hash)))
         return -EFAULT;
 
     list_for_each_entry(ap, &lp_patch_head3, l) {

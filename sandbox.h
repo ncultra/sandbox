@@ -263,7 +263,7 @@ static __inline__ int list_empty(const struct list_head *head)
 
 #define xmalloc(_type) ((_type *)aligned_alloc(__alignof__(_type), sizeof(_type)))
 #define xfree(a) if(a) free(a)
-
+#define printk DMSG
 
 static inline uintptr_t ___align(uintptr_t p, uintptr_t align)
  { 
@@ -290,7 +290,6 @@ static inline void *aligned_zalloc(int align, int size)
 
 #undef XEN_GUEST_HANDLE
 #define XEN_GUEST_HANDLE(a) a
-
 
 /* must be page-aligned. */
 #define SANDBOX_ALLOC_SIZE PLATFORM_PAGE_SIZE
@@ -354,7 +353,6 @@ struct applied_patch3 {
     uint32_t numdeps;
     struct xenlp_hash *deps;
     char *tags;
-    struct applied_patch3 *next;
     struct list_head l;
 };
 
