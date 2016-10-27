@@ -491,8 +491,7 @@ extern uintptr_t patch_sandbox_start, patch_sandbox_end;
 
 extern uintptr_t patch_cursor;
 
-extern struct list_head patch_list;
-extern struct list_head  applied_list;
+extern struct list_head lp_patch_head3;
 
 uintptr_t  make_sandbox_writeable(void);
 struct patch *alloc_patch(char *name, uint64_t size);

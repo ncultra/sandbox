@@ -29,8 +29,7 @@ int do_xen_hypercall(xc_interface_t, void *);
 
 
 int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
-               struct
-               xenlp_patch_info **patch);
+               struct xenlp_patch_info **patch);
 
 int do_lp_list(xc_interface_t xch, struct xenlp_list *list);
 

@@ -745,7 +745,6 @@ static int __attribute__((used)) xenlp_apply3(XEN_GUEST_HANDLE(void *)arg)
     patch->numwrites = apply.numwrites;
     patch->writes = writes;
 
-//    patch->next = NULL;
     list_add(&patch->l, &lp_patch_head3);
    
     bin2hex(apply.sha1, sizeof(apply.sha1), sha1, sizeof(sha1));

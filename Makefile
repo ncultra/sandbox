@@ -56,10 +56,10 @@ platform.h:
 	$(shell sh config.sh)
 
 .PHONY: raxlpqemu
-raxlpqemu: raxlpqemu.o util.o libsandbox.a platform.h
-	$(CC) $(CFLAGS) -c raxlpqemu.c util.c
+raxlpqemu: raxlpqemu.o libsandbox.a platform.h
+	$(CC) $(CFLAGS) -c raxlpqemu.c
 #TODO: might need to link libraries statically (probably not)
-	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o util.o libsandbox.a -lcrypto -lpthread -lz -lelf
+	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o libsandbox.a -lcrypto -lpthread -lz -lelf
 
 .PHONY: raxlpxs
 raxlpxs:

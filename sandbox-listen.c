@@ -648,8 +648,8 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 	
 	uint32_t count = 0, current  = 0, rsize = 0;
 	
-	if (! list_empty(&applied_list))  {
-		list_for_each(xp, &applied_list) {
+	if (! list_empty(&lp_patch_head3))  {
+		list_for_each(xp, &lp_patch_head3) {
 			count++;
 		}
 		DMSG("applied patch list has %d patches\n", count);
@@ -665,7 +665,7 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 		r = (list_response *)(rbuf + sizeof(uint32_t));
 		
 
-		list_for_each_entry(ap, &applied_list, l) {
+		list_for_each_entry(ap, &lp_patch_head3, l) {
 			dump_sandbox(&ap->sha1, 20);
 			memcpy(&r[current].sha1, ap->sha1, sizeof(ap->sha1));
 			DMSG("reading %d patch sha1: \n", current);

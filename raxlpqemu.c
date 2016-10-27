@@ -42,6 +42,201 @@ char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
 
 void bin2hex(unsigned char *, size_t, char *, size_t);
 
+#ifndef sandbox_port
+
+ssize_t	readn(int fd, void *vptr, size_t n);
+
+int _read(const char *filename, int fd, void *buf, size_t buflen)
+{
+    int ret = readn(fd, buf, buflen);
+    if (ret < 0) {
+        fprintf(stderr, "%s: %m\n", filename);
+        return -1;
+    }
+    if (ret < buflen) {
+	    fprintf(stderr, "%s: expected %d bytes, read %d\n",
+                filename, (int)buflen, ret);
+        return -1;
+    }
+
+    return 0;
+}
+
+
+int _readu64(const char *filename, int fd, uint64_t *value)
+{
+    unsigned char buf[sizeof(uint64_t)];
+
+    if (_read(filename, fd, buf, sizeof(buf)) < 0)
+        return -1;
+
+    *value = ((uint64_t)buf[0]) << 56 | ((uint64_t)buf[1]) << 48 |
+             ((uint64_t)buf[2]) << 40 | ((uint64_t)buf[3]) << 32 |
+             ((uint64_t)buf[4]) << 24 | ((uint64_t)buf[5]) << 16 |
+             ((uint64_t)buf[6]) << 8 | ((uint64_t)buf[7]);
+    return 0;
+}
+
+
+int _readu32(const char *filename, int fd, uint32_t *value)
+{
+    unsigned char buf[sizeof(uint32_t)];
+
+    if (_read(filename, fd, buf, sizeof(buf)) < 0)
+        return -1;
+
+    *value = ((uint32_t)buf[0]) << 24 | ((uint32_t)buf[1]) << 16 |
+             ((uint32_t)buf[2]) << 8 | ((uint32_t)buf[3]);
+    return 0;
+}
+
+
+int _readu16(const char *filename, int fd, uint16_t *value)
+{
+    unsigned char buf[sizeof(uint16_t)];
+
+    if (_read(filename, fd, buf, sizeof(buf)) < 0)
+        return -1;
+
+    *value = ((uint16_t)buf[0]) << 8 | ((uint16_t)buf[1]);
+    return 0;
+}
+
+
+void *_zalloc(size_t size)
+{
+    void *buf = malloc(size);
+    if (!buf) {
+        fprintf(stderr, "Failed to allocate %Zu bytes of memory\n", size);
+        exit(1);
+    }
+
+    memset(buf, 0, size);
+
+    return buf;
+}
+
+
+void *_realloc(void *buf, size_t size)
+{
+    void *newbuf = realloc(buf, size);
+    if (!newbuf) {
+        fprintf(stderr, "Failed to reallocate %Zu bytes of memory\n", size);
+        exit(1);
+    }
+
+    return newbuf;
+}
+
+
+#define MAJORFILE	"/sys/hypervisor/version/major"
+#define MINORFILE	"/sys/hypervisor/version/minor"
+#define EXTRAFILE	"/sys/hypervisor/version/extra"
+#define COMPILEDATEFILE	"/sys/hypervisor/compilation/compile_date"
+
+
+int _read_line(char *filename, char *buf, size_t bufsize)
+{
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        fprintf(stderr, "error: fopen(%s): %m\n", filename);
+        return -1;
+    }
+
+    int failed = (fgets(buf, bufsize, f) == NULL);
+    fclose(f);
+    if (failed) {
+        fprintf(stderr, "error: fgets(%s): %m\n", filename);
+        return -1;
+    }
+
+    /* Strip off trailing \n */
+    size_t len = strlen(buf);
+    if (buf[len - 1] == '\n') {
+        buf[len - 1] = 0;
+        len--;
+    }
+
+    return len;
+}
+
+
+int get_xen_version(char *buf, size_t bufsize)
+{
+    char major[64], minor[64], extra[64];
+
+    if (_read_line(MAJORFILE, major, sizeof(major)) < 0)
+        return -1;
+    if (_read_line(MINORFILE, minor, sizeof(minor)) < 0)
+        return -1;
+    if (_read_line(EXTRAFILE, extra, sizeof(extra)) < 0)
+        return -1;
+
+    return snprintf(buf, bufsize, "%s.%s%s", major, minor, extra);
+}
+
+
+int get_xen_compile_date(char *buf, size_t bufsize)
+{
+    return _read_line(COMPILEDATEFILE, buf, bufsize);
+}
+
+
+
+/* return: < 0 for error; zero if patch applied; one if patch not applied */
+/* if sha1 is NULL print all applied patches */
+
+int find_patch(int fd, uint8_t sha1[20])
+{
+	uint32_t *count = NULL, i = 0, ccode = SANDBOX_MSG_APPLY;
+	list_response *response;
+	char *rbuf = NULL;
+	
+	
+	/* return buffer format:*/
+        /* uint32_t count;
+         * struct list_response[count];
+	 * buffer needs to be freed by caller 
+	*/
+	count = (uint32_t *)sandbox_list_patches(fd);
+	DMSG("list path response buf %p\n", count);
+	dump_sandbox(count, 32);
+	
+	
+	if (*count == 0) {
+		LMSG("currently there are no applied patches\n");
+		goto exit;
+	}
+	
+	LMSG("%d applied patches...\n", *count);
+	rbuf = (char *)count;
+	rbuf += sizeof(uint32_t);
+	
+	response = (list_response *)rbuf;
+	dump_sandbox(response, 32);
+	
+	for (i = 0; i < *count; i++) {
+		if (sha1 == NULL) {
+			char sha1str[41];
+			DMSG("extracting sha1\n");
+			dump_sandbox(response[i].sha1, 20);
+			
+			bin2hex(response[i].sha1, sizeof(response[i].sha1),
+				sha1str, sizeof(sha1str));
+			LMSG("%s\n", sha1str);
+		} else if (memcmp(sha1, response[i].sha1, 20) == 0) {
+			goto exit;
+		}
+	}
+	
+	ccode = SANDBOX_MSG_APPLY;
+exit:
+	free(count);
+	return ccode;
+}
+
+#endif
+
 int list_patches(int fd)
 {
 	find_patch(fd, 0L);
