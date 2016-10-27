@@ -15,16 +15,14 @@
 
 #include <openssl/sha.h>
 
-//#include <xenctrl.h>
-//#include <xen/xen.h>
-//#include "../live_patch.h"
-
 #include "util.h"
 #include "patch_file.h"
 #include "../sandbox.h"
 #include "portability.h"
 
 /* stuff from private xen headers */
+
+#ifndef sandbox_port
 #ifdef HYPERCALL_BUFFER_AS_ARG
 #define DECLARE_NAMED_HYPERCALL_BOUNCE(_name, _ubuf, _sz, _dir) \
     xc_hypercall_buffer_t XC__HYPERCALL_BUFFER_NAME(_name) = {  \
@@ -32,6 +30,7 @@
         .param_shadow = NULL,                                   \
         .sz = _sz, .dir = _dir, .ubuf = _ubuf,                  \
     }
+
 
 #define DECLARE_HYPERCALL_BOUNCE(_ubuf, _sz, _dir) DECLARE_NAMED_HYPERCALL_BOUNCE(_ubuf, _ubuf, _sz, _dir)
 
@@ -41,6 +40,7 @@
 #define XC_HYPERCALL_BUFFER_BOUNCE_OUT	2
 #define XC_HYPERCALL_BUFFER_BOUNCE_BOTH	3
 
+
 int xc__hypercall_bounce_pre(xc_interface *xch, xc_hypercall_buffer_t *bounce);
 void xc__hypercall_bounce_post(xc_interface *xch, xc_hypercall_buffer_t *bounce);
 
@@ -48,11 +48,11 @@ void xc__hypercall_bounce_post(xc_interface *xch, xc_hypercall_buffer_t *bounce)
 #define xc_hypercall_bounce_post(_xch, _name) xc__hypercall_bounce_post(_xch, HYPERCALL_BUFFER(_name))
 #else
 #define HYPERCALL_BUFFER_AS_ARG(d)	((unsigned long)d)
-
-
 #define xc_hypercall_bounce_pre(_xch, _name)
 #define xc_hypercall_bounce_post(_xch, _name)
 #endif
+
+#endif/* #ifndef  sandbox_port */
 
 
 typedef struct privcmd_hypercall {
@@ -68,6 +68,7 @@ typedef xc_interface* xc_interface_t;
 typedef int xc_interface_t;
 #endif
 static int json = 0;
+
 
 #ifndef sandbox_port
 int do_xen_hypercall(xc_interface_t xch, privcmd_hypercall_t *hypercall);
@@ -91,7 +92,9 @@ int open_xc(xc_interface_t *xch)
 
     return 0;
 }
+#endif /*! sandbox_port */
 
+#ifndef sandbox_port
 
 int _do_lp_buf_op_both(xc_interface_t xch, void *buf, size_t buflen, uint64_t op)
 {
@@ -121,18 +124,17 @@ int _do_lp_buf_op_both(xc_interface_t xch, void *buf, size_t buflen, uint64_t op
     return rc;
 }
 
-
 int do_lp_list(xc_interface_t xch, struct xenlp_list *list)
 {
     return _do_lp_buf_op_both(xch, list, sizeof(*list), XENLP_list);
 }
-#endif /* sandbox port */
 
-int do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list)
-{
+
+int do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list){
     return _do_lp_buf_op_both(xch, list, sizeof(*list), XENLP_list3);
 }
 
+#endif /* ! sandbox_port */
 
 int do_lp_caps(xc_interface_t xch, struct xenlp_caps *caps)
 {
@@ -140,6 +142,7 @@ int do_lp_caps(xc_interface_t xch, struct xenlp_caps *caps)
 }
 
 
+#ifndef sandbox_port
 int _do_lp_buf_op(xc_interface_t xch, void *buf, size_t buflen, uint64_t op)
 {
 #ifdef DECLARE_HYPERCALL_BOUNCE
@@ -165,7 +168,7 @@ int _do_lp_buf_op(xc_interface_t xch, void *buf, size_t buflen, uint64_t op)
     return do_xen_hypercall(xch, &hypercall);
 }
 
-
+#endif /* ! sandbox_port */
 int do_lp_apply(xc_interface_t xch, void *buf, size_t buflen)
 {
     return _do_lp_buf_op(xch, buf, buflen, XENLP_apply);
@@ -647,6 +650,7 @@ static void print_list_footer()
 }
 
 
+
 int _cmd_list2(xc_interface_t xch)
 {
     struct xenlp_list list = { .skippatches = 0 };
@@ -663,7 +667,12 @@ int _cmd_list2(xc_interface_t xch)
     while (1) {
         int i;
         for (i = 0; i < list.numpatches; i++) {
+
+#ifdef sandbox_port
+            struct xenlp_patch_info3 *pi = &list.patches[i];
+#else
             struct xenlp_patch_info *pi = &list.patches[i];
+#endif
             int j;
             if (list.numpatches < MAX_LIST_PATCHES && i == list.numpatches - 1)
                 last = 1;

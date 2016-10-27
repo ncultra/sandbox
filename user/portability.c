@@ -84,7 +84,7 @@ int do_xen_hypercall(xc_interface_t xc, void *buf)
  * no reason to support iterative searching, there is no upper limit to how 
  * many patches we can return in a hypercall, we are using a socket instead
  */
-int __find_patch(int fd, uint8_t sha1[20], struct xenlp_list *list)
+int __find_patch(int fd, uint8_t sha1[20], struct xenlp_list3 *list)
 {
     uint32_t *count = NULL, ccode = SANDBOX_OK; /* 0 */
     struct  xenlp_patch_info *response;
@@ -156,7 +156,7 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
                struct xenlp_patch_info **patch) 
 {
     int ccode;
-    struct xenlp_list list;
+    struct xenlp_list3 list;
     if (!patch) {
         DMSG("must provide an output buffer ptr to find_patch\n");
         return SANDBOX_ERR;
@@ -192,7 +192,24 @@ int do_lp_list(xc_interface_t xch, struct xenlp_list *list)
         return SANDBOX_ERR;
     }
 
+    return __find_patch((int)xch, NULL, (struct xenlp_list3 *)list);
+}
+
+
+int do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list) 
+{
+    if (list == NULL) {
+        DMSG("error bad list parameter to do_lp_list\n");
+        return SANDBOX_ERR;
+    }
+
     return __find_patch((int)xch, NULL, list);
+}
+
+int _do_lp_buf_op(xc_interface_t xch, void *list, size_t buflen, uint64_t op)
+{
+    /*#warning "using deprecated function\n" */
+    return 0;
 }
 
 
@@ -206,4 +223,37 @@ int _do_lp_buf_op_both(xc_interface_t xch, void *list, size_t buflen, uint64_t o
 unsigned int __attribute__((deprecated)) get_order_from_bytes(int len)
 {
     return (len & 0x10);
+}
+
+/* when display is set print the info strings */
+int get_info_strings(int fd, int display)
+{
+	char *info_buf, *info_buf_save, *p;
+	int index = 0;
+	
+	if (fd < 0) {
+		DMSG("get_info was passed a bad socket\n");
+		return SANDBOX_ERR_BAD_FD;
+	}
+	
+	info_buf =  get_sandbox_build_info(fd);
+	if (info_buf == NULL) {
+		LMSG("unable to get info strings\n");
+		return SANDBOX_ERR_RW;
+	}
+
+	/* split the long string into separate strings*/
+	p = strtok_r(info_buf, "\n", &info_buf_save);
+	for (index = 0; index < COUNT_INFO_STRINGS && p != NULL; index++) {	
+		strncpy(info_strings[index], p, INFO_STRING_LEN);
+		if (display)
+			LMSG("%s\n", info_strings[index]);
+		p = strtok_r(NULL, "\n", &info_buf_save);
+	}
+	if (index <  COUNT_INFO_STRINGS - 1) {
+		LMSG("error parsing info strings, index: %d\n", index);
+		return SANDBOX_ERR_PARSE;
+	}
+	
+	return SANDBOX_OK;
 }

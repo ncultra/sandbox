@@ -404,12 +404,11 @@ typedef struct xenlp_patch_info list_response;
 #ifndef MAX_LIST_PATCHES
 #define MAX_LIST_PATCHES 128
 #endif
-struct xenlp_list {
-    uint16_t skippatches;	/* input, number of patches to skip */
-    uint16_t numpatches;	/* output, number of patches returned */
-    char __pad[4];
-    struct xenlp_patch_info patches[MAX_LIST_PATCHES];	/* output */
-};
+
+/* TODO: we only need the v3 definition of these structs, 
+ * remove the original definitions and then use 
+ * ifdefs in raxlpxs to allow a non-sandbox build 
+ */
 
 struct xenlp_patch_info3 {
     uint64_t hvaddr;		/* virtual address in hypervisor memory */
@@ -419,12 +418,23 @@ struct xenlp_patch_info3 {
     struct xenlp_hash deps[MAX_LIST_DEPS];
 };
 
+struct xenlp_list {
+    uint16_t skippatches;	/* input, number of patches to skip */
+    uint16_t numpatches;	/* output, number of patches returned */
+    char __pad[4];
+/* sleight of hand to normalize _find_patch */
+    struct xenlp_patch_info3 patches[MAX_LIST_PATCHES];	/* output */
+};
+
+
 struct xenlp_list3 {
     uint16_t skippatches;	/* input, number of patches to skip */
     uint16_t numpatches;	/* output, number of patches returned */
     char __pad[4];
     struct xenlp_patch_info3 patches[MAX_LIST_PATCHES3];	/* output */
 };
+
+
 
 
 /* layout in memory:
