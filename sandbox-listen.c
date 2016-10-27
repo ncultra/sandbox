@@ -641,7 +641,7 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 /*	count the number of patches, then allocate list_response array
 	struct list_response[];
 */
-	struct list_response *r;
+	list_response *r;
 	struct list_head *xp;
 	struct  applied_patch *ap;
 	char *rbuf = NULL;
@@ -653,7 +653,7 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 			count++;
 		}
 		DMSG("applied patch list has %d patches\n", count);
-		rsize = (count * sizeof(struct list_response)) + sizeof(uint32_t);
+		rsize = (count * sizeof(list_response)) + sizeof(uint32_t);
 		DMSG("response buf size:  %d\n", rsize);
 		
 		rbuf = calloc(rsize, sizeof(uint8_t));
@@ -662,7 +662,7 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 			return SANDBOX_ERR_NOMEM;
 		}
 		*(uint32_t *)rbuf = count;
-		r = (struct list_response *)(rbuf + sizeof(uint32_t));
+		r = (list_response *)(rbuf + sizeof(uint32_t));
 		
 
 		list_for_each_entry(ap, &applied_list, l) {
@@ -677,7 +677,7 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 				break;
 		}
 		ccode = send_rr_buf(fd, SANDBOX_MSG_LISTRSP,
-				   rsize, rbuf, git SANDBOX_LAST_ARG);
+				   rsize, rbuf, SANDBOX_LAST_ARG);
 		free(rbuf);	
 	} else {
 		DMSG("applied patch list empty, sending null response list\n");
@@ -701,7 +701,7 @@ ssize_t dispatch_list_response(int fd, int len, void **bufp)
 	DMSG("patch list responder\n");
 
 	*bufp = calloc(sizeof(uint8_t),
-		       remaining_bytes + sizeof(struct list_response) + sizeof(uint32_t));
+		       remaining_bytes + sizeof(list_response) + sizeof(uint32_t));
 	if (*bufp  == NULL) {
 		DMSG("error allocating buffer for patch list\n");
 		return SANDBOX_ERR_NOMEM;
@@ -875,7 +875,7 @@ void  *sandbox_list_patches(int fd)
 
 	/* return buffer format:*/
         /* uint32_t count;
-        you * struct list_response[count];
+         *  struct list_response[count];
 	 * buffer needs to be freed by caller 
 	*/
 	return listen_buf;

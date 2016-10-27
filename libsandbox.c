@@ -778,7 +778,7 @@ static int __attribute__((used)) xenlp_undo3(XEN_GUEST_HANDLE(void *) arg)
 
     int err = xenlp_upgrade_patch_list();
     if (err != 0)
-        return err;
+        return SANDBOX_ERR;
 
     if (memcpy(&hash, arg, sizeof(struct xenlp_hash)))
         return -EFAULT;
