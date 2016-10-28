@@ -5,7 +5,7 @@
 * 
 * Copyright 2015-16 Rackspace, Inc.
 ***************************************************************/
-
+#include <math.h>
 #include "../sandbox.h"
 #include "portability.h"
 
@@ -206,26 +206,29 @@ int do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list)
     return __find_patch((int)xch, NULL, list);
 }
 
-int _do_lp_buf_op(xc_interface_t xch, void *list, size_t buflen, uint64_t op)
+int __attribute__((deprecated))
+do_lp_buf_op(xc_interface_t xch, void *list, size_t buflen, uint64_t op)
 {
     /*#warning "using deprecated function\n" */
     return 0;
 }
 
 
-int _do_lp_buf_op_both(xc_interface_t xch, void *list, size_t buflen, uint64_t op)
+int __attribute__((deprecated))
+_do_lp_buf_op_both(xc_interface_t xch, void *list, size_t buflen, uint64_t op)
 {
 /*#warning "using deprecated function\n" */
     return 0;
 }
 
 
-unsigned int __attribute__((deprecated)) get_order_from_bytes(int len)
+unsigned int __attribute__((deprecated))
+get_order_from_bytes(int len)
 {
-    return (len & 0x10);
+    return log(len) / log(2);
+    
 }
 
-/* when display is set print the info strings */
 int get_info_strings(int fd, int display)
 {
 	char *info_buf, *info_buf_save, *p;

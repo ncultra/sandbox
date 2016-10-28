@@ -34,8 +34,8 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
 int do_lp_list(xc_interface_t xch, struct xenlp_list *list);
 int do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list);
 
-int _do_lp_buf_op_both(xc_interface_t xch, void *list, size_t buflen, uint64_t op);
-int _do_lp_buf_op(xc_interface_t xch, void *list, size_t buflen, uint64_t op);
+int __attribute__((deprecated)) _do_lp_buf_op_both(xc_interface_t xch, void *list, size_t buflen, uint64_t op);
+int __attribute__((deprecated)) _do_lp_buf_op(xc_interface_t xch, void *list, size_t buflen, uint64_t op);
 unsigned int __attribute__((deprecated)) get_order_from_bytes(int len);
 
 #define COUNT_INFO_STRINGS 6

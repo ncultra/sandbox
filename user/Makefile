@@ -6,7 +6,7 @@ CFLAGS = -g  -Wall -Werror -fPIC -std=gnu11 -ffunction-sections -fdata-sections 
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
-LIBS=$(SANDBOX_DIR)/libsandbox.a -lz -lcrypto -lelf -lpthread -ldl
+LIBS=$(SANDBOX_DIR)/libsandbox.a -lz -lcrypto -lelf -lpthread -ldl -lm
 EXE=raxlpxs
 CLEAN=rm -f $(EXE) *.o *.a *.so 
 
