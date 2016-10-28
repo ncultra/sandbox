@@ -530,19 +530,21 @@ uintptr_t get_sandbox_end(void);
 #define SANDBOX_MSG_GET_LEN(b) (*(uint32_t *)((uint8_t *)b + 8))
 #define SANDBOX_MSG_PUT_LEN(b, l) ((*(uint32_t *)((uint8_t *)b + 8)) = (uint32_t)l)
 
+#define SANDBOX_MSG_APPLY                      1
+#define SANDBOX_MSG_APPLYRSP                   2
+#define SANDBOX_MSG_LIST                       3
 #define SANDBOX_MSG_LIST_BUFSIZE 512
-#define SANDBOX_MSG_APPLY 1
-#define SANDBOX_MSG_APPLYRSP 2
-#define SANDBOX_MSG_LIST 3
-#define SANDBOX_MSG_LISTRSP 4
-#define SANDBOX_MSG_GET_BLD 5
-#define SANDBOX_MSG_GET_BLDRSP 6
+#define SANDBOX_MSG_LISTRSP                    4
+#define SANDBOX_MSG_GET_BLD                    5
 #define SANDBOX_MSG_BLD_BUFSIZE 512
-#define SANDBOX_TEST_REQ 7
-#define SANDBOX_TEST_REP 8
+#define SANDBOX_MSG_GET_BLDRSP                 6
+#define SANDBOX_TEST_REQ                       7
+#define SANDBOX_TEST_REP                       8
+#define SANDBOX_MSG_UNDO_REQ                   9
+#define SANDBOX_MSG_UNDO_REP                  10
 
 #define SANDBOX_MSG_FIRST SANDBOX_MSG_APPLY
-#define SANDBOX_MSG_LAST SANDBOX_TEST_REP
+#define SANDBOX_MSG_LAST SANDBOX_MSG_UNDO_REP
 
 #define SANDBOX_LAST_ARG -1 /* to terminate var args in buffer */
 #define SANDBOX_OK 0
@@ -664,6 +666,13 @@ ssize_t dispatch_list(int fd, int len, void **bufp);
 ssize_t dispatch_list_response(int fd, int len, void **bufp);
 ssize_t dispatch_apply(int fd, int len, void **bufp);
 ssize_t dispatch_apply_response(int fd, int len, void **bufp);
+ssize_t dispatch_getbld(int, int, void **);
+ssize_t dummy(int, int, void **);
+ssize_t dispatch_getbld_res(int fd, int len, void **);
+ssize_t dispatch_test_req(int fd, int len, void ** bufp);
+ssize_t dispatch_test_rep(int, int len, void **);
+ssize_t dispatch_undo_req(int fd, int len, void **bufp);
+ssize_t dispatch_undo_rep(int fd, int len, void **bufp);
 int do_lp_apply(int fd, void *buf, size_t buflen);
 int xenlp_apply(void *arg);
 void dump_sandbox(const void* data, size_t size);

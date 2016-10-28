@@ -39,15 +39,17 @@
 /* dispatch functions need to drain the socket buy reading all the bytes
  * in the message that follow the header */
 
-
-ssize_t dispatch_apply(int, int, void **);
-ssize_t dispatch_list(int, int, void **);
-ssize_t dispatch_getbld(int, int, void **);
-ssize_t dummy(int, int, void **);
-ssize_t dispatch_getbld_res(int fd, int len, void **);
-ssize_t dispatch_test_req(int fd, int len, void ** bufp);
-ssize_t dispatch_test_rep(int, int len, void **);
-
+/**************** declared in sandbox.h *********************** 
+ * ssize_t dispatch_apply(int, int, void **);
+ * ssize_t dispatch_list(int, int, void **);
+ * ssize_t dispatch_getbld(int, int, void **);
+ * ssize_t dummy(int, int, void **);
+ * ssize_t dispatch_getbld_res(int fd, int len, void **);
+ * ssize_t dispatch_test_req(int fd, int len, void ** bufp);
+ * ssize_t dispatch_test_rep(int, int len, void **);
+ * ssize_t dispatch_undo_req(int fd, int len, void **bufp);
+ * ssize_t dispatch_undo_rep(int fd, int len, void **bufp);
+ *************************************************************/
 
 typedef ssize_t (*handler)(int, int, void **);
 
@@ -62,6 +64,8 @@ handler dispatch[] =
 	dispatch_getbld_res,
 	dispatch_test_req,
 	dispatch_test_rep,
+        dispatch_undo_req,
+        dispatch_undo_rep,
 	dummy, dummy
 };
 
@@ -823,6 +827,17 @@ ssize_t dispatch_test_rep(int fd, int len, void **bufp)
 	}
 	printf("response code: %d\n", c);
 	return SANDBOX_OK;
+}
+
+
+ssize_t dispatch_undo_req(int fd, int len, void **bufp) 
+{
+    return 0;
+}
+
+ssize_t dispatch_undo_rep(int fd, int len, void **bufp)
+{
+    return 0;
 }
 
 
