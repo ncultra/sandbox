@@ -123,22 +123,33 @@ int _do_lp_buf_op_both(xc_interface_t xch, void *buf, size_t buflen, uint64_t op
     xc_hypercall_bounce_post(xch, buf);
     return rc;
 }
-
+#endif 
 int do_lp_list(xc_interface_t xch, struct xenlp_list *list)
 {
+#ifndef sandbox_port
     return _do_lp_buf_op_both(xch, list, sizeof(*list), XENLP_list);
+#else
+    return __do_lp_list(xch, list);
+#endif /* ! sandbox_port */
 }
 
 
 int do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list){
+#ifndef sandbox_port
     return _do_lp_buf_op_both(xch, list, sizeof(*list), XENLP_list3);
+#else
+    return __do_lp_list3(xch, list);;
+#endif /* ! sandbox_port */
 }
 
-#endif /* ! sandbox_port */
 
 int do_lp_caps(xc_interface_t xch, struct xenlp_caps *caps)
 {
+#ifndef sandbox_port
     return _do_lp_buf_op_both(xch, caps, sizeof(*caps), XENLP_caps);
+#else
+    return __do_lp_caps(xch, caps);
+#endif /* ! sandbox_port */
 }
 
 
@@ -171,19 +182,34 @@ int _do_lp_buf_op(xc_interface_t xch, void *buf, size_t buflen, uint64_t op)
 #endif /* ! sandbox_port */
 int do_lp_apply(xc_interface_t xch, void *buf, size_t buflen)
 {
+#ifndef sandbox_port
     return _do_lp_buf_op(xch, buf, buflen, XENLP_apply);
+#else
+    return __do_lp_apply(xch, buf, buflen);
+#endif /* ! sandbox_port */
 }
 
 
 int do_lp_apply3(xc_interface_t xch, void *buf, size_t buflen)
 {
+#ifndef sandbox_port
     return _do_lp_buf_op(xch, buf, buflen, XENLP_apply3);
+#else
+    return __do_lp_apply3(xch, buf, buflen);
+#endif /* ! sandbox_port */
+
+    
 }
 
 
 int do_lp_undo3(xc_interface_t xch, void *buf, size_t buflen)
 {
+#ifndef sandbox_port
     return _do_lp_buf_op(xch, buf, buflen, XENLP_undo3);
+#else
+    return __do_lp_undo3(xch, buf, buflen);
+#endif /* ! sandbox_port */
+    
 }
 
 

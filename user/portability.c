@@ -185,7 +185,7 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
     return ccode;
 }
 
-int do_lp_list(xc_interface_t xch, struct xenlp_list *list) 
+int __do_lp_list(xc_interface_t xch, struct xenlp_list *list) 
 {
     if (list == NULL) {
         DMSG("error bad list parameter to do_lp_list\n");
@@ -196,7 +196,7 @@ int do_lp_list(xc_interface_t xch, struct xenlp_list *list)
 }
 
 
-int do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list) 
+int __do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list) 
 {
     if (list == NULL) {
         DMSG("error bad list parameter to do_lp_list\n");
@@ -205,6 +205,30 @@ int do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list)
 
     return __find_patch((int)xch, NULL, list);
 }
+
+
+int __do_lp_caps(xc_interface_t xch, struct xenlp_caps *caps)
+{
+    return 0;
+    
+}
+
+int __do_lp_apply(xc_interface_t xch, void *buf, size_t buflen)
+{
+    return 0;
+}
+
+int __do_lp_apply3(xc_interface_t xch, void *buf, size_t buflen)
+{
+    return 0;
+}
+
+int __do_lp_undo3(xc_interface_t xch, void *buf, size_t buflen)
+{
+    return 0;
+}
+
+
 
 int __attribute__((deprecated))
 do_lp_buf_op(xc_interface_t xch, void *list, size_t buflen, uint64_t op)
