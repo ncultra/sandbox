@@ -223,6 +223,22 @@ int __do_lp_apply3(xc_interface_t xch, void *buf, size_t buflen)
     return 0;
 }
 
+
+
+/* 
+   client: -> __do_lp_undo3
+           ------send_rr_buf
+
+   server: -> dispatch_undo_req
+           --- do_lp_undo3
+           ------send_rr_buf
+
+   client: 
+           ------read_sandbox_message_header
+           ---------dispatch_undo_rep
+           <----------------------|
+
+ */
 /* buf is a ptr to sha1, buflen = 20 bytes */
 int __do_lp_undo3(xc_interface_t xch, void *buf, size_t buflen)
 {
