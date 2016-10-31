@@ -732,12 +732,6 @@ ssize_t dispatch_list_response(int fd, int len, void **bufp)
 }
 
 	
-/*****************************************************************
- * Dispatch functions: at this point socket's file pointer 
- * is at the first field
- *
- *****************************************************************/
-
 ssize_t dispatch_getbld(int fd, int len, void **bufp)
 {
 /* construct a string buffer with each data on a separate line */
@@ -830,14 +824,60 @@ ssize_t dispatch_test_rep(int fd, int len, void **bufp)
 }
 
 
+
+/*** undo request msg
+     HEADER
+     uint8_t[20] sha1
+ ***/
 ssize_t dispatch_undo_req(int fd, int len, void **bufp) 
 {
-    return 0;
+
+/*  reply = 0 for success, < 0 for not applied or error */
+    uint32_t code;
+    uint8_t sha1[20], sha1_txt_buf[42];
+    
+    int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
+    DMSG("undo request dispatcher: remaining bytes = %d\n", remaining_bytes);
+    /* message should be 20 bytes sha1 of patch to undo */
+    if (remaining_bytes != 20) {
+        DMSG("undo request wrong size: %d, not dispatched.\n", remaining_bytes);
+        ccode =  SANDBOX_ERR_PARSE;
+        goto exit;
+    }
+    
+    if (readn(fd, &sha1[0], remaining_bytes) != remaining_bytes) {
+        DMSG("error reading sha1 in undo message\n");
+        ccode =  SANDBOX_ERR_RW;
+        goto exit;
+    }
+    memset(sha1_txt_buf, 0x00, sizeof(sha1_txt_buf));
+    bin2hex(sha1, sizeof(sha1), sha1_txt_buf, sizeof(sha1_txt_buf) - 1);
+    DMSG("Undoing patch %s\n", sha1_txt_buf);
+    ccode = xenlp_undo3(sha1);
+    
+exit:
+    return(send_rr_buf(fd, SANDBOX_MSG_UNDO_REP, sizeof(uint32_t),
+                       &ccode, SANDBOX_LAST_ARG));
 }
+
+/*** undo reply msg
+     HEADER
+     uint32_t return code 
+ ***/
 
 ssize_t dispatch_undo_rep(int fd, int len, void **bufp)
 {
-    return 0;
+    /* read remainder of message - ccode
+       return ccode - 1 for success, 0 for not applied 
+     */
+
+    	uint32_t c;
+	DMSG("received an undo  reply - remaining bytes = %d\n", len - SANDBOX_MSG_HDRLEN);
+	if (readn(fd, &c, sizeof(uint32_t)) != sizeof(uint32_t)) {
+		DMSG("error reading undo reply message\n");
+		return SANDBOX_ERR_RW;
+	}
+        return c;
 }
 
 

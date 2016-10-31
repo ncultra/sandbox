@@ -272,7 +272,7 @@ int xenlp_apply(void *arg)
 	size_t i;
 	struct applied_patch *patch;
 	ptrdiff_t relocrel = 0;
-	char sha1[41];
+	char sha1[42];
 	ptrdiff_t p;
 	
 
@@ -414,8 +414,8 @@ int xenlp_apply(void *arg)
         INIT_LIST_HEAD(&patch->l);
 	
 	list_add(&patch->l, &lp_patch_head2);
-        
-	bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1));
+        memset(sha1, 0x00, sizeof(sha1));
+	bin2hex(apply->sha1, sizeof(apply->sha1), sha1, sizeof(sha1) - 1);
 	LMSG("successfully applied patch %s\n", sha1);
 
 	return 0;
