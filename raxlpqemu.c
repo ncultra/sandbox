@@ -328,6 +328,7 @@ inline char * get_sandbox_build(int fd)
 
 
 /* client-side counterpart to xenlp_apply */
+
 int do_lp_apply(int fd, void *buf, size_t buflen)
 {
 // fill buffer, write it to the socket 

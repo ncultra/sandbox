@@ -658,6 +658,8 @@ void bin2hex(unsigned char *bin, size_t binlen, char *buf,
                     size_t buflen);
 int write_sandbox_message_header(int fd,
 				 uint16_t version, uint16_t id);
+int xenlp_undo3(XEN_GUEST_HANDLE(void *) arg);
+
 /* **** test functions **** */
 char *get_sandbox_build_info(int fd);
 int client_func(void *p);

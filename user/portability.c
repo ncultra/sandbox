@@ -225,7 +225,7 @@ int __do_lp_apply3(xc_interface_t xch, void *buf, size_t buflen)
 
 
 
-/* 
+/*
    client: -> __do_lp_undo3
            ------send_rr_buf
 

@@ -804,7 +804,7 @@ ssize_t dispatch_test_req(int fd, int len, void ** bufp)
 	}
 	DMSG("%08x ", code);	
 	dump_sandbox(&code, sizeof(code));
-	printf("test code: %d\n", code);
+	DMSG("undo test  code: %d\n", code);
 
 	/* send a test response */
 	return send_rr_buf(fd, SANDBOX_TEST_REP, sizeof(uint32_t),
@@ -833,8 +833,9 @@ ssize_t dispatch_undo_req(int fd, int len, void **bufp)
 {
 
 /*  reply = 0 for success, < 0 for not applied or error */
-    uint32_t code;
-    uint8_t sha1[20], sha1_txt_buf[42];
+    uint32_t ccode;
+    uint8_t sha1[20];
+    char sha1_txt_buf[42];
     
     int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
     DMSG("undo request dispatcher: remaining bytes = %d\n", remaining_bytes);

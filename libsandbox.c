@@ -770,7 +770,7 @@ static int has_dependent_patches(struct applied_patch3 *patch)
     return 0;
 }
 
-static int __attribute__((used)) xenlp_undo3(XEN_GUEST_HANDLE(void *) arg)
+int xenlp_undo3(XEN_GUEST_HANDLE(void *) arg)
 {
     struct xenlp_hash hash;
     struct applied_patch3 *ap;
