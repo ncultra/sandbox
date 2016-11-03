@@ -70,7 +70,8 @@ int open_xc(xc_interface_t *xch)
 /* TODO: conditionally compile i raxlpxs.c, remove from this file 
  * right now its only a stub
  */
-int do_xen_hypercall(xc_interface_t xc, void *buf)
+int __attribute__((deprecated))
+do_xen_hypercall(xc_interface_t xc, void *buf)
 {
     return 0;
 }
@@ -209,18 +210,56 @@ int __do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list)
 
 int __do_lp_caps(xc_interface_t xch, struct xenlp_caps *caps)
 {
+    caps->flags = XENLP_CAPS_V3;
     return 0;
-    
 }
 
-int __do_lp_apply(xc_interface_t xch, void *buf, size_t buflen)
+int __attribute__((deprecated))
+__do_lp_apply(xc_interface_t xch, void *buf, size_t buflen)
 {
     return 0;
 }
+ 
+
+
+/*
+   client: ->
+     cmd_apply
+     ---_cmd_apply3
+     -----fill_patch_buf
+     ---------__do_lp_apply3
+     ---------------do_lp_apply
+     ------------------send_rr_buf
+
+   server: -> 
+           dispatch_apply
+           ---xenlp_apply3
+           ---send_rr_buf
+
+   client: 
+           ------read_sandbox_message_header
+           ---------dispatch_apply_response
+           <----------------------|
+ */
 
 int __do_lp_apply3(xc_interface_t xch, void *buf, size_t buflen)
-{
-    return 0;
+{    
+    /* fill buffer, write it to the socket  */
+    int ccode = SANDBOX_ERR;
+    void *buf2 = NULL;
+    uint16_t version = 1, id = SANDBOX_MSG_APPLYRSP;    
+    uint32_t len = 0;
+    
+    if (send_rr_buf((int) xch,
+                    SANDBOX_MSG_APPLY,
+                    buflen,
+                    buf,
+                    SANDBOX_LAST_ARG) == SANDBOX_OK) {
+        ccode =  read_sandbox_message_header((int)xch, &version, &id, &len, &buf2);
+        if (buf2 != NULL)
+            free(buf2);
+    }
+    return ccode;
 }
 
 

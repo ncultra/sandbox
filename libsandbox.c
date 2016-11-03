@@ -25,9 +25,9 @@ extern uint64_t _start, _end;
 
 uint64_t fill = PLATFORM_ALLOC_SIZE;
 
-	__asm__(".text");
-	__asm__(".global patch_sandbox_start");
-	__asm__(".global patch_sandbox_end");
+__asm__(".text");
+__asm__(".global patch_sandbox_start");
+__asm__(".global patch_sandbox_end");
 
 #if defined (__X86_64__) || defined (__i386__)
 	__asm__(".align " str(PLATFORM_CACHE_LINE_SIZE));
@@ -655,8 +655,7 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
     return SANDBOX_OK;
 }
 
-#ifndef sandbox_port
-static int __attribute__((used)) xenlp_apply3(XEN_GUEST_HANDLE(void *)arg)
+int xenlp_apply3(void *arg)
 {
     struct xenlp_apply3 apply;
     unsigned char *blob = NULL;
@@ -799,5 +798,3 @@ int xenlp_undo3(XEN_GUEST_HANDLE(void *) arg)
     }
     return -ENOENT;
 }
-
-#endif /* sandbox_port */

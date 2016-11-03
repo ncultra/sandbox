@@ -197,7 +197,6 @@ int do_lp_apply3(xc_interface_t xch, void *buf, size_t buflen)
 #else
     return __do_lp_apply3(xch, buf, buflen);
 #endif /* ! sandbox_port */
-
     
 }
 
@@ -597,7 +596,9 @@ int cmd_apply(int argc, char *argv[])
     if (load_patch_file3(fd, filename, &patch) < 0)
         return -1;
     close(fd);
-
+    
+#ifndef sandbox_port
+    /* make the xen/sandbox version check conditional */
     /* Make sure this patch applies to this version of Xen */
     char rxenversion[255];
     char rxencompiledate[255];
@@ -623,6 +624,38 @@ int cmd_apply(int argc, char *argv[])
         return -1;
     }
 
+#else
+/* check for QEMU version and sandbox build info */
+    LMSG("Getting QEMU/sandbox info\n");
+    
+    char *qemu_version = get_qemu_version(xch);
+    char *qemu_compile_date = get_qemu_date(xch);
+    if (!strlen(qemu_version) || !strlen(qemu_compile_date)) {
+	    LMSG("error getting version and complilation data\n");
+	    return SANDBOX_ERR_RW;	    
+    }
+
+ 
+    LMSG("  QEMU Version: %s\n", qemu_version);
+    LMSG("  QEMU Compile Date: %s\n", qemu_compile_date);
+
+    LMSG("\n");
+    LMSG("Patch Applies To:\n");
+    LMSG("  QEMU Version: %s\n", patch.xenversion);
+    LMSG("  QEMU  Compile Date: %s\n", patch.xencompiledate);
+    LMSG("\n");
+
+
+    if (strncmp(qemu_version, patch.xenversion, INFO_STRING_LEN) != 0 ||
+	strncmp(qemu_compile_date, patch.xencompiledate, INFO_STRING_LEN) != 0) {
+	    LMSG("error: patch does not match QEMU build\n");
+	    return SANDBOX_ERR_BAD_VER;
+    }
+   
+
+    
+#endif /* sandbox_port */
+    
     /* Perform some sanity checks */
     if (patch.crowbarabs != 0) {
         fprintf(stderr, "error: cannot handle crowbar style patches\n");
@@ -646,9 +679,14 @@ int cmd_apply(int argc, char *argv[])
         if (_cmd_apply3(xch, &patch) < 0)
             return -1;
     } else {
+#ifdef sandbox_port
+        DMSG("error: using v2 livepatch ABI\n");
+        return -1;
+#else
         fprintf(stderr, "warn: using v2 livepatch ABI\n");
         if (_cmd_apply2(xch, &patch) < 0)
             return -1;
+#endif
     }
 
     char sha1str[SHA_DIGEST_LENGTH * 2 + 1];

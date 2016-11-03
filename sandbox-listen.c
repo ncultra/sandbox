@@ -609,7 +609,10 @@ ssize_t dispatch_apply(int fd, int len, void **bufp)
 	if (readn(fd, patch_buf, remaining_bytes) == remaining_bytes) {
 		DMSG("read incoming patch into the buffer...\n");
 		dump_sandbox(patch_buf, 32);
-		ccode = xenlp_apply(patch_buf);
+                
+		/* ccode = xenlp_apply(patch_buf); */
+                ccode = xenlp_apply3(patch_buf);
+                
 	} else {	
 		ccode = SANDBOX_ERR_RW;
 	}

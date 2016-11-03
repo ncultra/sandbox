@@ -677,6 +677,8 @@ ssize_t dispatch_undo_req(int fd, int len, void **bufp);
 ssize_t dispatch_undo_rep(int fd, int len, void **bufp);
 int do_lp_apply(int fd, void *buf, size_t buflen);
 int xenlp_apply(void *arg);
+int xenlp_apply3(void *arg);
+
 void dump_sandbox(const void* data, size_t size);
 
 #endif /* __SANDBOX_H */

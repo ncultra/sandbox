@@ -466,6 +466,7 @@ int cmd_apply(int fd)
 	       (long long unsigned int)func->oldabs);
     }
 
+
     size_t buflen = fill_patch_buf(NULL, &patch, numwrites, writes);
     unsigned char *buf = _zalloc(buflen);
     buflen = fill_patch_buf(buf, &patch, numwrites, writes);
