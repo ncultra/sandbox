@@ -651,8 +651,6 @@ int cmd_apply(int argc, char *argv[])
 	    LMSG("error: patch does not match QEMU build\n");
 	    return SANDBOX_ERR_BAD_VER;
     }
-   
-
     
 #endif /* sandbox_port */
     

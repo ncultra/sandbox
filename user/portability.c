@@ -67,16 +67,6 @@ int open_xc(xc_interface_t *xch)
     return 0;
 }
 
-/* TODO: conditionally compile i raxlpxs.c, remove from this file 
- * right now its only a stub
- */
-int __attribute__((deprecated))
-do_xen_hypercall(xc_interface_t xc, void *buf)
-{
-    return 0;
-}
-
-
 /* return: < 0 SANDBOX_ERR for error; */
 /* zero (SANDBOX_OK) if patch not applied; one (SANDBOX_SUCCESS) if patch applied */
 /* if sha1 is NULL return all applied patches
@@ -186,7 +176,9 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
     return ccode;
 }
 
-int __do_lp_list(xc_interface_t xch, struct xenlp_list *list) 
+
+int __attribute__((deprecated))
+__do_lp_list(xc_interface_t xch, struct xenlp_list *list) 
 {
     if (list == NULL) {
         DMSG("error bad list parameter to do_lp_list\n");
@@ -214,12 +206,13 @@ int __do_lp_caps(xc_interface_t xch, struct xenlp_caps *caps)
     return 0;
 }
 
+
 int __attribute__((deprecated))
 __do_lp_apply(xc_interface_t xch, void *buf, size_t buflen)
 {
     return 0;
 }
- 
+
 
 
 /*
@@ -262,8 +255,6 @@ int __do_lp_apply3(xc_interface_t xch, void *buf, size_t buflen)
     return ccode;
 }
 
-
-
 /*
    client: -> __do_lp_undo3
            ------send_rr_buf
@@ -290,31 +281,6 @@ int __do_lp_undo3(xc_interface_t xch, void *buf, size_t buflen)
     }
     
     return ccode;
-}
-
-
-
-int __attribute__((deprecated))
-do_lp_buf_op(xc_interface_t xch, void *list, size_t buflen, uint64_t op)
-{
-    /*#warning "using deprecated function\n" */
-    return 0;
-}
-
-
-int __attribute__((deprecated))
-_do_lp_buf_op_both(xc_interface_t xch, void *list, size_t buflen, uint64_t op)
-{
-/*#warning "using deprecated function\n" */
-    return 0;
-}
-
-
-unsigned int __attribute__((deprecated))
-get_order_from_bytes(int len)
-{
-    return log(len) / log(2);
-    
 }
 
 int get_info_strings(int fd, int display)
