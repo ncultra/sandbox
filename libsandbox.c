@@ -225,6 +225,33 @@ void bin2hex(unsigned char *bin, size_t binlen, char *buf,
     if (buflen)
         *buf = 0;
 }
+
+/* assumes that str begins with "0x" */
+/* TODO: this needs to store the bits, not print them, */
+int hex2bin (const char *str)
+{
+    char *p;
+    for(p = str+2; *p; p++)
+    {
+        int n;
+        if(*p >= '0' && *p <= '9') {
+            n = *p - '0';
+        }
+        else {
+            n = *p - 'a' + 10;
+        }
+        int i , k, mask;
+        for(i = 3; i >= 0; i--) {
+            mask = 1 << i;
+            k = n & mask;
+            k == 0 ? printf("0") : printf("1");
+        }
+    }
+    return 0;
+}
+
+
+
 void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 {
 	

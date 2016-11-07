@@ -9,12 +9,14 @@
 #include "../sandbox.h"
 #include "portability.h"
 
-int copy_from_guest(void *dest, XEN_GUEST_HANDLE(int) fd, int size)
+int __attribute__((deprecated))
+copy_from_guest(void *dest, XEN_GUEST_HANDLE(int) fd, int size)
 {
     return readn(fd, dest, (size_t)size);
 }
 
-int copy_to_guest(XEN_GUEST_HANDLE(int) fd, void *src, int size)
+int __attribute__((deprecated))
+copy_to_guest(XEN_GUEST_HANDLE(int) fd, void *src, int size)
 {
     return writen(fd, src, (size_t)size);
     
