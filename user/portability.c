@@ -77,6 +77,10 @@ int open_xc(xc_interface_t *xch)
  * no reason to support iterative searching, there is no upper limit to how 
  * many patches we can return in a hypercall, we are using a socket instead
  */
+
+/* TODO: pass a hex string with the sha1 hash, run bin2hex on the response list, 
+/* compare hex strings to find a match 
+*/
 int __find_patch(int fd, uint8_t sha1[20], struct xenlp_list3 *list)
 {
     uint32_t *count = NULL, ccode = SANDBOX_OK; /* 0 */
@@ -145,6 +149,11 @@ exit:
 
 
 /* return SANDBOX_OK for success, SANDBOX_ERR on failure */
+/* TODO: change sha1 to a hex string, pass to __find_patch as the sha1 */
+/* convert bin sha1 to hex before comparing. uses more space but more reliable 
+ * than converting strings of varying length and format.
+ */
+
 int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
                struct xenlp_patch_info **patch) 
 {
@@ -163,7 +172,9 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
         if (*patch) {
             free(*patch);
             (*patch = NULL);
-        } else {
+        }
+        
+    } else { /* ccode is 1, found the patch */
             *patch = realloc(*patch,
                              list.numpatches * sizeof(struct xenlp_patch_info));
             if (*patch == NULL) {

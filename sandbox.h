@@ -675,6 +675,7 @@ ssize_t dispatch_test_req(int fd, int len, void ** bufp);
 ssize_t dispatch_test_rep(int, int len, void **);
 ssize_t dispatch_undo_req(int fd, int len, void **bufp);
 ssize_t dispatch_undo_rep(int fd, int len, void **bufp);
+void hex2bin(char *buf, size_t buflen, unsigned char *bin, size_t binlen);
 int do_lp_apply(int fd, void *buf, size_t buflen);
 int xenlp_apply(void *arg);
 int xenlp_apply3(void *arg);

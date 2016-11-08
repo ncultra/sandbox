@@ -226,31 +226,40 @@ void bin2hex(unsigned char *bin, size_t binlen, char *buf,
         *buf = 0;
 }
 
-/* assumes that str begins with "0x" */
-/* TODO: this needs to store the bits, not print them, */
-int hex2bin (const char *str)
+static unsigned int hex_to_int(const char *ptr)
 {
-    char *p;
-    for(p = str+2; *p; p++)
-    {
-        int n;
-        if(*p >= '0' && *p <= '9') {
-            n = *p - '0';
-        }
-        else {
-            n = *p - 'a' + 10;
-        }
-        int i , k, mask;
-        for(i = 3; i >= 0; i--) {
-            mask = 1 << i;
-            k = n & mask;
-            k == 0 ? printf("0") : printf("1");
-        }
+    unsigned int value = 0;
+    char ch = *ptr;
+
+    while (ch == ' ' || ch == '\t')
+        ch = *(++ptr);
+
+    for (int i = 0; i < 4; i++) {
+
+        if (ch >= '0' && ch <= '9')
+            value = (value << 4) + (ch - '0');
+        else if (ch >= 'A' && ch <= 'F')
+            value = (value << 4) + (ch - 'A' + 10);
+        else if (ch >= 'a' && ch <= 'f')
+            value = (value << 4) + (ch - 'a' + 10);
+        else
+            return value;
+        ch = *(++ptr);
     }
-    return 0;
 }
 
+void hex2bin(char *buf, size_t buflen, unsigned char *bin, size_t binlen)
+{
 
+    int count = 0, sha_count = 0;
+    char *p = buf;
+    
+    while(count <= buflen && sha_count <= binlen) {
+        bin[sha_count] = htoi(p + count);
+        count += 4;	
+        sha_count++;
+    }	
+}
 
 void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 {
