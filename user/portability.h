@@ -21,6 +21,8 @@ typedef int* xc_interface;
 
 #define __HYPERVISOR_arch_2 SANDBOX_MSG_APPLY
 
+int connect_to_sandbox(char *sandbox_name);
+
 int copy_from_guest(void *dest, int fd, int size);
 int copy_to_guest(int fd, void *src, int size);
 

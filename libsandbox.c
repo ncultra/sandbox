@@ -246,6 +246,7 @@ static unsigned int hex_to_int(const char *ptr)
             return value;
         ch = *(++ptr);
     }
+    return value;
 }
 
 void hex2bin(char *buf, size_t buflen, unsigned char *bin, size_t binlen)

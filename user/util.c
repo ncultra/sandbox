@@ -105,12 +105,12 @@ void bin2hex(unsigned char *bin, size_t binlen, char *buf,
 }
 
 
-int string2sha1(const char *string, unsigned char *sha1)
+int string2sha1(const unsigned char *string, unsigned char *sha1)
 {
     int i;
     /* Make sure first 40 chars of string are composed of only hex digits */
     for (i = 0; i < 40; i += 2) {
-        if (sscanf(string + i, "%02x", (int*)(&sha1[i / 2])) != 1) {
+        if (sscanf((const char *)string + i, "%02x", (int*)(&sha1[i / 2])) != 1) {
             fprintf(stderr, "error: not a valid sha1 string: %s\n", string);
             return -1;
         }

@@ -23,7 +23,7 @@ copy_to_guest(XEN_GUEST_HANDLE(int) fd, void *src, int size)
 }
 
 static char sockname[PATH_MAX];
-static int sockfd;
+int sockfd;
 
 /*******************************************************************
  * sandbox_name, AKA sockname, defines the path to the domain socket
@@ -78,8 +78,7 @@ int open_xc(xc_interface_t *xch)
  * many patches we can return in a hypercall, we are using a socket instead
  */
 
-/* TODO: pass a hex string with the sha1 hash, run bin2hex on the response list, 
-/* compare hex strings to find a match 
+/* TODO: pass a hex string with the sha1 hash, run bin2hex on the response list, * compare hex strings to find a match 
 */
 int __find_patch(int fd, uint8_t sha1[20], struct xenlp_list3 *list)
 {
@@ -184,8 +183,8 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
             memcpy(*patch, &list.patches[0],
                    list.numpatches * sizeof(struct xenlp_patch_info));
             ccode = SANDBOX_OK;    
-        }       
-    }
+    }       
+    
     return ccode;
 }
 

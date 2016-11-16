@@ -232,6 +232,15 @@ int usage(char *argv0)
 
     return 1;
 }
+
+#else
+void usage(void)
+{
+	printf("\nraxlpqemu --info --list --apply <patch> \
+--remove <patch> --socket <sockname>  --debug --help\n");
+	exit(0);	
+}
+
 #endif
 
 
@@ -576,6 +585,8 @@ int cmd_apply(int argc, char *argv[])
     int cmd_apply(int sockfd, char *path)
 #endif
 {
+
+    char filepath[PATH_MAX];
 #ifndef sandbox_port
     /*size_t i; apparently unused in original file */
     if (argc < 3)
@@ -586,14 +597,13 @@ int cmd_apply(int argc, char *argv[])
         return -1;
 
     const char *path = argv[2];
-    char filepath[PATH_MAX];
-
-    /* basename() can modify its argument, so make a copy */
-    strncpy(filepath, path, sizeof(filepath) - 1);
-    filepath[sizeof(filepath) - 1] = 0;
+    
 #else
     int xch = sockfd;
 #endif
+    /* basename() can modify its argument, so make a copy */
+    strncpy(filepath, path, sizeof(filepath) - 1);
+    filepath[sizeof(filepath) - 1] = 0;
     const char *filename = basename(filepath);
 
     int fd = open(filepath, O_RDONLY);
@@ -1384,7 +1394,7 @@ err2:
     return -1;
 }
 
-
+#ifndef sandbox_port
 int cmd_info(int argc, char *argv[])
 {
     if (argc < 3)
@@ -1424,10 +1434,10 @@ int cmd_info(int argc, char *argv[])
 
     return ret;
 }
-
+#endif
 
 int _cmd_undo3(xc_interface_t xch, struct xenlp_hash *hash,
-               const char *patch_hash)
+               const unsigned char *patch_hash)
 {
     struct xenlp_patch_info3 *info = NULL;
     if (find_patch3(xch, hash->sha1, SHA_DIGEST_LENGTH, &info) < 0) {
@@ -1463,16 +1473,22 @@ int _cmd_undo3(xc_interface_t xch, struct xenlp_hash *hash,
     return 0;
 }
 
-
+#ifndef sandbox_port
 int cmd_undo(int argc, char *argv[])
+#else
+/* sha1 will be a string in the sandbox case */
+int cmd_undo(unsigned char *sha1)
+#endif
 {
+    
+#ifndef sandbox_port    
     unsigned char sha1[SHA_DIGEST_LENGTH];
-
     if (argc < 3)
         return usage(argv[0]);
-
-    const char *sha1hex = argv[2];
-
+    const unsigned char *sha1hex = argv[2];
+#else
+    const unsigned char *sha1hex = sha1;    
+#endif
     if (string2sha1(sha1hex, sha1) < 0)
         return -1;
 
@@ -1481,8 +1497,6 @@ int cmd_undo(int argc, char *argv[])
         return -1;
 
     struct xenlp_hash hash = {{0}};
-    
-    
     memcpy(hash.sha1, sha1, SHA_DIGEST_LENGTH);
 
     struct xenlp_caps caps = { .flags = 0 };
@@ -1494,8 +1508,12 @@ int cmd_undo(int argc, char *argv[])
         fprintf(stderr, "error: no v3 ABI detected, undo disabled\n");
         return -1;
     }
-
+#ifndef sandbox_port
     printf("\nSuccessfully un-applied patch %s\n", argv[2]);
+#else
+    LMSG("\n successfully un-applied patch %s\n", sha1hex);
+    
+#endif
     return 0;
 }
 
@@ -1547,18 +1565,9 @@ int main(int argc, char *argv[])
 static int info_flag, list_flag, find_flag, apply_flag, remove_flag, sock_flag;
 static char filepath[PATH_MAX];
 static char patch_basename[PATH_MAX];
-static char patch_hash[SHA_DIGEST_LENGTH * 2 + 1];
-extern char sockname[PATH_MAX];
+static unsigned char patch_hash[SHA_DIGEST_LENGTH * 2 + 1];
+char sockname[PATH_MAX];
 extern int sockfd;
-
-
-void usage(void)
-{
-	printf("\nraxlpqemu --info --list --apply <patch> \
---remove <patch> --socket <sockname>  --debug --help\n");
-	exit(0);	
-}
-
 
 
 /* There is no defined order for options on the command line
@@ -1574,169 +1583,201 @@ void usage(void)
 
 static inline void get_options(int argc, char **argv)
 {
-		while (1)
-	{
-		if (argc < 2)
-			usage();
+    while (1) {
+        if (argc < 2)
+            usage();
 		
-		int c;
-		static struct option long_options[] = {
-			{"dummy-for-short-option", no_argument, NULL, 0},
-			{"info", no_argument, &info_flag, 1},
-			{"list", no_argument, &list_flag, 1},
-                        {"find", required_argument, &find_flag, 1},
-			{"apply", required_argument, &apply_flag, 1},
-			{"remove", required_argument, &remove_flag, 1},
-			{"socket", required_argument, &sock_flag, 1},
-			{"debug", no_argument, NULL, 0},
-			{"help", no_argument, NULL, 0},
-			{0,0,0,0}
-		};
-		int option_index = 0;
-		c = getopt_long_only(argc, argv, "ila:u:s:dh",
-				     long_options, &option_index);
-		if (c == -1) {
-			break;
-		}
+        int c;
+        static struct option long_options[] = {
+            {"dummy-for-short-option", no_argument, NULL, 0},
+            {"info", no_argument, &info_flag, 1},
+            {"list", no_argument, &list_flag, 1},
+            {"find", required_argument, &find_flag, 1},
+            {"apply", required_argument, &apply_flag, 1},
+            {"remove", required_argument, &remove_flag, 1},
+            {"socket", required_argument, &sock_flag, 1},
+            {"debug", no_argument, NULL, 0},
+            {"help", no_argument, NULL, 0},
+            {0,0,0,0}
+        };
+        int option_index = 0;
+        c = getopt_long_only(argc, argv, "ila:u:s:dh",
+                             long_options, &option_index);
+        if (c == -1) {
+            break;
+        }
 		
-	restart_long:
-		switch (option_index) {
-		case 0:
-			switch (c) {
-			case  'i':
-				option_index = 1;
-				info_flag = 1;
-				goto restart_long;
-			case 'l':
-				option_index = 2;
-				list_flag = 1;
-				goto restart_long;
-                        case 'f':
-				option_index = 3;
-				find_flag = 1;
-				goto restart_long;
-                        case 'a':
-				option_index = 4;
-				apply_flag = 1;
-				goto restart_long;
-			case 'u':
-				option_index = 5;
-				remove_flag = 1;
-				goto restart_long;
-			case 's':
-				option_index = 6;
-				goto restart_long;
-			case 'd':
-				option_index = 7;
-				goto restart_long;
-			case 'h':
-				option_index = 8;
-				goto restart_long;
+    restart_long:
+        switch (option_index) {
+        case 0:
+            switch (c) {
+            case  'i':
+                option_index = 1;
+                info_flag = 1;
+                goto restart_long;
+            case 'l':
+                option_index = 2;
+                list_flag = 1;
+                goto restart_long;
+            case 'f':
+                option_index = 3;
+                find_flag = 1;
+                goto restart_long;
+            case 'a':
+                option_index = 4;
+                apply_flag = 1;
+                goto restart_long;
+            case 'u':
+                option_index = 5;
+                remove_flag = 1;
+                goto restart_long;
+            case 's':
+                option_index = 6;
+                goto restart_long;
+            case 'd':
+                option_index = 7;
+                goto restart_long;
+            case 'h':
+                option_index = 8;
+                goto restart_long;
 				
-			default:
-				break;
-				usage();			
-			}
-			DMSG("selected option %s\n", long_options[option_index].name);
-		case 1:
-                    info_flag = 1;
-                    DMSG("selected option %s\n", long_options[option_index].name);
-                    break;
+            default:
+                break;
+                usage();			
+            }
+            DMSG("selected option %s\n", long_options[option_index].name);
+        case 1:
+        {
                     
-		case 2: /* list */
-                    break;
-                case 3: /* find */
-                {
-                    strncpy(patch_hash, optarg, SHA_DIGEST_LENGTH * 2 + 1);
-                    DMSG("find patch %s: %s\n", patch_hash);
-                    break;
-                }
-		case 4: /* apply */
-		{
+            info_flag = 1;
+            DMSG("selected option %s\n", long_options[option_index].name);
+        }break;
                     
-                    strncpy(filepath, optarg, sizeof(filepath) - 1);
-                    DMSG("patch file: %s\n", filepath);
-                    break;
-		}
-		case 5: /* undo */
-		{
-                    strncpy(patch_hash, optarg, SHA_DIGEST_LENGTH * 2 + 1);
-                    DMSG("undo (remove)  patch %s: %s\n", patch_hash);
-                    break;
-                }
-                case 6: /* set socket */ 
-		{                   
-                    strncpy(sockname, optarg, PATH_MAX);
-                    DMSG("socket: %s\n", sockname);
-                    break;
-		}
-		case 7:
-		{
-                    set_debug(1);
-                    break;
+        case 2: /* list */
+            break;
+        case 3: /* find */
+        {
+            strncpy((char *)patch_hash, optarg, SHA_DIGEST_LENGTH * 2 + 1);
+            DMSG("find patch %s: %s\n", patch_hash);
+            break;
+        }
+        case 4: /* apply */
+        {
+            strncpy(filepath, optarg, sizeof(filepath) - 1);
+            /* TODO: clean up basename handling - detect errors */
+            char *basep = basename(filepath);
+            if (basep != NULL) {
+                strncpy(patch_basename, basep, PATH_MAX);
+            }
+            DMSG("patch file: %s\n", patch_basename);
+            break;
+        }
+        case 5: /* undo */
+        {
+            strncpy((char *)patch_hash, optarg, SHA_DIGEST_LENGTH * 2 + 1);
+            DMSG("undo (remove)  patch %s: %s\n", patch_hash);
+            break;
+        }
+        case 6: /* set socket */ 
+        {                   
+            strncpy(sockname, optarg, PATH_MAX);
+            DMSG("socket: %s\n", sockname);
+            break;
+        }
+        case 7:
+        {
+            set_debug(1);
+            break;
                     
-		}
-		case 8:
-                    usage(); /* usage exits */
-                    break;
+        }
+        case 8:
+        {
                     
-		default:
-                    break;
-		}
-	}
+            usage(); /* usage exits */
+            break;
+        }
+                
+        default:
+                           
+            break;
+        
+        }
+    }        
 }
-
-	
-int main(int argc, char **argv)
+                
+int main(int argc, char **argv)            
 {
 	
+    int ccode;
+    get_options(argc, argv);
 
-	get_options(argc, argv);
+    if (sock_flag == 0 || (sockfd = connect_to_sandbox(sockname)) < 0) {
+        LMSG("error connecting to sandbox server, did you specify the --socket? \n");
+        return SANDBOX_ERR_RW;
+    }
+        
+    /* we don't run these functions within the option switch because */
+    /* we rely on having the sockname set, which can happen after other options */
+    if (info_flag > 0) {
+        /* info for xenlp inspects the patch file */
+        /* this is a little different, it returns the QEMU build info strings */
 
-        if (sock_flag == 0 || (sockfd = connect_to_sandbox(sockname)) < 0) {
-            LMSG("error connecting to sandbox server, did you specify the --socket? \n");
-            return SANDBOX_ERR_RW;
+        int info = get_info_strings(sockfd, 1);
+        if (info != SANDBOX_OK)  {	
+            LMSG("error getting build info\n");
+        }
+    }
+
+    if (list_flag > 0) {
+
+        if ((ccode = _cmd_list3(sockfd)) < 0) {
+            LMSG("error listing applied patches\n");
+        }
+    }
+
+    
+    if (find_flag) {
+        struct xenlp_patch_info **patch_buf = NULL;
+        unsigned char sha1[SHA_DIGEST_LENGTH + 2] = { 0 };
+        
+        string2sha1(patch_hash, sha1);
+
+        ccode = find_patch(sockfd, sha1, SHA_DIGEST_LENGTH, patch_buf);
+        if (ccode == 1) {
+            DMSG("found patch: %s\n", patch_hash);
+            /* TODO: print all patch info int txt, json */
+        } else if (ccode == 0) {
+            DMSG("Not found: %s\n", patch_hash);
+        } else if (
+            patch_buf < 0) {
+            DMSG("error in find_patch: %d\n", ccode);
+        }
+        if (*patch_buf == NULL) {
+            free(patch_buf);
+        }
+    }
+    if (apply_flag > 0) {
+        if ((ccode = cmd_apply(sockfd, filepath)) < 0) {
+            DMSG("error applying patch %d\n", ccode);
+        } else {
+            LMSG("Patch %s successfully applied\n", filepath);
+        }
+    }
+    if (remove_flag > 0) {
+        /* getopt should have copied the sha1 hex string to patch_hash */
+        /* cmd_undo */
+        if ((ccode = cmd_undo(patch_hash)) < 0) {
+            LMSG("Error reversing patch %s\n", patch_hash); 
         }
         
-	/* we don't run these functions within the option switch because */
-	/* we rely on having the sockname set, which can happen after other options */
-	if (info_flag > 0) {
-            /* info for xenlp inspects the patch file */
-            /* this is a little different, it returns the QEMU build info strings */
-
-            int info = get_info_strings(sockfd, 1);
-            if (info != SANDBOX_OK)  {	
-			LMSG("error getting build info\n");
-            }
-        }
-
-	if (list_flag > 0) {
-		int ccode;
-                struct xenlp_list3 l;
-                
-                if ((ccode = _cmd_list3(sockfd)) < 0) {
-                    LMSG("error listing applied patches\n");
-                }
-	}
-        if (find_flag) {
-            
-        }
+    }
         
-	if (apply_flag > 0) {
-
-		int ccode;		
-		if ((ccode = cmd_apply(sockfd)) < 0)
-			LMSG("error applying patch %d\n", ccode);
-	}
+    if (sockfd > 0)
+        close(sockfd);
 	
-	if (sockfd > 0)
-		close(sockfd);
-	
-	LMSG("bye\n");
-	return SANDBOX_OK;
+    LMSG("bye\n");
+    return SANDBOX_OK;
 	
 }
-
-
 
 #endif /* ! sandbox_port */

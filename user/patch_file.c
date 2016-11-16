@@ -84,7 +84,7 @@ static int extract_sha1_from_filename(unsigned char *sha1, size_t sha1len,
         return -1;
     }
 
-    return string2sha1(filename, sha1);
+    return string2sha1((unsigned char *)filename, sha1);
 }
 
 

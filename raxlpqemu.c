@@ -766,7 +766,7 @@ static inline void get_options(int argc, char **argv)
 			switch (c) {
 			case  'i':
 				option_index = 1;
-				info_flag = 1;
+ma				info_flag = 1;
 				goto restart_long;
 			case 'l':
 				option_index = 2;
