@@ -226,7 +226,8 @@ void bin2hex(unsigned char *bin, size_t binlen, char *buf,
         *buf = 0;
 }
 
-static unsigned int hex_to_int(const char *ptr)
+static unsigned int __attribute__((used))
+hex_to_int(const char *ptr)
 {
     unsigned int value = 0;
     char ch = *ptr;
@@ -256,7 +257,7 @@ void hex2bin(char *buf, size_t buflen, unsigned char *bin, size_t binlen)
     char *p = buf;
     
     while(count <= buflen && sha_count <= binlen) {
-        bin[sha_count] = htoi(p + count);
+        bin[sha_count] = htoi(*(p + count));
         count += 4;	
         sha_count++;
     }	
