@@ -94,7 +94,7 @@ ptrdiff_t get_sandbox_free(void)
 
 FILE *log_fd = NULL;
 int log_level = 1; /* mirror log to stdout */
-int DEBUG = 0;
+int DEBUG = 1;
 
 int set_loglevel(int l) 
 {
