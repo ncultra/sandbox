@@ -1712,7 +1712,7 @@ int main(int argc, char **argv)
     get_options(argc, argv);
 
     if (sock_flag == 0 || (sockfd = connect_to_sandbox(sockname)) < 0) {
-        LMSG("error connecting to sandbox server, did you specify the --socket? \n");
+        DMSG("error connecting to sandbox server, did you specify the --socket? \n");
         return SANDBOX_ERR_RW;
     }
         
@@ -1722,6 +1722,8 @@ int main(int argc, char **argv)
         /* info for xenlp inspects the patch file */
         /* this is a little different, it returns the QEMU build info strings */
 
+        DMSG("calling get_info_strings with handle: %d\n", sockfd);
+        
         int info = get_info_strings(sockfd, 1);
         if (info != SANDBOX_OK)  {	
             LMSG("error getting build info\n");
