@@ -436,15 +436,17 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 			if (ccode == 0) {	
 				return SANDBOX_ERR_CLOSED;
 			}
+                        DMSG("socket error reading message\n");
 			goto errout;
 		}
-	}	
+	}
 	dump_sandbox(hbuf, SANDBOX_MSG_HDRLEN);
 	
 	DMSG("checking magic ...\n");
 	if (check_magic(hbuf)) {
 		ccode = SANDBOX_ERR_BAD_HDR;
-		goto errout;
+                DMSG("bad magic on message header\n");
+                goto errout;
 	}
 	DMSG("checking protocol version...%d\n", SANDBOX_MSG_GET_VER(hbuf));
 	if (SANDBOX_MSG_VERSION != (*version = SANDBOX_MSG_GET_VER(hbuf))) {
@@ -475,7 +477,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 		return ccode;
 	
 errout:
-	LMSG("read a bad or incomplete sandbox header\n");
+	DMSG("read a bad or incomplete sandbox header\n");
 	
 	return SANDBOX_ERR_BAD_HDR;
 	
@@ -529,26 +531,34 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	DMSG("message length estimated to be %d bytes\n", len);	
 
 	if (len > SANDBOX_MSG_MAX_LEN) {
-		LMSG("message calculated to exceed the maximum size\n");
+		DMSG("message calculated to exceed the maximum size\n");
 		goto errout;
 	}
 	
 	/* magic header */
-	if (writen(fd, sand, sizeof(sand)) != sizeof(sand))
-			goto errout;
-
+	if (writen(fd, sand, sizeof(sand)) != sizeof(sand)) {
+            DMSG("error writing response message header magic\n");
+            goto errout;
+        }
+        
 	/* protocol version */
-	if (writen(fd, &pver, sizeof(uint16_t)) != sizeof(uint16_t))
+	if (writen(fd, &pver, sizeof(uint16_t)) != sizeof(uint16_t)) {
+            DMSG("error writing protocol version to header\n"); 
 		goto errout;
-	
+	}
+        
 	/* message id  */
-	if (writen(fd, &id, sizeof(uint16_t)) != sizeof(uint16_t))
-		goto errout;
-
+	if (writen(fd, &id, sizeof(uint16_t)) != sizeof(uint16_t)) {
+            DMSG ("error writing message ID to header\n");
+            goto errout;
+        }
+        
 	/* msg length */
-	if (writen(fd, &len, sizeof(uint32_t)) != sizeof(uint32_t))
+	if (writen(fd, &len, sizeof(uint32_t)) != sizeof(uint32_t)) {
+            DMSG("error writing message length to header\n");
 		goto errout;
-
+        }
+        
 	DMSG("msg len at send time: %d\n", *&len);
 	
 /* go through the buf descriptors, this time write the values */
@@ -576,6 +586,7 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 	
 	return(SANDBOX_OK);
 errout:
+        DMSG("erring out of send_rr_buf\n");
 	return(SANDBOX_ERR_RW);
 }
 

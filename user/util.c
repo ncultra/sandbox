@@ -84,27 +84,6 @@ int get_xen_compile_date(char *buf, size_t bufsize)
     return _read_line(COMPILEDATEFILE, buf, bufsize);
 }
 
-void bin2hex(unsigned char *bin, size_t binlen, char *buf,
-                    size_t buflen)
-{
-    static const char hexchars[] = "0123456789abcdef";
-    size_t i;
-
-    for (i = 0; i < binlen; i++, bin++) {
-        /* Ensure we can fit two characters and the terminating nul */
-        if (buflen >= 3) {
-            *buf++ = hexchars[(*bin >> 4) & 0x0f];
-            *buf++ = hexchars[*bin & 0x0f];
-
-            buflen -= 2;
-        }
-    }
-
-    if (buflen)
-        *buf = 0;
-}
-
-
 int string2sha1(const unsigned char *string, unsigned char *sha1)
 {
     int i;

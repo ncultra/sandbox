@@ -62,7 +62,7 @@ raxlpqemu: raxlpqemu.o libsandbox.a platform.h
 	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o libsandbox.a -lcrypto -lpthread -lz -lelf
 
 .PHONY: raxlpxs
-raxlpxs:
+raxlpxs: platform.h
 	cd user && make $@
 
 

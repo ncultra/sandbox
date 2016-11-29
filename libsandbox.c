@@ -103,12 +103,11 @@ int set_loglevel(int l)
 	return old;
 }
 
-
 int set_debug(int db)
 {
 	int old = DEBUG;
 	DEBUG = db;
-	printf("debug messages are %s", db > 0 ? "on" : "off" );
+	printf("debug messages are %s\n", db > 0 ? "on" : "off" );
 	return old;
 }
 
@@ -205,6 +204,7 @@ static uintptr_t get_sandbox_memory(ptrdiff_t size)
 						PLATFORM_CACHE_LINE_SIZE);
 	return p;
 }
+
 
 void bin2hex(unsigned char *bin, size_t binlen, char *buf,
                     size_t buflen)
