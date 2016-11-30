@@ -50,8 +50,7 @@ unsigned int __attribute__((deprecated)) get_order_from_bytes(int len);
 #define INFO_COMPILE_INDEX 1
 #define INFO_FLAGS_INDEX 2
 #define INFO_DATE_INDEX 3
-#define INFO_TAG_INDEX 4
-#define INFO_VER_INDEX 5
+#define INFO_VER_INDEX 4
 char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
 
 #define INFO_CHECK(_sockfd)				\
@@ -84,13 +83,6 @@ static inline char * get_qemu_date(int _sockfd)
 	INFO_CHECK(_sockfd);
 	return info_strings[INFO_DATE_INDEX];	
 }
-
-static inline char * get_qemu_tag(int _sockfd)
-{
-	INFO_CHECK(_sockfd);
-	return info_strings[INFO_TAG_INDEX];
-}
-
 
 static inline char *get_qemu_version(int _sockfd) 
 {

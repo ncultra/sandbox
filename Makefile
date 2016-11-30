@@ -89,7 +89,6 @@ gitsha.h: version.mak
 	@echo "const char *compiled = \""`gcc --version`"\";" >> $@
 	@echo "const char *ccflags = \"$(CFLAGS)\";" >> $@
 	@echo "const char *compile_date = \"`date`\";" >> $@
-	@echo "const char *tag = \"$(GIT_TAG)\";" >> $@
 	@echo "const int major = $(MAJOR_VERSION);" >> $@
 	@echo "const int minor = $(MINOR_VERSION);" >> $@
 	@echo "const int revision = $(REVISION);" >> $@
@@ -97,7 +96,6 @@ gitsha.h: version.mak
 	@echo "const char *get_compiled(void){return compiled;}" >> $@
 	@echo "const char *get_ccflags(void){return ccflags;}" >> $@
 	@echo "const char *get_compiled_date(void){return compile_date;}" >> $@
-	@echo "const char *get_tag(void){return tag;}" >> $@
 	@echo "int get_major(void){return major;}" >> $@
 	@echo "int get_minor(void){return minor;}" >> $@
 	@echo "int get_revision(void){return revision;}" >> $@

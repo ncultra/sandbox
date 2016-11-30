@@ -661,10 +661,10 @@ ssize_t dispatch_getbld(int fd, int len, void **bufp)
 		LMSG("error allocating buffer for build info\n");
 		return SANDBOX_ERR_NOMEM;
 	}
-	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%s\n%d.%d%d\n",
+	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%d.%d%d\n",
 		 get_git_revision(),
 		 get_compiled(), get_ccflags(),
-		 get_compiled_date(), get_tag(),
+		 get_compiled_date(),
 		 get_major(), get_minor(), get_revision());
 
 	uint32_t reply_buf_length = strnlen(*bufp, SANDBOX_MSG_BLD_BUFSIZE);
