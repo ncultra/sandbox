@@ -58,7 +58,7 @@ gen_version() {
     echo "GIT_TAG=$(cd .. && git describe --abbrev=0 --tags 2>/dev/null)" >> version.mak
 }
 
-until [[ -z "$" ]]; do
+until [ -z "$" ]; do
     case  "${1:0:2}" in "--")
 	  case "${1:2:2}" in
 	      "ve") VER_FILE="${1##--ve*=}";
