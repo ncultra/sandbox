@@ -231,11 +231,12 @@ hex_to_int(const char *ptr)
 {
     unsigned int value = 0;
     char ch = *ptr;
+    int i;
 
     while (ch == ' ' || ch == '\t')
         ch = *(++ptr);
 
-    for (int i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++) {
 
         if (ch >= '0' && ch <= '9')
             value = (value << 4) + (ch - '0');
@@ -271,8 +272,8 @@ void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 	for (i = 0; i < numwrites; i++) {
 		struct xenlp_patch_write *pw = &writes[i];
 
-	    atomic_xchg((uint64_t *)&pw->hvabs,
-			(uint64_t *)&pw->data);
+	    atomic_xchg((uintptr_t *)&pw->hvabs,
+			(uintptr_t *)&pw->data);
 	    
 	
 	}
@@ -537,37 +538,6 @@ void dump_sandbox(const void* data, size_t size) {
  *
  ******************************************/
 
-
-/* probably won't need this because won't be upgrading QEMU patches to v3 */
-
-static int __attribute__((used)) xenlp_upgrade_patch_list(void)
-{
-    struct applied_patch *ap;
-
-    ap = list_first_entry_or_null(&lp_patch_head2, struct applied_patch, l);
-    while (ap != NULL) {
-        struct applied_patch3 *patch3 = xmalloc(struct applied_patch3);
-        if (!patch3) {
-            DMSG("unable to allocate %d bytes of memory in xenlp_upgrade_patch_list\n",
-                 sizeof(struct applied_patch3));
-            return SANDBOX_ERR_NOMEM;
-        }
-        patch3->tags = "";
-        patch3->deps = NULL;
-        patch3->numdeps = 0;
-        patch3->blob = (void *)ap->blob;
-        memcpy(patch3->sha1, ap->sha1, sizeof(ap->sha1));
-        patch3->numwrites = 0;
-        patch3->writes = NULL;
-        list_add(&patch3->l, &lp_patch_head3);
-        list_del(&ap->l);
-        xfree(ap);
-        ap = list_first_entry_or_null(&lp_patch_head2, struct applied_patch, l);
-    }
-    
-    return 0;
-}
-
 /* arg points to the apply buffer just past the xenlp_apply struct */
 /* apply points to the xenlp_apply struct (also beginning of the original buffer */
 /* blob_p and writes_p both point to stack variables in the caller's stack */
@@ -584,7 +554,7 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
             return SANDBOX_ERR_INVALID;
         }
         
-        *blob_p = aligned_alloc(64, apply->bloblen);
+        *blob_p = aligned_zalloc(64, apply->bloblen);
 
         if (!(*blob_p)) {
             DMSG("error allocating %d bytes memory in read_patch_data2\n",
@@ -602,14 +572,14 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
         arg = (unsigned char *)arg + apply->bloblen;
 
         /* Calculate offset of relocations */
-        relocrel = (uint64_t)(*blob_p) - apply->refabs;
+        relocrel = (uint64_t)(uintptr_t)(*blob_p) - apply->refabs;
     }
 
     /* Read relocs */
     if (apply->numrelocs) {
         uint32_t *relocs;
 
-        relocs = xmalloc_array(uint32_t, apply->numrelocs);
+        relocs = xzalloc_array(uint32_t, apply->numrelocs);
         if (!relocs) {
             DMSG("error allocating %d bytes in read_patch_data2\n",
                  apply->numrelocs * sizeof(uint32_t));
@@ -637,7 +607,7 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
     }
 
     /* Read writes */
-    *writes_p = xmalloc_array(struct xenlp_patch_write, apply->numwrites);
+    *writes_p = xzalloc_array(struct xenlp_patch_write, apply->numwrites);
     if (!(*writes_p)) {
         DMSG("error allocating %d bytes in read_patch_data2\n",
              apply->numwrites * sizeof(struct xenlp_patch_write));
@@ -701,9 +671,6 @@ int xenlp_apply3(void *arg)
     struct applied_patch3 *patch;
     char sha1[41];
     int res;
-    int err = xenlp_upgrade_patch_list();
-    if (err != 0)
-        return err;
 
     if (memcpy(&apply, arg, sizeof(struct xenlp_apply3))) {
         DMSG("fault while copying memory in xenlp_apply3\n");
@@ -726,7 +693,7 @@ int xenlp_apply3(void *arg)
         return SANDBOX_ERR_INVALID;
     }
 
-    patch = xmalloc(struct applied_patch3);
+    patch = xzalloc(struct applied_patch3);
     if (!patch) {
         DMSG("unable to allocate %d bytes in xenlp_apply3\n",
              sizeof(struct xenlp_apply3));
@@ -744,7 +711,7 @@ int xenlp_apply3(void *arg)
     patch->numdeps = apply.numdeps;
     DMSG("numdeps: %d\n", apply.numdeps);
     if (apply.numdeps > 0) {
-        patch->deps = xmalloc_array(struct xenlp_hash, apply.numdeps);
+        patch->deps = xzalloc_array(struct xenlp_hash, apply.numdeps);
         if (!patch->deps) {
             DMSG("error allocating memory for patch dependencies\n");
             return SANDBOX_ERR_NOMEM;
@@ -762,7 +729,7 @@ int xenlp_apply3(void *arg)
     patch->tags = "";
     DMSG("taglen: %d\n", apply.taglen);
     if (apply.taglen > 0) {
-        patch->tags = xmalloc_array(char, apply.taglen + 1);
+        patch->tags = xzalloc_array(char, apply.taglen + 1);
         if (memcpy(patch->tags, arg, apply.taglen)) {
             DMSG("fault while copying memory in xenlp_apply3\n");
             return -EFAULT;
@@ -811,10 +778,6 @@ int xenlp_undo3(XEN_GUEST_HANDLE(void *) arg)
 {
     struct xenlp_hash hash;
     struct applied_patch3 *ap;
-
-    int err = xenlp_upgrade_patch_list();
-    if (err != 0)
-        return SANDBOX_ERR;
 
     if (memcpy(&hash, arg, sizeof(struct xenlp_hash)))
         return -EFAULT;

@@ -289,7 +289,7 @@ static inline void *aligned_zalloc(int align, int size)
 
 
 #define xzalloc_array(_type, _num) \
-    ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type) * num))
+    ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type) * _num))
 
 #undef XEN_GUEST_HANDLE
 #define XEN_GUEST_HANDLE(a) a

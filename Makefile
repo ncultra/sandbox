@@ -12,7 +12,7 @@ CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
 
 .PHONY: version.mak
 version.mak:
-	sh config.sh --ver="../VERSION"
+	bash config.sh --ver="../VERSION"
 
 include version.mak
 
