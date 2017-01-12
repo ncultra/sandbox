@@ -86,10 +86,11 @@ int get_xen_compile_date(char *buf, size_t bufsize)
 
 int string2sha1(const unsigned char *string, unsigned char *sha1)
 {
-    int i;
+    int i, ccode;
     /* Make sure first 40 chars of string are composed of only hex digits */
     for (i = 0; i < 40; i += 2) {
-        if (sscanf((const char *)string + i, "%02x", (int*)(&sha1[i / 2])) != 1) {
+        if ((ccode = sscanf((const char *)string + i, "%02x", (int*)(&sha1[i / 2])))
+            != 1) {
             fprintf(stderr, "error: not a valid sha1 string: %s\n", string);
             return -1;
         }

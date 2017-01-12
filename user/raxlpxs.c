@@ -1477,9 +1477,12 @@ int _cmd_undo3(xc_interface_t xch, struct xenlp_hash *hash,
 int cmd_undo(int argc, char *argv[])
 #else
 /* sha1 will be a string in the sandbox case */
-int cmd_undo(unsigned char *sha1)
+    int cmd_undo(int sockfd, unsigned char *sha1)
 #endif
 {
+
+    int ccode = 0;
+    unsigned char *sha1hex = NULL;
     
 #ifndef sandbox_port    
     unsigned char sha1[SHA_DIGEST_LENGTH];
@@ -1487,34 +1490,44 @@ int cmd_undo(unsigned char *sha1)
         return usage(argv[0]);
     const unsigned char *sha1hex = argv[2];
 #else
-    const unsigned char *sha1hex = sha1;    
+    /* this needs to be a copy */
+    sha1hex = (unsigned char *)strdup((char *)sha1);    
 #endif
-    if (string2sha1(sha1hex, sha1) < 0)
-        return -1;
+    if (string2sha1(sha1hex, sha1) < 0) {
+        ccode = -1;
+        goto out;
+    }
 
-    xc_interface_t xch;
-    if (open_xc(&xch) < 0)
-        return -1;
+    /* sockfd will already be open if we get here */
 
+    xc_interface_t xch = sockfd;
+    
     struct xenlp_hash hash = {{0}};
     memcpy(hash.sha1, sha1, SHA_DIGEST_LENGTH);
 
     struct xenlp_caps caps = { .flags = 0 };
     do_lp_caps(xch, &caps);
     if (caps.flags & XENLP_CAPS_V3) {
-        if (_cmd_undo3(xch, &hash, sha1hex) < 0)
-            return -1;
+        if (_cmd_undo3(xch, &hash, sha1hex) < 0) {
+            ccode = -1;
+            goto out;
+        }
+        
     } else {
         fprintf(stderr, "error: no v3 ABI detected, undo disabled\n");
-        return -1;
-    }
+        ccode = -1;
+        goto out;
+     }
 #ifndef sandbox_port
     printf("\nSuccessfully un-applied patch %s\n", argv[2]);
 #else
     LMSG("\n successfully un-applied patch %s\n", sha1hex);
     
 #endif
-    return 0;
+out:
+    if (sha1hex != NULL)
+        free(sha1hex);
+    return ccode;
 }
 
 #ifndef sandbox_port
@@ -1675,10 +1688,10 @@ static inline void get_options(int argc, char **argv)
         case 5: /* undo */
         {
             strncpy((char *)patch_hash, optarg, SHA_DIGEST_LENGTH * 2 + 1);
-            DMSG("undo (remove)  patch %s: %s\n", patch_hash);
+            DMSG("undo (remove)  patch: %s \n", patch_hash);
             break;
         }
-        case 6: /* set socket */ 
+        case 6: /* set socket */
         {                   
             strncpy(sockname, optarg, PATH_MAX);
             DMSG("socket: %s\n", sockname);
@@ -1768,7 +1781,7 @@ int main(int argc, char **argv)
     if (remove_flag > 0) {
         /* getopt should have copied the sha1 hex string to patch_hash */
         /* cmd_undo */
-        if ((ccode = cmd_undo(patch_hash)) < 0) {
+        if ((ccode = cmd_undo(sockfd, patch_hash)) < 0) {
             LMSG("Error reversing patch %s\n", patch_hash); 
         }
         

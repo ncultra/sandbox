@@ -546,7 +546,6 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
 {
     size_t i;
     int32_t relocrel = 0;
-    int aligned_len;
     
     /* Blobs are optional */if (apply->bloblen) {
         if (!blob_p || !writes_p || !apply || !arg) {
@@ -625,9 +624,9 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
         struct xenlp_patch_write *pw = &((*writes_p)[i]);
         char off = pw->dataoff;
 
-        if ((uint64_t)&pw->hvabs < (uintptr_t)&_start ||
-            (uintptr_t)&pw->hvabs >= (uintptr_t)&_end) {
-            printk("invalid hvabs value %p\n", pw->hvabs);
+        if (pw->hvabs < (uint64_t)_start ||
+            pw->hvabs >= (uint64_t)_end) {
+            printk("invalid hvabs value %lx\n", pw->hvabs);
         }
 
         if (off < 0)

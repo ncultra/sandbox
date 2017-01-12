@@ -287,8 +287,9 @@ int __do_lp_undo3(xc_interface_t xch, void *buf, size_t buflen)
     uint16_t version, id;
     uint32_t len, ccode = SANDBOX_ERR; 
     char *sha1_buf = NULL;
-     
-    if (send_rr_buf(xch, SANDBOX_MSG_UNDO_REQ, buf, SANDBOX_LAST_ARG) == SANDBOX_OK) {
+
+    /* when including var args, have to also pass the buf size */
+    if (send_rr_buf(xch, SANDBOX_MSG_UNDO_REQ, 20, buf, SANDBOX_LAST_ARG) == SANDBOX_OK) {
         ccode = read_sandbox_message_header(xch, &version, &id, &len, (void **)&sha1_buf);
     }
     

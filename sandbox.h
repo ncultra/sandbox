@@ -385,7 +385,7 @@ struct xenlp_apply {
 };
 
 struct xenlp_patch_write {
-    uintptr_t hvabs;		/* Absolute address in HV to apply patch */
+    uint64_t hvabs;		/* Absolute address in HV to apply patch */
 
     unsigned char data[8];	/* 8-bytes of data to write at location */
 
