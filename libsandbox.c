@@ -8,7 +8,7 @@
 #define str(s) str1(s)
 
 
-extern uint64_t _start, _end;
+extern uintptr_t _start, _end;
 
 
 /************************************************************
@@ -546,9 +546,9 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
 {
     size_t i;
     int32_t relocrel = 0;
-    /* Blobs are optional */
-    if (apply->bloblen) {
-
+    int aligned_len;
+    
+    /* Blobs are optional */if (apply->bloblen) {
         if (!blob_p || !writes_p || !apply || !arg) {
             DMSG("error invalid parameters in read_patch_data2\n");
             return SANDBOX_ERR_INVALID;
@@ -561,13 +561,14 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
                  apply->bloblen);
             return SANDBOX_ERR_NOMEM;
         }
+
+        DMSG("read_patch_data2: blob: %p arg: %p len: %d\n", *blob_p,
+             arg, apply->bloblen);
         
         /* FIXME: Memory allocated for blob can leak in case of error */
-
         /* Copy blob to hypervisor */
-        if (memcpy(*blob_p, arg, apply->bloblen)) {    
-            return -EFAULT;
-        }        
+        memcpy(*blob_p, arg, apply->bloblen);
+    
         /* Skip over blob */
         arg = (unsigned char *)arg + apply->bloblen;
 
@@ -614,10 +615,7 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
         return SANDBOX_ERR_NOMEM;
     }
     
-    if (memcpy(*writes_p, arg, apply->numwrites * sizeof(struct xenlp_patch_write))) {
-        DMSG("error copying memory in read_patch_data2\n");
-        return -EFAULT;
-    }
+    memcpy(*writes_p, arg, apply->numwrites * sizeof(struct xenlp_patch_write));
     
     /* Move over all of the writes */
     arg = (unsigned char *)arg + (apply->numwrites * sizeof((*writes_p)[0]));
@@ -627,9 +625,9 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *app
         struct xenlp_patch_write *pw = &((*writes_p)[i]);
         char off = pw->dataoff;
 
-        if (pw->hvabs < _start || pw->hvabs >= _end) {
-            printk("invalid hvabs value %lx\n", pw->hvabs);
-            return -EINVAL;
+        if ((uint64_t)&pw->hvabs < (uintptr_t)&_start ||
+            (uintptr_t)&pw->hvabs >= (uintptr_t)&_end) {
+            printk("invalid hvabs value %p\n", pw->hvabs);
         }
 
         if (off < 0)
@@ -672,11 +670,7 @@ int xenlp_apply3(void *arg)
     char sha1[41];
     int res;
 
-    if (memcpy(&apply, arg, sizeof(struct xenlp_apply3))) {
-        DMSG("fault while copying memory in xenlp_apply3\n");
-        return -EFAULT;
-    }
-    
+    memcpy(&apply, arg, sizeof(struct xenlp_apply3)); 
     /* FIXME: Manipulating arg.p seems a bit ugly */
 
     /* Skip over struct xenlp_apply */
@@ -701,7 +695,7 @@ int xenlp_apply3(void *arg)
     }
     /* FIXME: Memory allocated for patch can leak in case of error */
 
-    res = read_patch_data2(&arg, (struct xenlp_apply *)&apply, &blob, &writes);
+    res = read_patch_data2(arg, (struct xenlp_apply *)&apply, &blob, &writes);
     if (res < 0) {
         DMSG("fault %d reading patch data\n", res);
         return res;

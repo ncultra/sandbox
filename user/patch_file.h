@@ -15,7 +15,7 @@
 
 
 struct check {
-    uint64_t hvabs;
+    uintptr_t hvabs;
     uint16_t datalen;
     unsigned char *data;
 };
@@ -30,7 +30,7 @@ struct function_patch {
 
 struct table_patch {
     char *tablename;
-    uint64_t hvabs;
+    uintptr_t hvabs;
     uint16_t datalen;
     unsigned char *data;
 };

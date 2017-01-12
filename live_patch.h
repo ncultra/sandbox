@@ -86,7 +86,7 @@ struct xenlp_list {
 #define XENLP_RELOC_INT32	1	/* jmp instructions, etc */
 
 struct xenlp_patch_write {
-    uint64_t hvabs;		/* Absolute address in HV to apply patch */
+    uintptr_t hvabs;		/* Absolute address in HV to apply patch */
 
     unsigned char data[8];	/* 8-bytes of data to write at location */
 

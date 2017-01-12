@@ -269,11 +269,11 @@ static __inline__ int list_empty(const struct list_head *head)
 #define printk DMSG
 
 static inline uintptr_t ___align(uintptr_t p, uintptr_t align)
- { 
+{ 
      p += (align - 1);
      p &= ~(align - 1);
      return p;
- }
+}
 
 static inline void *aligned_zalloc(int align, int size)
 {
@@ -311,7 +311,7 @@ typedef uint8_t * reloc_ptr_t;
  * must guarantee commonality with original struct definition
  */
 struct check {
-    uint64_t hvabs;
+    uintptr_t hvabs;
     uint16_t datalen;
     unsigned char *data;
 };
@@ -325,7 +325,7 @@ struct function_patch {
     
 struct table_patch {
     char *tablename;
-    uint64_t hvabs;
+    uintptr_t hvabs;
     uint16_t datalen;
     unsigned char *data;
 };
@@ -385,7 +385,7 @@ struct xenlp_apply {
 };
 
 struct xenlp_patch_write {
-    uint64_t hvabs;		/* Absolute address in HV to apply patch */
+    uintptr_t hvabs;		/* Absolute address in HV to apply patch */
 
     unsigned char data[8];	/* 8-bytes of data to write at location */
 

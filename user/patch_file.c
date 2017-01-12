@@ -209,7 +209,7 @@ static int read_check_data(int fd, const char *filename, struct patch *patch)
     for (i = 0; i < patch->numchecks; i++) {
         struct check *check = &patch->checks[i];
 
-        if (_readu64(fd, filename, &check->hvabs) < 0)
+        if (_readu64(fd, filename, (uintptr_t)&check->hvabs) < 0)
             return -1;
         if (_readu16(fd, filename, &check->datalen) < 0)
             return -1;
@@ -268,7 +268,7 @@ static int read_table_data(int fd, const char *filename, struct patch *patch)
         if (_read(fd, filename, table->tablename, tablenamelen) < 0)
             return -1;
 
-        if (_readu64(fd, filename, &table->hvabs) < 0)
+        if (_readu64(fd, filename, (uintptr_t)&table->hvabs) < 0)
             return -1;
         if (_readu16(fd, filename, &table->datalen) < 0)
             return -1;
