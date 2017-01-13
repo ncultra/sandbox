@@ -360,7 +360,7 @@ static int read_tag_data(int fd, const char *filename, struct patch3 *patch)
     uint16_t size;
     if (_readu16(fd, filename, &size) < 0)
         return -1;
-    patch->tags = _zalloc(size + 1);
+    patch->tags[0] = 0;
     if (_read(fd, filename, patch->tags, size) < 0)
         return -1;
     return 0;
@@ -508,7 +508,7 @@ int load_patch_file3(int fd, const char *filename, struct patch3 *patch)
             patch->numdeps = 0;
             patch->numrelocs3 = 0;
             patch->numsymbols = 0;
-            patch->tags = "";
+            patch->tags[0] = 0;
             return load_patch_file(fd, filename, &patch->v2);
         case XSPATCH_VER3:
             return _load_patch_file3(fd, filename, patch);

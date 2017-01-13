@@ -348,6 +348,10 @@ struct applied_patch {
     struct xenlp_patch_write *writes;
 };
 
+#define MAX_TAGS_LEN	       128
+#define MAX_LIST_DEPS            8
+#define MAX_LIST_PATCHES3	16
+
 struct applied_patch3 {
     void *blob;
     unsigned char sha1[20];		/* binary encoded */
@@ -355,7 +359,7 @@ struct applied_patch3 {
     struct xenlp_patch_write *writes;
     uint32_t numdeps;
     struct xenlp_hash *deps;
-    char *tags;
+    char tags[MAX_TAGS_LEN];
     struct list_head l;
 };
 
@@ -363,11 +367,6 @@ struct applied_patch3 {
 /* NOTE: defined externally in patch_file.h 
  * must guarantee commonality with original struct definition
  */
-
-#define MAX_TAGS_LEN	       128
-#define MAX_LIST_DEPS            8
-#define MAX_LIST_PATCHES3	16
-
 struct xenlp_hash {
     unsigned char sha1[20];
 

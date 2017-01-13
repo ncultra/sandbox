@@ -497,7 +497,7 @@ void init_sandbox(void)
 
 void dump_sandbox(const void* data, size_t size) {
 	char ascii[17];
-ba	size_t i, j;
+	size_t i, j;
 	if (DEBUG < 1)
 		return;
 	
@@ -719,15 +719,10 @@ int xenlp_apply3(void *arg)
     }
 
     /* Read tags */
-    patch->tags = "";
+    patch->tags[0] = 0;
     DMSG("taglen: %d\n", apply.taglen);
-    if (apply.taglen > 0) {
-        patch->tags = xzalloc_array(char, apply.taglen + 1);
-        if (memcpy(patch->tags, arg, apply.taglen)) {
-            DMSG("fault while copying memory in xenlp_apply3\n");
-            return -EFAULT;
-        }
-        
+    if (apply.taglen > 0 && apply.taglen <= MAX_TAGS_LEN) {
+        memcpy(patch->tags, arg, apply.taglen);
         patch->tags[apply.taglen] = '\0';
         arg = (unsigned char *)arg + (apply.taglen * sizeof(char));
         DMSG("tags: %s\n", patch->tags);
@@ -772,7 +767,8 @@ int xenlp_undo3(XEN_GUEST_HANDLE(void *) arg)
     struct xenlp_hash hash;
     struct applied_patch3 *ap;
 
-    memcpy(&hash, arg, sizeof(struct xenlp_hash))
+    memcpy(&hash, arg, sizeof(struct xenlp_hash));
+    
 
     list_for_each_entry(ap, &lp_patch_head3, l) {
         
@@ -784,7 +780,6 @@ int xenlp_undo3(XEN_GUEST_HANDLE(void *) arg)
             
             xfree(ap->writes);
             xfree(ap->deps);
-            xfree(ap->tags);
             xfree(ap);
             return 0;
         }    

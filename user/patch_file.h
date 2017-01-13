@@ -86,7 +86,7 @@ struct patch3 {
         struct patch v2;
     };
     int version;
-    char * tags;
+    char tags[MAX_TAGS_LEN];
     uint16_t numrelocs3;
     struct reloc3 *relocs3;
     uint16_t numsymbols;
