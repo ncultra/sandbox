@@ -497,7 +497,7 @@ void init_sandbox(void)
 
 void dump_sandbox(const void* data, size_t size) {
 	char ascii[17];
-	size_t i, j;
+ba	size_t i, j;
 	if (DEBUG < 1)
 		return;
 	
@@ -772,8 +772,7 @@ int xenlp_undo3(XEN_GUEST_HANDLE(void *) arg)
     struct xenlp_hash hash;
     struct applied_patch3 *ap;
 
-    if (memcpy(&hash, arg, sizeof(struct xenlp_hash)))
-        return -EFAULT;
+    memcpy(&hash, arg, sizeof(struct xenlp_hash))
 
     list_for_each_entry(ap, &lp_patch_head3, l) {
         

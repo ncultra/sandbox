@@ -401,7 +401,7 @@ struct xenlp_patch_info {
     char __pad[4];
 };
 
-typedef struct xenlp_patch_info list_response;
+typedef struct xenlp_patch_info3 list_response;
 
 
 #ifndef MAX_LIST_PATCHES
