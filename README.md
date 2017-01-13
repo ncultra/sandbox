@@ -42,6 +42,7 @@ The "sandbox" is actually an area in the .text segment that is full of no-ops. T
 ###logging###
 By default every message over the domain socket is logged to a local text file. This can be turned off. 
 
-Integration into QEMU
-----------------------
-	
+
+###Debugging messages###
+In the current build debugging messagez are turned on and are quite verbose. These should be turned off before deployment. The can be re-enabled if necessary.
+
