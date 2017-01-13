@@ -26,7 +26,7 @@ Nothing happens with the sandbox until the raxlpxs utility connects to the socke
 
 Messages are exchanged via the domain socket. The sandbox supports the following messages:
 
-1. info
+1. info - git index, build date and time, version, compile flags
 2. list applied patches
 3. apply patch
 4. remove patch
