@@ -2,11 +2,17 @@ BUILD_ROOT := "/home/$(shell id -n -u)/src/sandbox/"
 CC	:= gcc
 CFLAGS = -D sandbox_port -g  -Wall -Werror -fPIC -std=gnu11 -ffunction-sections -fdata-sections -fkeep-static-consts -fno-inline  -fms-extensions -pthread
 
+ifndef BUILD_COMMENT
+	BUILD_COMMENT=""
+else
+
+endif
+
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
 LIB_FILES=libsandbox.o  sandbox-listen.o
-CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
+CLEAN=rm -f sandbox.out  *.o *.a *.so gitsha.txt platform.h \
 	gitsha.h version.mak
 
 # this uses the qemu version file
@@ -52,8 +58,6 @@ clean:
 platform.h:
 	$(shell sh config.sh)
 
-	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o libsandbox.a -lcrypto -lpthread -lz -lelf
-
 .PHONY: raxlpxs
 raxlpxs: platform.h
 	cd user && make $@
@@ -71,6 +75,7 @@ gitsha.txt: version.mak
 	@echo -n "'major':\"$(MAJOR_VERSION)\"," >> $@
 	@echo -n "'minor':\"$(MINOR_VERSION)\"," >> $@
 	@echo -n "'revision':\"$(REVISION)\"," >> $@
+	@echo -n "'comment':\"$(BUILD_COMMENT)\"," >> $@
 	@echo -n "}" >> $@
 	@echo -n "SANDBOXBUILDINFOEND" >> $@
 
@@ -85,6 +90,8 @@ gitsha.h: version.mak
 	@echo "const int major = $(MAJOR_VERSION);" >> $@
 	@echo "const int minor = $(MINOR_VERSION);" >> $@
 	@echo "const int revision = $(REVISION);" >> $@
+	@echo "const char *comment = \"$(BUILD_COMMENT)\";" >> $@
+
 	@echo "const char *get_git_revision(void){return git_revision;}" >> $@
 	@echo "const char *get_compiled(void){return compiled;}" >> $@
 	@echo "const char *get_ccflags(void){return ccflags;}" >> $@
@@ -92,6 +99,8 @@ gitsha.h: version.mak
 	@echo "int get_major(void){return major;}" >> $@
 	@echo "int get_minor(void){return minor;}" >> $@
 	@echo "int get_revision(void){return revision;}" >> $@
+	@echo "const char *get_comment(void){return comment;}" >> $@	
+
 
 .PHONY: static
 static: libsandbox.a
