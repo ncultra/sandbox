@@ -339,15 +339,7 @@ struct table_patch {
 #define XENLP_RELOC_UINT64	0	/* function dispatch tables, etc */
 #define XENLP_RELOC_INT32	1	/* jmp instructions, etc */
 
-
-struct applied_patch {
-    struct list_head l;
-    uintptr_t blob; /* address of the patch in memory (in the sandbox) */
-    unsigned char sha1[20];		/* binary encoded */
-    uint32_t numwrites;
-    struct xenlp_patch_write *writes;
-};
-
+#define XENLP_CAPS_V3 0x1
 #define MAX_TAGS_LEN	       128
 #define MAX_LIST_DEPS            8
 #define MAX_LIST_PATCHES3	16
@@ -373,16 +365,6 @@ struct xenlp_hash {
     char __pad0[4];
 };
 
-struct xenlp_apply {
-    unsigned char sha1[20];	/* SHA1 of patch file (binary) */
-    char __pad0[4];
-    uint32_t  bloblen;		/* Length of blob */
-    uint32_t numrelocs;		/* Number of relocations */
-    uint32_t numwrites;		/* Number of writes */
-    char __pad1[4];
-    uint64_t refabs;		/* Reference address for relocations */
-};
-
 struct xenlp_patch_write {
     uint64_t hvabs;		/* Absolute address in HV to apply patch */
 
@@ -394,10 +376,19 @@ struct xenlp_patch_write {
     char __pad[6];
 };
 
-struct xenlp_patch_info {
+struct xenlp_patch_info3 {
     uint64_t hvaddr;		/* virtual address in hypervisor memory */
     unsigned char sha1[20];	/* binary encoded */
     char __pad[4];
+    char tags[MAX_TAGS_LEN];
+    struct xenlp_hash deps[MAX_LIST_DEPS];
+};
+
+struct xenlp_list3 {
+    uint16_t skippatches;	/* input, number of patches to skip */
+    uint16_t numpatches;	/* output, number of patches returned */
+    char __pad[4];
+    struct xenlp_patch_info3 patches[MAX_LIST_PATCHES3];	/* output */
 };
 
 typedef struct xenlp_patch_info3 list_response;
@@ -411,34 +402,6 @@ typedef struct xenlp_patch_info3 list_response;
  * remove the original definitions and then use 
  * ifdefs in raxlpxs to allow a non-sandbox build 
  */
-
-struct xenlp_patch_info3 {
-    uint64_t hvaddr;		/* virtual address in hypervisor memory */
-    unsigned char sha1[20];	/* binary encoded */
-    char __pad[4];
-    char tags[MAX_TAGS_LEN];
-    struct xenlp_hash deps[MAX_LIST_DEPS];
-};
-
-struct xenlp_list {
-    uint16_t skippatches;	/* input, number of patches to skip */
-    uint16_t numpatches;	/* output, number of patches returned */
-    char __pad[4];
-/* sleight of hand to normalize _find_patch */
-    struct xenlp_patch_info3 patches[MAX_LIST_PATCHES];	/* output */
-};
-
-
-struct xenlp_list3 {
-    uint16_t skippatches;	/* input, number of patches to skip */
-    uint16_t numpatches;	/* output, number of patches returned */
-    char __pad[4];
-    struct xenlp_patch_info3 patches[MAX_LIST_PATCHES3];	/* output */
-};
-
-
-
-
 /* layout in memory:
  *
  * struct xenlp_apply
@@ -477,22 +440,22 @@ struct xenlp_caps {
 #endif
 
 struct xpatch {
-	unsigned char sha1[20];	
-	char xenversion[INFO_STRING_LEN]; /* qemu version, compiledate, etc */
-	char xencompiledate[INFO_STRING_LEN]; 
-	uint64_t crowbarabs; /* don't need this */
-	uintptr_t refabs; /* qemu start of .txt */
-	uint32_t bloblen;
-	unsigned char  *blob;
-	uint16_t numrelocs;
-	uint32_t *relocs;
-	uint16_t numchecks;  /*  not currently used */
-	struct check *checks; /* same purpose as the canary in the classic patch struct */
-	uint16_t numfuncs;
-	struct function_patch *funcs;
-	uint16_t numtables;
-	struct table_patch *tables;
-	struct list_head l; /* list handle */
+    unsigned char sha1[20];	
+    char xenversion[INFO_STRING_LEN]; /* qemu version, compiledate, etc */
+    char xencompiledate[INFO_STRING_LEN]; 
+    uint64_t crowbarabs; /* don't need this */
+    uintptr_t refabs; /* qemu start of .txt */
+    uint32_t bloblen;
+    unsigned char  *blob;
+    uint16_t numrelocs;
+    uint32_t *relocs;
+    uint16_t numchecks;  /*  not currently used */
+    struct check *checks; /* same purpose as the canary in the classic patch struct */
+    uint16_t numfuncs;
+    struct function_patch *funcs;
+    uint16_t numtables;
+    struct table_patch *tables;
+    struct list_head l; /* list handle */
 };
 
 

@@ -80,6 +80,9 @@ struct dependency {
     uint32_t reladdr;
 };
 
+#ifndef MAX_TAGS_LEN
+#define MAX_TAGS_LEN	       128
+#endif
 struct patch3 {
     union {
         struct patch;

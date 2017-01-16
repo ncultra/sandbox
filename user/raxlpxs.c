@@ -125,7 +125,7 @@ int _do_lp_buf_op_both(xc_interface_t xch, void *buf, size_t buflen, uint64_t op
 }
 
 #endif 
-int do_lp_list(xc_interface_t xch, struct xenlp_list *list)
+int do_lp_list(xc_interface_t xch, struct xenlp_list3 *list)
 {
 #ifndef sandbox_port
     return _do_lp_buf_op_both(xch, list, sizeof(*list), XENLP_list);
@@ -339,7 +339,7 @@ size_t fill_patch_buf(unsigned char *buf, struct patch3 *patch,
                       uint32_t numwrites, struct xenlp_patch_write *writes)
 {
     unsigned char *ptr = buf;
-    struct xenlp_apply apply = {
+    struct xenlp_apply3 apply = {
         bloblen: patch->bloblen,
 
         numrelocs: patch->numrelocs,
@@ -447,7 +447,7 @@ void patch_writes(struct patch *patch, struct xenlp_patch_write *writes)
 int _cmd_apply2(xc_interface_t xch, struct patch3 *patch)
 {
     size_t i;
-    struct xenlp_patch_info *info = NULL;
+    struct xenlp_patch_info3 *info = NULL;
     /* Do a list first and make sure patch isn't already applied yet */
     if (find_patch(xch, patch->sha1, sizeof(patch->sha1), &info) < 0) {
         fprintf(stderr, "error: could not search for patches\n");
@@ -459,7 +459,7 @@ int _cmd_apply2(xc_interface_t xch, struct patch3 *patch)
     }
     /* Search for dependent patches, calculate relative address for each */
     for (i = 0; i < patch->numdeps; i++) {
-        struct xenlp_patch_info *dep_patch = NULL;
+        struct xenlp_patch_info3 *dep_patch = NULL;
         if (find_patch(xch, patch->deps[i].sha1, sizeof(patch->deps[i].sha1),
                        &dep_patch) < 0) {
             fprintf(stderr, "error: could not search for patches\n");
@@ -738,7 +738,7 @@ static void print_list_footer()
 
 int _cmd_list2(xc_interface_t xch)
 {
-    struct xenlp_list list = { .skippatches = 0 };
+    struct xenlp_list3 list = { .skippatches = 0 };
 
     int ret = do_lp_list(xch, &list);
     if (ret < 0) {
@@ -1752,7 +1752,7 @@ int main(int argc, char **argv)
 
     
     if (find_flag) {
-        struct xenlp_patch_info **patch_buf = NULL;
+        struct xenlp_patch_info3 **patch_buf = NULL;
         unsigned char sha1[SHA_DIGEST_LENGTH + 2] = { 0 };
         
         string2sha1(patch_hash, sha1);

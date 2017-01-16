@@ -31,9 +31,8 @@ int do_xen_hypercall(xc_interface_t, void *);
 
 
 int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
-               struct xenlp_patch_info **patch);
-
-int __do_lp_list(xc_interface_t xch, struct xenlp_list *list);
+               struct xenlp_patch_info3 **patch);
+int __do_lp_list(xc_interface_t xch, struct xenlp_list3 *list);
 int __do_lp_list3(xc_interface_t xch, struct xenlp_list3 *list);
 int __do_lp_caps(xc_interface_t xch, struct xenlp_caps *caps);
 int __do_lp_apply(xc_interface_t xch, void *buf, size_t buflen);
@@ -51,6 +50,7 @@ unsigned int __attribute__((deprecated)) get_order_from_bytes(int len);
 #define INFO_FLAGS_INDEX 2
 #define INFO_DATE_INDEX 3
 #define INFO_VER_INDEX 4
+
 char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
 
 #define INFO_CHECK(_sockfd)				\

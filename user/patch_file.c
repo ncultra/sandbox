@@ -558,7 +558,6 @@ void print_patch_file_info(struct patch3 *patch)
         printf("Blob symbols:\n");
     for (i = 0; i < patch->numsymbols; i++) {
         struct symbol *sym = &patch->symbols[i];
-
         printf("  %s @ %x\n", sym->name, sym->sec_off + sym->sym_off);
     }
 }

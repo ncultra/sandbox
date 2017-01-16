@@ -83,7 +83,7 @@ int open_xc(xc_interface_t *xch)
 int __find_patch(int fd, uint8_t sha1[20], struct xenlp_list3 *list)
 {
     uint32_t *count = NULL, ccode = SANDBOX_OK; /* 0 */
-    struct  xenlp_patch_info *response;
+    struct  xenlp_patch_info3 *response;
     char *rbuf = NULL;
 
     if (list == NULL) {
@@ -110,7 +110,7 @@ int __find_patch(int fd, uint8_t sha1[20], struct xenlp_list3 *list)
     rbuf = (char *)count;
     rbuf += sizeof(uint32_t);
     
-    response = (struct xenlp_patch_info *)rbuf;
+    response = (struct xenlp_patch_info3 *)rbuf;
     dump_sandbox(response, 32);
     int return_list_size = __min(*count, MAX_LIST_PATCHES);
     if (sha1 == NULL) { /* this is a list, not a find */
@@ -120,7 +120,7 @@ int __find_patch(int fd, uint8_t sha1[20], struct xenlp_list3 *list)
             LMSG("try searching for a specific patch\n");
         }
         memcpy(&list->patches[0], response,
-               return_list_size * sizeof(struct xenlp_patch_info));
+               return_list_size * sizeof(struct xenlp_patch_info3));
         list->numpatches = return_list_size;
         LMSG("returning a list of %d applied patches\n", return_list_size);
         ccode = SANDBOX_SUCCESS;
@@ -128,7 +128,7 @@ int __find_patch(int fd, uint8_t sha1[20], struct xenlp_list3 *list)
     } else { /* this is a search, not a list */
         for (int i = 0; return_list_size > 0; return_list_size--, i++) {
             if (memcmp(sha1, response[i].sha1, 20) == 0) {
-                memcpy(&list->patches[0], &response[i], sizeof(struct xenlp_patch_info));
+                memcpy(&list->patches[0], &response[i], sizeof(struct xenlp_patch_info3));
                 list->numpatches = 1;
                 ccode = SANDBOX_SUCCESS;
                 LMSG("one matching applied patch\n");
@@ -154,7 +154,7 @@ exit:
  */
 
 int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
-               struct xenlp_patch_info **patch) 
+               struct xenlp_patch_info3 **patch) 
 {
     int ccode;
     struct xenlp_list3 list;
@@ -175,13 +175,13 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
         
     } else { /* ccode is 1, found the patch */
             *patch = realloc(*patch,
-                             list.numpatches * sizeof(struct xenlp_patch_info));
+                             list.numpatches * sizeof(struct xenlp_patch_info3));
             if (*patch == NULL) {
                 DMSG("unable to allocate memory in find_patch\n");
                 return SANDBOX_ERR;
             }
             memcpy(*patch, &list.patches[0],
-                   list.numpatches * sizeof(struct xenlp_patch_info));
+                   list.numpatches * sizeof(struct xenlp_patch_info3));
             ccode = SANDBOX_OK;    
     }       
     
@@ -190,7 +190,7 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
 
 
 int __attribute__((deprecated))
-__do_lp_list(xc_interface_t xch, struct xenlp_list *list) 
+__do_lp_list(xc_interface_t xch, struct xenlp_list3 *list) 
 {
     if (list == NULL) {
         DMSG("error bad list parameter to do_lp_list\n");
@@ -289,7 +289,7 @@ int __do_lp_undo3(xc_interface_t xch, void *buf, size_t buflen)
     char *sha1_buf = NULL;
 
     /* when including var args, have to also pass the buf size */
-    if (send_rr_buf(xch, SANDBOX_MSG_UNDO_REQ, 20, buf, SANDBOX_LAST_ARG) == SANDBOX_OK) {
+    if (send_rr_buf(xch, SANDBOX_MSG_UNDO_REQ, buflen, buf, SANDBOX_LAST_ARG) == SANDBOX_OK) {
         ccode = read_sandbox_message_header(xch, &version, &id, &len, (void **)&sha1_buf);
     }
     

@@ -305,11 +305,11 @@ static void make_text_writeable(struct xenlp_patch_write *writes,
 /* corresponds to do_lp_apply on the raxl side */
 int xenlp_apply(void *arg)
 {
-	struct xenlp_apply *apply = (struct xenlp_apply *)arg;
+	struct xenlp_apply3 *apply = (struct xenlp_apply3 *)arg;
 	uintptr_t blob = 0L;
 	struct xenlp_patch_write *writes;
 	size_t i;
-	struct applied_patch *patch;
+	struct applied_patch3 *patch;
 	ptrdiff_t relocrel = 0;
 	char sha1[42];
 	ptrdiff_t p;
@@ -317,7 +317,7 @@ int xenlp_apply(void *arg)
 
     
 	/* Skip over struct xenlp_apply */
-	p = (ptrdiff_t) arg + sizeof(struct xenlp_apply);
+	p = (ptrdiff_t) arg + sizeof(struct xenlp_apply3);
 
 	/* Do some initial sanity checking */
 	if (apply->bloblen > MAX_PATCH_SIZE) {
@@ -335,7 +335,7 @@ int xenlp_apply(void *arg)
 	DMSG("number of writes: %d \n", apply->numwrites);
 	
 	
-	patch = calloc(1, sizeof(struct applied_patch));
+	patch = calloc(1, sizeof(struct applied_patch3));
 	if (!patch)
 		return SANDBOX_ERR_NOMEM;
 
@@ -444,7 +444,7 @@ int xenlp_apply(void *arg)
 	/* Nothing should be possible to fail now, so do all of the writes */
 	swap_trampolines(writes, apply->numwrites);
 	/* Record applied patch */
-	patch->blob = blob;
+	patch->blob = (void *)blob;
 	memcpy(patch->sha1, apply->sha1, sizeof(patch->sha1));
 	DMSG("incoming patch sha1:\n");
 	dump_sandbox(patch->sha1, 20);
@@ -541,7 +541,7 @@ void dump_sandbox(const void* data, size_t size) {
 /* arg points to the apply buffer just past the xenlp_apply struct */
 /* apply points to the xenlp_apply struct (also beginning of the original buffer */
 /* blob_p and writes_p both point to stack variables in the caller's stack */
-static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply *apply,
+static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
                             unsigned char **blob_p, struct xenlp_patch_write **writes_p)
 {
     size_t i;
@@ -674,8 +674,7 @@ int xenlp_apply3(void *arg)
 
     /* Skip over struct xenlp_apply */
     arg = (unsigned char *)arg + sizeof(struct xenlp_apply3);
-
-    /* Do some initial sanity checking */
+/* Do some initial sanity checking */
     if (apply.bloblen > MAX_PATCH_SIZE) {
         printk("live patch size %u is too large\n", apply.bloblen);
         return SANDBOX_ERR_INVALID;
@@ -694,7 +693,7 @@ int xenlp_apply3(void *arg)
     }
     /* FIXME: Memory allocated for patch can leak in case of error */
 
-    res = read_patch_data2(arg, (struct xenlp_apply *)&apply, &blob, &writes);
+    res = read_patch_data2(arg, (struct xenlp_apply3 *)&apply, &blob, &writes);
     if (res < 0) {
         DMSG("fault %d reading patch data\n", res);
         return res;
