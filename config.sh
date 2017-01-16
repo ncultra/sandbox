@@ -62,7 +62,7 @@ until [ -z "$" ]; do
     case  "${1:0:2}" in "--")
 	  case "${1:2:2}" in
 	      "ve") VER_FILE="${1##--ve*=}";
-                    gen_version $VER_FILE
+	            gen_version $VER_FILE
 		    exit 0;;
 	      "pl") create_platform; exit 0;;
 	  esac ;;

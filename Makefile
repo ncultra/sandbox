@@ -1,6 +1,6 @@
 BUILD_ROOT := "/home/$(shell id -n -u)/src/sandbox/"
 CC	:= gcc
-CFLAGS = -g  -Wall -Werror -fPIC -std=gnu11 -ffunction-sections -fdata-sections -fkeep-static-consts -fno-inline  -fms-extensions -pthread
+CFLAGS = -D sandbox_port -g  -Wall -Werror -fPIC -std=gnu11 -ffunction-sections -fdata-sections -fkeep-static-consts -fno-inline  -fms-extensions -pthread
 
 MAJOR_VERSION=0
 MINOR_VERSION=0
@@ -9,7 +9,7 @@ LIB_FILES=libsandbox.o  sandbox-listen.o
 CLEAN=rm -f sandbox.out raxlpqemu *.o *.a *.so gitsha.txt platform.h \
 	gitsha.h version.mak
 
-
+# this uses the qemu version file
 .PHONY: version.mak
 version.mak:
 	bash config.sh --ver="../VERSION"
@@ -34,7 +34,7 @@ libsandbox-qemu: libsandbox.o sandbox-listen.o version.mak
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 
 libsandbox.o: libsandbox.c platform.h sandbox.h gitsha.h gitsha.txt
-	$(CC) $(CFLAGS) -c -O0  $<
+	$(CC) $(CFLAGS) -c -O0 $<
 	$(shell sh config.sh)
 
 sandbox-listen.o: sandbox-listen.c platform.h gitsha
@@ -93,27 +93,10 @@ gitsha.h: version.mak
 	@echo "int get_minor(void){return minor;}" >> $@
 	@echo "int get_revision(void){return revision;}" >> $@
 
-.PHONY: shared
-shared: libsandbox.so
-
-libsandbox.so: gitsha $(LIB_FILES)
-	$(CC) -fPIC -shared -o $@ $(LIB_FILES)
-	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
-
-
 .PHONY: static
 static: libsandbox.a
 
 .PHONY: all
-all: static  sandbox raxlpqemu
-
-.PHONY: install
-install:
-	cp -v libsandbox.a /usr/lib64/
-	cp -v sandbox.h /usr/include/
-
-
-.PHONY: qemu
-qemu:
-	cp -v  libsandbox.c ~/src/qemu/target-i386/libsandbox.c
-	cp -v  sandbox.h ~/src/qemu/include/qemu/sandbox.h
+all:
+	make static
+	cd user && make raxlpxs
