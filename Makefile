@@ -20,9 +20,6 @@ include version.mak
 gitsha: gitsha.txt gitsha.h libsandbox.o
 #	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=nolo#ad,readonly libsandbox.o libsandbox.o)
 
-sandbox: sandbox.o libsandbox.a
-	$(CC) $(CFLAGS) -o sandbox sandbox.o libsandbox.a
-
 # any target that requires libsandbox will pull in gitsha.txt automatically
 libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
 	$(shell objcopy --add-section .buildinfo=gitsha.txt \
@@ -55,10 +52,6 @@ clean:
 platform.h:
 	$(shell sh config.sh)
 
-.PHONY: raxlpqemu
-raxlpqemu: raxlpqemu.o libsandbox.a platform.h
-	$(CC) $(CFLAGS) -c raxlpqemu.c
-#TODO: might need to link libraries statically (probably not)
 	$(CC) $(CFLAGS) -o raxlpqemu raxlpqemu.o libsandbox.a -lcrypto -lpthread -lz -lelf
 
 .PHONY: raxlpxs
