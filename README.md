@@ -4,9 +4,8 @@ QEMU Live Patching (sandbox)
 
 The sandbox live patching module is designed to be linked into other programs, and the first implementation is for QEMU. There are two requirements for an application to support the sandbox:
 
-Requirements
+Requirements:
 ------------
-QEMU, or any application that requires live-patching, must meet at least the following requirements:
 * create a root-only local domain socket for communication with the raxlpxs utility program.
 * create an independent thread to service the socket
 
