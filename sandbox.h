@@ -439,27 +439,6 @@ struct xenlp_caps {
 #define INFO_STRING_LEN 255
 #endif
 
-struct xpatch {
-    unsigned char sha1[20];	
-    char xenversion[INFO_STRING_LEN]; /* qemu version, compiledate, etc */
-    char xencompiledate[INFO_STRING_LEN]; 
-    uint64_t crowbarabs; /* don't need this */
-    uintptr_t refabs; /* qemu start of .txt */
-    uint32_t bloblen;
-    unsigned char  *blob;
-    uint16_t numrelocs;
-    uint32_t *relocs;
-    uint16_t numchecks;  /*  not currently used */
-    struct check *checks; /* same purpose as the canary in the classic patch struct */
-    uint16_t numfuncs;
-    struct function_patch *funcs;
-    uint16_t numtables;
-    struct table_patch *tables;
-    struct list_head l; /* list handle */
-};
-
-
-
 /* these const strings contain information generated at build time. */
 extern const char *gitversion, *cc, *cflags;
 extern uintptr_t patch_sandbox_start, patch_sandbox_end; 
