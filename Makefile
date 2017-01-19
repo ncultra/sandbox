@@ -24,11 +24,10 @@ include version.mak
 
 .PHONY: gitsha
 gitsha: gitsha.txt gitsha.h libsandbox.o
-#	$(shell objcopy --add-section .buildinfo=gitsha.txt --set-section-flags .build=nolo#ad,readonly libsandbox.o libsandbox.o)
 
 # any target that requires libsandbox will pull in gitsha.txt automatically
 libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
-	$(shell objcopy --add-section .buildinfo=gitsha.txt \
+	$(shell objcopy --add-section .note.rackspace.buildinfo=gitsha.txt \
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 # add the static elf library to the sandbox
 	ar cr libsandbox.a libsandbox.o  sandbox-listen.o
@@ -63,6 +62,7 @@ raxlpxs: platform.h
 	cd user && make $@
 
 
+
 .PHONY: gitsha.txt
 gitsha.txt: version.mak
 	@echo -n "SANDBOXBUILDINFOSTART" > $@
@@ -76,8 +76,15 @@ gitsha.txt: version.mak
 	@echo -n "'minor':\"$(MINOR_VERSION)\"," >> $@
 	@echo -n "'revision':\"$(REVISION)\"," >> $@
 	@echo -n "'comment':\"$(BUILD_COMMENT)\"," >> $@
-	@echo -n "}" >> $@
 	@echo -n "SANDBOXBUILDINFOEND" >> $@
+	@echo -n "}" >> $@
+	@echo -n " `uuid`" >> $@
+
+.PHONY: sha1.txt
+sha1.txt: gitsha.txt
+	sha1sum gitsha.txt > sha1.txt
+
+
 
 .PHONY: gitsha.h
 

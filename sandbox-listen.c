@@ -653,7 +653,7 @@ ssize_t dispatch_getbld(int fd, int len, void **bufp)
 {
 /* construct a string buffer with each data on a separate line */
 	int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
-	DMSG("get bld info dispatcher: remaining bytes %d\n", remaining_bytes);
+	DMSG("striving for one and a half nines: remaining bytes %d\n", remaining_bytes);
 
 
 	*bufp = calloc(sizeof(uint8_t), SANDBOX_MSG_BLD_BUFSIZE);
@@ -661,11 +661,12 @@ ssize_t dispatch_getbld(int fd, int len, void **bufp)
 		LMSG("error allocating buffer for build info\n");
 		return SANDBOX_ERR_NOMEM;
 	}
-	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%d.%d%d\n",
+	snprintf(*bufp, SANDBOX_MSG_BLD_BUFSIZE, "%s\n%s\n%s\n%s\n%d.%d%d\n%s\n",
 		 get_git_revision(),
 		 get_compiled(), get_ccflags(),
 		 get_compiled_date(),
-		 get_major(), get_minor(), get_revision());
+		 get_major(), get_minor(), get_revision(),
+                 get_comment());
 
 	uint32_t reply_buf_length = strnlen(*bufp, SANDBOX_MSG_BLD_BUFSIZE);
 	DMSG("sending buildinfo reply %d bytes\n", reply_buf_length);

@@ -41,7 +41,7 @@ gen_version() {
     oldifs=$IFS
     IFS='.'
     if [[ ! -e $1 ]] ; then
-	echo "/* no version file */" > version.mak
+	echo "# no version file #" > version.mak
 	exit 1
     fi
 
