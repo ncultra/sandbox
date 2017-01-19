@@ -98,6 +98,8 @@ gitsha.h: version.mak
 	@echo "const int minor = $(MINOR_VERSION);" >> $@
 	@echo "const int revision = $(REVISION);" >> $@
 	@echo "const char *comment = \"$(BUILD_COMMENT)\";" >> $@
+	@echo "const char *sha1 = \"$(shell cat sha1.txt)\";" >> $@
+
 
 	@echo "const char *get_git_revision(void){return git_revision;}" >> $@
 	@echo "const char *get_compiled(void){return compiled;}" >> $@
@@ -106,8 +108,8 @@ gitsha.h: version.mak
 	@echo "int get_major(void){return major;}" >> $@
 	@echo "int get_minor(void){return minor;}" >> $@
 	@echo "int get_revision(void){return revision;}" >> $@
-	@echo "const char *get_comment(void){return comment;}" >> $@	
-
+	@echo "const char *get_comment(void){return comment;}" >> $@
+	@echo "const char *get_sha1(void){return sha1;}" >> $@	
 
 .PHONY: static
 static: libsandbox.a
