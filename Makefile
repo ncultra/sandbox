@@ -83,8 +83,7 @@ gitsha.txt: version.mak
 
 .PHONY: sha1.txt
 sha1.txt: gitsha.txt
-	sha1sum gitsha.txt > sha1.txt
-
+	sha1sum gitsha.txt | awk '{print $$1}' > sha1.txt
 
 
 .PHONY: gitsha.h
