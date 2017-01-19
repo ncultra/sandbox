@@ -13,7 +13,7 @@ MINOR_VERSION=0
 REVISION=1
 LIB_FILES=libsandbox.o  sandbox-listen.o
 CLEAN=rm -f sandbox.out  *.o *.a *.so gitsha.txt platform.h \
-	gitsha.h version.mak
+	gitsha.h version.mak sha1.txt
 
 # this uses the qemu version file
 .PHONY: version.mak
@@ -26,9 +26,12 @@ include version.mak
 gitsha: gitsha.txt gitsha.h libsandbox.o
 
 # any target that requires libsandbox will pull in gitsha.txt automatically
-libsandbox.a: gitsha.txt libsandbox.o  sandbox-listen.o
+libsandbox.a: sha1.txt gitsha.txt libsandbox.o  sandbox-listen.o
 	$(shell objcopy --add-section .note.rackspace.buildinfo=gitsha.txt \
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
+	$(shell objcopy --add-section .note.rackspace.sha1=sha1.txt \
+	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
+
 # add the static elf library to the sandbox
 	ar cr libsandbox.a libsandbox.o  sandbox-listen.o
 
