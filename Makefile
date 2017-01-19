@@ -68,8 +68,7 @@ raxlpxs: platform.h
 
 .PHONY: gitsha.txt
 gitsha.txt: version.mak
-	@echo -n "SANDBOXBUILDINFOSTART" > $@
-	@echo -n "{" >> $@
+	@echo -n "{" > $@
 	@echo -n "'git-revision': \"$(GIT_REVISION)\"," >> $@
 	@echo -n "'compiled': \"`gcc --version`\"," >> $@
 	@echo -n "'ccflags': \"$(CFLAGS)\"," >> $@
@@ -78,10 +77,9 @@ gitsha.txt: version.mak
 	@echo -n "'major':\"$(MAJOR_VERSION)\"," >> $@
 	@echo -n "'minor':\"$(MINOR_VERSION)\"," >> $@
 	@echo -n "'revision':\"$(REVISION)\"," >> $@
-	@echo -n "'comment':\"$(BUILD_COMMENT)\"," >> $@
-	@echo -n "SANDBOXBUILDINFOEND" >> $@
+	@echo -n "'comment':\"$(BUILD_COMMENT)\"" >> $@
 	@echo -n "}" >> $@
-	@echo -n " `uuid`" >> $@
+	@echo " `uuid`" >> $@
 
 .PHONY: sha1.txt
 sha1.txt: gitsha.txt
