@@ -88,7 +88,7 @@ sha1.txt: gitsha.txt
 
 .PHONY: gitsha.h
 
-gitsha.h: version.mak
+gitsha.h: version.mak sha1.txt
 	@echo "/* this file is generated automatically in the Makefile */" >$@
 	@echo "const char *git_revision = \"$(GIT_REVISION)\";" >> $@
 	@echo "const char *compiled = \""`gcc --version`"\";" >> $@
