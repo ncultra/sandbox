@@ -154,39 +154,42 @@ void *listen_thread(void *arg)
 // connect, peek at the incoming data.
 // sock_name: full path of the socket e.g. /var/run/SANDBOX_ERR_BAD_HDR
 */
-int listen_sandbox_sock(char *sock_name)
+int listen_sandbox_sock(struct listen *l)
 {
-	int fd, len, err, ccode;
+	int len, err, ccode;
 	struct sockaddr_un un;
 	char sn[PATH_MAX];
-
+        char *sock_name = (char *) l->arg;
+        
 	if (strlen(sock_name) >= sizeof(un.sun_path) - 6 - 1) {
 		errno = ENAMETOOLONG;
 		return(-1);
 	}
 	sprintf(sn, "%s%d", sock_name, (int)getpid());
-	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+	if ((l->sock  = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
 		return(-2);
 	}
+        l->arg = strdup(sn);
 	unlink(sn);
-	DMSG("server socket %d: %s\n", fd, sn);
+	DMSG("server socket %d: %s\n", l->sock, sn);
 	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
-	strcpy(un.sun_path, sn);  /* already checked the length */
+	
 	len = offsetof(struct sockaddr_un, sun_path) + strlen(sn);
-	if (bind(fd, (struct sockaddr *)&un, len) < 0) {
+        strncpy(un.sun_path, sn, len);
+        if (bind(l->sock, (struct sockaddr *)&un, len) < 0) {
 		ccode = -3;
 		goto errout;
 	}
-	if (listen(fd, QLEN) < 0) {
+	if (listen(l->sock, QLEN) < 0) {
 		ccode = -4;
 		goto errout;
 	}
-	DMSG("server now listening on %d %s\n", fd, sn);
-	return fd;
+	DMSG("server now listening on %d %s\n", l->sock, sn);
+	return l->sock;
 errout:
 	err = errno;
-	close(fd);
+	close(l->sock);
 	errno = err;
 	return(ccode);
 }
