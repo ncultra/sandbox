@@ -35,11 +35,6 @@ libsandbox.a: sha1.txt gitsha.txt libsandbox.o  sandbox-listen.o
 # add the static elf library to the sandbox
 	ar cr libsandbox.a libsandbox.o  sandbox-listen.o
 
-# force the qemu makefile to copy the build info into the .buidinfo section
-.PHONY: libsandbox-qemu
-libsandbox-qemu: libsandbox.o sandbox-listen.o version.mak
-	$(shell objcopy --add-section .buildinfo=gitsha.txt \
-	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 
 libsandbox.o: libsandbox.c platform.h sandbox.h gitsha.h gitsha.txt
 	$(CC) $(CFLAGS) -c -O0 $<
