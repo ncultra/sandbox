@@ -66,7 +66,8 @@ handler dispatch[] =
 	dispatch_test_rep,
         dispatch_undo_req,
         dispatch_undo_rep,
-	dummy, dummy
+	dummy,
+        dummy
 };
 
  int get_handler_count(void)
@@ -159,24 +160,21 @@ int listen_sandbox_sock(struct listen *l)
 	int len, err, ccode;
 	struct sockaddr_un un;
 	char sn[PATH_MAX];
-        char *sock_name = (char *) l->arg;
-        
-	if (strlen(sock_name) >= sizeof(un.sun_path) - 6 - 1) {
-		errno = ENAMETOOLONG;
-		return(-1);
-	}
-	sprintf(sn, "%s%d", sock_name, (int)getpid());
+
+	snprintf(sn, PATH_MAX, "%s%d", (char *)l->arg, (int)getpid());
 	if ((l->sock  = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
 		return(-2);
 	}
+        if (l->arg)
+            free(l->arg); 
         l->arg = strdup(sn);
 	unlink(sn);
-	DMSG("server socket %d: %s\n", l->sock, sn);
+	DMSG("server socket %d: %s\n", l->sock, (char *)l->arg);
 	memset(&un, 0, sizeof(un));
 	un.sun_family = AF_UNIX;
 	
-	len = offsetof(struct sockaddr_un, sun_path) + strlen(sn);
-        strncpy(un.sun_path, sn, len);
+	len = offsetof(struct sockaddr_un, sun_path) + strlen((char *)l->arg);
+        strncpy(un.sun_path, (char *)l->arg, len);
         if (bind(l->sock, (struct sockaddr *)&un, len) < 0) {
 		ccode = -3;
 		goto errout;
@@ -185,7 +183,7 @@ int listen_sandbox_sock(struct listen *l)
 		ccode = -4;
 		goto errout;
 	}
-	DMSG("server now listening on %d %s\n", l->sock, sn);
+	DMSG("server now listening on %d %s\n", l->sock, (char *)l->arg);
 	return l->sock;
 errout:
 	err = errno;
