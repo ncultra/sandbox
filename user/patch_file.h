@@ -38,7 +38,8 @@ struct table_patch {
 
 struct patch {
     unsigned char sha1[SHA_DIGEST_LENGTH];
-
+    unsigned char build_sha1[SHA_DIGEST_LENGTH];
+    
     char xenversion[32];
     char xencompiledate[32];
 

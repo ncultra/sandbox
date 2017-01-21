@@ -653,6 +653,7 @@ int cmd_apply(int argc, char *argv[])
     
     char *qemu_version = get_qemu_version(xch);
     char *qemu_compile_date = get_qemu_date(xch);
+    
     if (!strlen(qemu_version) || !strlen(qemu_compile_date)) {
 	    LMSG("error getting version and complilation data\n");
 	    return SANDBOX_ERR_RW;	    
