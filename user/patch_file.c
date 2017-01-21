@@ -528,7 +528,6 @@ void print_patch_file_info(struct patch3 *patch)
     printf("  Hypervisor Version: %s\n", patch->xenversion);
     printf("  Hypervisor Compile Date: %s\n", patch->xencompiledate);
     printf("  Patch sha1: %s\n", hex);
-    printf("  Build sha1: %s\n", patch->build_sha1);
     if (patch->version > 2)
         printf("  Tags: %s\n", patch->tags);
     if (patch->numdeps > 0)
