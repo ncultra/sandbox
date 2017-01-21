@@ -43,13 +43,15 @@ int __attribute__((deprecated)) _do_lp_buf_op_both(xc_interface_t xch, void *lis
 int __attribute__((deprecated)) _do_lp_buf_op(xc_interface_t xch, void *list, size_t buflen, uint64_t op);
 unsigned int __attribute__((deprecated)) get_order_from_bytes(int len);
 
-#define COUNT_INFO_STRINGS 6
+#define COUNT_INFO_STRINGS 7
 
-#define INFO_SHA_INDEX 0
+#define INFO_GIT_INDEX 0
 #define INFO_COMPILE_INDEX 1
 #define INFO_FLAGS_INDEX 2
 #define INFO_DATE_INDEX 3
 #define INFO_VER_INDEX 4
+#define INFO_COMMENT_INDEX 5
+#define INFO_SHA1_INDEX 6
 
 char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
 
@@ -59,10 +61,10 @@ char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
 
 int get_info_strings(int fd, int display);
 
-static inline char * get_qemu_sha(int _sockfd)
+static inline char * get_qemu_git_index(int _sockfd)
 {
 	INFO_CHECK(_sockfd);
-	return info_strings[INFO_SHA_INDEX];
+	return info_strings[INFO_GIT_INDEX];
 }
 
 
@@ -88,6 +90,18 @@ static inline char *get_qemu_version(int _sockfd)
 {
 	INFO_CHECK(_sockfd);
 	return info_strings[INFO_VER_INDEX];
+}
+
+static inline char *get_qemu_comment(int _sockfd) 
+{
+	INFO_CHECK(_sockfd);
+	return info_strings[INFO_COMMENT_INDEX];
+}
+
+static inline char *get_qemu_sha1(int _sockfd) 
+{
+	INFO_CHECK(_sockfd);
+	return info_strings[INFO_SHA1_INDEX];
 }
 
 
