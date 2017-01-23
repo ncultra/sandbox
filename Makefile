@@ -86,14 +86,14 @@ sha1.txt: gitsha.txt
 
 gitsha.h: version.mak sha1.txt
 	@echo "/* this file is generated automatically in the Makefile */" >$@
-	@echo "const char *git_revision = \"$(GIT_REVISION)\";" >> $@
+	@echo "const char *git_revision = \"  $(GIT_REVISION)\";" >> $@
 	@echo "const char *compiled = \""`gcc --version`"\";" >> $@
 	@echo "const char *ccflags = \"$(CFLAGS)\";" >> $@
 	@echo "const char *compile_date = \"`date`\";" >> $@
 	@echo "const int major = $(MAJOR_VERSION);" >> $@
 	@echo "const int minor = $(MINOR_VERSION);" >> $@
 	@echo "const int revision = $(REVISION);" >> $@
-	@echo "const char *comment = \"$(BUILD_COMMENT)\";" >> $@
+	@echo "const char *comment = \"  $(BUILD_COMMENT)  \";" >> $@
 	@echo "const char *sha1 = \"$(shell cat sha1.txt)\";" >> $@
 
 

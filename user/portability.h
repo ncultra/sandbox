@@ -45,7 +45,7 @@ unsigned int __attribute__((deprecated)) get_order_from_bytes(int len);
 
 #define COUNT_INFO_STRINGS 7
 
-#define INFO_GIT_INDEX 0
+#define INFO_GIT_INDEX 0 
 #define INFO_COMPILE_INDEX 1
 #define INFO_FLAGS_INDEX 2
 #define INFO_DATE_INDEX 3

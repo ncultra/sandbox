@@ -810,7 +810,6 @@ ssize_t dummy(int fd, int len, void **bufp)
 			   SANDBOX_LAST_ARG));
 }
 
-
 /* info is returned as one string, with each field on a separate line */
 char *get_sandbox_build_info(int fd)
 {
