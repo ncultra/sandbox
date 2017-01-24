@@ -586,11 +586,7 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *ap
             return SANDBOX_ERR_NOMEM;
         }
         
-        if (memcpy(relocs, arg, apply->numrelocs * sizeof(relocs[0]))) {
-            DMSG("error copying memory in read_patch_data2\n");
-            return -EFAULT;
-        }
-
+        memcpy(relocs, arg, apply->numrelocs * sizeof(relocs[0]));
         arg = (unsigned char *)arg + (apply->numrelocs * sizeof(relocs[0]));
 
         for (i = 0; i < apply->numrelocs; i++) {
