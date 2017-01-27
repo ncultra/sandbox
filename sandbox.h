@@ -412,21 +412,13 @@ typedef struct xenlp_patch_info3 list_response;
  * tags (taglen) */
 struct xenlp_apply3 {
     unsigned char sha1[20];	/* SHA1 of patch file (binary) */
-
     char __pad0[4];
-
     uint32_t bloblen;		/* Length of blob */
-
     uint32_t numrelocs;		/* Number of relocations */
-
     uint32_t numwrites;		/* Number of writes */
-
     char __pad1[4];
-
     uint64_t refabs;		/* Reference address for relocations */
-
     uint32_t numdeps;       /* Number of dependendencies */
-
     uint32_t taglen;        /* length of tags string */
 };
 

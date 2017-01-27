@@ -26,8 +26,6 @@ extern uintptr_t _start, _end;
 uint64_t fill = PLATFORM_ALLOC_SIZE;
 
 __asm__(".text");
-__asm__(".global patch_sandbox_start");
-__asm__(".global patch_sandbox_end");
 
 #if defined (__X86_64__) || defined (__i386__)
 	__asm__(".align " str(PLATFORM_CACHE_LINE_SIZE));
@@ -39,26 +37,13 @@ __asm__(".global patch_sandbox_end");
 
 /* sandbox is 4MB,  can make it larger or smaller if needed. */
 
-	__asm__("patch_sandbox_start:");
 
-#if defined (__X86_64__) || defined (__i386__)
-	__asm__("mfence");
-	__asm__("jmp patch_sandbox_end");
-	__asm__(".text");
-	__asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
-
-/*  TODO: get rid of this constant, gas doesn't use the cpp 
-*/
-	__asm__(".align 8");
-
-#endif
 #ifdef PPC64LE
 	__asm__("b patch_sandbox_end");
 	__asm__(".fill 1000 * 1000,1,0x00");
 	__asm__(".align 3");
 
 #endif
-	__asm__("patch_sandbox_end:");
 
 #if defined (__X86_64__)
 	__asm__("retq");
@@ -82,10 +67,35 @@ uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
  	return p;
 }
 
+
+uintptr_t patch_sandbox_start, patch_sandbox_end __attribute__ ((used));
+
+#if defined (__X86_64__) || defined (__i386__)
+void  fill_sandbox(void)
+{
+
+
+    
+    __asm__(".text");
+
+    __asm__(".global patch_sandbox_start");
+    __asm__("mfence");
+    __asm__("jmp patch_sandbox_end");
+    __asm__(".text");
+    __asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3")qq;
+    
+    __asm__(".align 8");
+    __asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
+
+    __asm__(".global patch_sandbox_end");    
+}
+
+#endif
 uintptr_t update_patch_cursor(uintptr_t offset)
 {
     return (uintptr_t)(patch_cursor += offset);
 }
+
 
 ptrdiff_t get_sandbox_free(void)
 {
@@ -172,6 +182,11 @@ LIST_HEAD(lp_patch_head2);
 LIST_HEAD(lp_patch_head3);
 
 
+/* TODO: patch_cursor needs to be actual address, not relative to the sandbox start */
+/* or, at least use patch_cursort in a consistent way */
+/* patch cursor is not located in .txt */
+
+/* should be patch_cursor = &patch_sandbox_start; */
 uintptr_t patch_cursor = (uintptr_t)NULL;
 
 uintptr_t get_sandbox_start(void)
@@ -274,16 +289,14 @@ void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 
 	    atomic_xchg((uintptr_t *)&pw->hvabs,
 			(uintptr_t *)&pw->data);
-	    
-	
-	}
+        }
 }
 
 
 /* unlike the xen kernel, there is a good chance that the .text is not writeable. 
  * So, make the text page that will host the trampoline writeable.
  */
-static void make_text_writeable(struct xenlp_patch_write *writes,
+void make_text_writeable(struct xenlp_patch_write *writes,
 				uint32_t numwrites)
 {
 	int i;
@@ -541,7 +554,7 @@ void dump_sandbox(const void* data, size_t size) {
 /* arg points to the apply buffer just past the xenlp_apply struct */
 /* apply points to the xenlp_apply struct (also beginning of the original buffer */
 /* blob_p and writes_p both point to stack variables in the caller's stack */
-static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
+int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
                             unsigned char **blob_p, struct xenlp_patch_write **writes_p)
 {
     size_t i;
@@ -620,11 +633,12 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *ap
         struct xenlp_patch_write *pw = &((*writes_p)[i]);
         char off = pw->dataoff;
 
+        /*
         if (pw->hvabs < (uint64_t)_start ||
-            pw->hvabs >= (uint64_t)_end) {
+            pw->hvabs >= (uint64_t)_fini {
             printk("invalid hvabs value %lx\n", pw->hvabs);
         }
-
+        */
         if (off < 0)
             continue;
 
@@ -633,7 +647,7 @@ static int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *ap
         switch (pw->reloctype) {
             case XENLP_RELOC_UINT64:
                 if (off > sizeof(pw->data) - sizeof(uint64_t)) {
-                    printk("invalid dataoff value %d\n", off);
+                    printk("invalnid dataoff value %d\n", off);
                     return -EINVAL;
                 }
 
@@ -740,7 +754,7 @@ int xenlp_apply3(void *arg)
     return 0;
 }
 
-static int has_dependent_patches(struct applied_patch3 *patch)
+int has_dependent_patches(struct applied_patch3 *patch)
 {
     /* Starting from current patch, looking down the linked list
      * Find if any later patches depend on this one */

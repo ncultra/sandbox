@@ -59,8 +59,6 @@ platform.h:
 raxlpxs: platform.h
 	cd user && make $@
 
-
-
 .PHONY: gitsha.txt
 gitsha.txt: version.mak
 
