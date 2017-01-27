@@ -70,27 +70,24 @@ uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
 
 uintptr_t patch_sandbox_start, patch_sandbox_end __attribute__ ((used));
 
-#if defined (__X86_64__) || defined (__i386__)
+//#if defined (__X86_64__) || defined (__i386__)
 void  fill_sandbox(void)
 {
-
-
+    static int sandbox_start __attribute__ ((used)) ;
     
-    __asm__(".text");
-
+    
     __asm__(".global patch_sandbox_start");
     __asm__("mfence");
     __asm__("jmp patch_sandbox_end");
-    __asm__(".text");
-    __asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3")qq;
-    
     __asm__(".align 8");
     __asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
 
-    __asm__(".global patch_sandbox_end");    
+    __asm__(".global patch_sandbox_end");
+    return;
+    
 }
 
-#endif
+//#endif
 uintptr_t update_patch_cursor(uintptr_t offset)
 {
     return (uintptr_t)(patch_cursor += offset);
