@@ -299,6 +299,16 @@ static inline void *aligned_zalloc(int align, int size)
 
 typedef uint8_t * reloc_ptr_t;
 
+
+struct sandbox_header {
+    uintptr_t _start;
+    uintptr_t _end;
+    uintptr_t _cursor;
+};
+
+struct sandbox_header *fill_sandbox(void);
+
+
 #ifdef sandbox_port
 #define INFO_STRING_LEN 255
 #define MAX_LIST_PATCHES 1024 /* size of a list returned by __find_patch */

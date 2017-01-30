@@ -67,24 +67,22 @@ uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
  	return p;
 }
 
+struct sandbox_header *sandhead = NULL;
 
-uintptr_t patch_sandbox_start, patch_sandbox_end __attribute__ ((used));
 
 //#if defined (__X86_64__) || defined (__i386__)
-void  fill_sandbox(void)
+struct sandbox_header *fill_sandbox(void)
 {
-    static int sandbox_start __attribute__ ((used)) ;
-    
-    
-    __asm__(".global patch_sandbox_start");
+    static struct sandbox_header sh;
+/*  sandbox is 10k */
+    sh._start = (uintptr_t)__builtin_frame_address(0);
+    sh._end = sh._start + (PLATFORM_ALLOC_SIZE * PLATFORM_ALLOC_SIZE);
+    sh._cursor = (uintptr_t)__builtin_frame_address(0);
+    return &sh;
     __asm__("mfence");
-    __asm__("jmp patch_sandbox_end");
     __asm__(".align 8");
     __asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
-
-    __asm__(".global patch_sandbox_end");
-    return;
-    
+    return NULL;
 }
 
 //#endif
@@ -96,7 +94,7 @@ uintptr_t update_patch_cursor(uintptr_t offset)
 
 ptrdiff_t get_sandbox_free(void)
 {
-    return (ptrdiff_t) ((uintptr_t)&patch_sandbox_end - (uintptr_t)patch_cursor);
+    return (ptrdiff_t) sandhead->_end - sandhead->_cursor;
 }
 
 FILE *log_fd = NULL;
@@ -178,22 +176,22 @@ void LMSG(char *fmt, ...)
 LIST_HEAD(lp_patch_head2);
 LIST_HEAD(lp_patch_head3);
 
-
 /* TODO: patch_cursor needs to be actual address, not relative to the sandbox start */
-/* or, at least use patch_cursort in a consistent way */
+/* or, at least use patch_cursor in a consistent way */
 /* patch cursor is not located in .txt */
 
 /* should be patch_cursor = &patch_sandbox_start; */
+
 uintptr_t patch_cursor = (uintptr_t)NULL;
 
 uintptr_t get_sandbox_start(void)
 {
-	return  (uintptr_t)( &patch_sandbox_start);
+	return  sandhead->_start;
 }
 
 uintptr_t get_sandbox_end(void)
 {
-	return (uintptr_t)&patch_sandbox_end;
+	return sandhead->_end;
 	
 }
 
@@ -474,13 +472,13 @@ uintptr_t make_sandbox_writeable(void)
 {
 
 	
-	uintptr_t p = (uintptr_t)&patch_sandbox_start;
+	uintptr_t p = (uintptr_t)sandhead->_start;
 	
-	DMSG ("sandbox start before alignment\n %016lx\n",(uintptr_t)&patch_sandbox_start);
+	DMSG ("sandbox start before alignment\n %016lx\n", sandhead->_start);
 	p &= PLATFORM_PAGE_MASK;
 	DMSG("page mask: %016lx\n", (uintptr_t)PLATFORM_PAGE_MASK);
 	
-	DMSG ("sandbox start %016lx\n", (uintptr_t) &patch_sandbox_start);
+	DMSG ("sandbox start %016lx\n", (uintptr_t) sandhead->_start);
 	DMSG ("page size: %016lx\n", (uintptr_t)PLATFORM_PAGE_SIZE);
 	printf("page-aligned address: %p\n", (void *)p);
 	
@@ -495,14 +493,15 @@ uintptr_t make_sandbox_writeable(void)
 
 void init_sandbox(void)
 {
-	make_sandbox_writeable(); 
-	uintptr_t p  = (uintptr_t) &lp_patch_head2;
-	p &= PLATFORM_PAGE_MASK;
-	if (
-            mprotect((void *)p, PLATFORM_PAGE_SIZE,
-                     PROT_READ|PROT_EXEC|PROT_WRITE)) {    
-            perror("err: ");
-	}        
+    sandhead = fill_sandbox();
+    make_sandbox_writeable(); 
+    uintptr_t p  = (uintptr_t) &lp_patch_head2;
+    p &= PLATFORM_PAGE_MASK;
+    if (
+        mprotect((void *)p, PLATFORM_PAGE_SIZE,
+                 PROT_READ|PROT_EXEC|PROT_WRITE)) {    
+        perror("err: ");
+    }        
 }
 
 void dump_sandbox(const void* data, size_t size) {
@@ -644,7 +643,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         switch (pw->reloctype) {
             case XENLP_RELOC_UINT64:
                 if (off > sizeof(pw->data) - sizeof(uint64_t)) {
-                    printk("invalnid dataoff value %d\n", off);
+                    printk("invalid dataoff value %d\n", off);
                     return -EINVAL;
                 }
 
