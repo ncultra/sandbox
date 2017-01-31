@@ -71,6 +71,10 @@ struct sandbox_header *sandhead = NULL;
 
 
 //#if defined (__X86_64__) || defined (__i386__)
+
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+
 struct sandbox_header *fill_sandbox(void)
 {
     static struct sandbox_header sh;
@@ -78,13 +82,13 @@ struct sandbox_header *fill_sandbox(void)
     sh._start = (uintptr_t)__builtin_frame_address(0);
     sh._end = sh._start + (PLATFORM_ALLOC_SIZE * PLATFORM_ALLOC_SIZE);
     sh._cursor = (uintptr_t)__builtin_frame_address(0);
-    return &sh;
+
     __asm__("mfence");
     __asm__(".align 8");
     __asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
-    return NULL;
+    return &sh;;
 }
-
+#pragma GCC pop_options
 //#endif
 uintptr_t update_patch_cursor(uintptr_t offset)
 {
