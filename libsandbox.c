@@ -88,12 +88,14 @@ struct sandbox_header *fill_sandbox(void)
 //#endif
 uintptr_t update_patch_cursor(uintptr_t offset)
 {
-    return (uintptr_t)(patch_cursor += offset);
+    assert(sandhead != NULL);
+    return sandhead->_cursor += offset;
 }
 
 
 ptrdiff_t get_sandbox_free(void)
 {
+    assert(sandhead != NULL);
     return (ptrdiff_t) sandhead->_end - sandhead->_cursor;
 }
 
@@ -173,16 +175,9 @@ void LMSG(char *fmt, ...)
 /* this is the 'new'patch struct */
 
 /* Linked list of applied patches */
+/* TODO: remove lp_patch_head2, we don't need it */
 LIST_HEAD(lp_patch_head2);
 LIST_HEAD(lp_patch_head3);
-
-/* TODO: patch_cursor needs to be actual address, not relative to the sandbox start */
-/* or, at least use patch_cursor in a consistent way */
-/* patch cursor is not located in .txt */
-
-/* should be patch_cursor = &patch_sandbox_start; */
-
-uintptr_t patch_cursor = (uintptr_t)NULL;
 
 uintptr_t get_sandbox_start(void)
 {
@@ -195,22 +190,24 @@ uintptr_t get_sandbox_end(void)
 	
 }
 
+
 static uintptr_t get_sandbox_memory(ptrdiff_t size)
 {
 	uintptr_t p = 0L;
-	
+
+        assert(sandhead != NULL);
 	assert(get_sandbox_free() > size);
         assert(size < MAX_PATCH_SIZE);
+
         
-	patch_cursor = (uintptr_t)ALIGN_POINTER((uintptr_t)patch_cursor,
-						PLATFORM_CACHE_LINE_SIZE);
-	p = patch_cursor;
+	p = (uintptr_t)ALIGN_POINTER(sandhead->_cursor,
+                                     PLATFORM_CACHE_LINE_SIZE);
 	
-	/* paranoid, be certain there are no code fragments wondering around 
+	/* be certain there are no code fragments wondering around 
 	   in the sandbox. */
-	memset((void *)p, size, sizeof(uint8_t));	
-	patch_cursor += size;
-	patch_cursor = (uintptr_t) ALIGN_POINTER((uintptr_t)patch_cursor,
+	memset((void *)p, 0xc3, size);	
+	sandhead->_cursor += size;
+	sandhead->_cursor = (uintptr_t) ALIGN_POINTER(sandhead->_cursor,
 						PLATFORM_CACHE_LINE_SIZE);
 	return p;
 }
@@ -495,7 +492,7 @@ void init_sandbox(void)
 {
     sandhead = fill_sandbox();
     make_sandbox_writeable(); 
-    uintptr_t p  = (uintptr_t) &lp_patch_head2;
+    uintptr_t p  = (uintptr_t) &lp_patch_head3;
     p &= PLATFORM_PAGE_MASK;
     if (
         mprotect((void *)p, PLATFORM_PAGE_SIZE,
