@@ -306,7 +306,7 @@ struct sandbox_header {
     uintptr_t _cursor;
 };
 
-struct sandbox_header *fill_sandbox(void);
+struct sandbox_header *fill_sandbox(int);
 
 
 #ifdef sandbox_port

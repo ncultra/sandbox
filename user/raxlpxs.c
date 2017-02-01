@@ -236,7 +236,7 @@ int usage(char *argv0)
 #else
 void usage(void)
 {
-	printf("\nraxlpqemu --info --list --apply <patch> \
+	printf("\nraxlpxs --info --list --apply <patch> \
 --remove <patch> --socket <sockname>  --debug --help\n");
 	exit(0);	
 }

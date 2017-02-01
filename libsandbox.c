@@ -9,7 +9,7 @@
 
 
 extern uintptr_t _start, _end;
-
+uint64_t sandbox_cur_rip;
 
 /************************************************************
  * The .align instruction has a different syntax on X86_64
@@ -67,28 +67,25 @@ uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
  	return p;
 }
 
-struct sandbox_header *sandhead = NULL;
 
-
+struct sandbox_header sh;
+struct sandbox_header *sandhead = &sh;
+struct sandbox_header *(*blob_buf)(int) = fill_sandbox;
 //#if defined (__X86_64__) || defined (__i386__)
-
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
-
-struct sandbox_header *fill_sandbox(void)
+struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
 {
-    static struct sandbox_header sh;
-/*  sandbox is 10k */
-    sh._start = (uintptr_t)__builtin_frame_address(0);
+    uintptr_t sandbox_cur_rip = (uintptr_t)*blob_buf;
+    
+    sh._start = sandbox_cur_rip; 
     sh._end = sh._start + (PLATFORM_ALLOC_SIZE * PLATFORM_ALLOC_SIZE);
-    sh._cursor = (uintptr_t)__builtin_frame_address(0);
-
-    __asm__("mfence");
-    __asm__(".align 8");
-    __asm__(".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
-    return &sh;;
+    sh._cursor = sh._start + 0x100;;
+    if (c)
+        return &sh;
+    __asm__ volatile ("mfence\n"
+                      ".align 8\n");
+    __asm__ volatile (".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
+    return &sh;
 }
-#pragma GCC pop_options
 //#endif
 uintptr_t update_patch_cursor(uintptr_t offset)
 {
@@ -201,8 +198,7 @@ static uintptr_t get_sandbox_memory(ptrdiff_t size)
 
         assert(sandhead != NULL);
 	assert(get_sandbox_free() > size);
-        assert(size < MAX_PATCH_SIZE);
-
+        assert(size < (unsigned int)MAX_PATCH_SIZE);
         
 	p = (uintptr_t)ALIGN_POINTER(sandhead->_cursor,
                                      PLATFORM_CACHE_LINE_SIZE);
@@ -494,7 +490,7 @@ uintptr_t make_sandbox_writeable(void)
 
 void init_sandbox(void)
 {
-    sandhead = fill_sandbox();
+    sandhead = fill_sandbox(1);
     make_sandbox_writeable(); 
     uintptr_t p  = (uintptr_t) &lp_patch_head3;
     p &= PLATFORM_PAGE_MASK;
@@ -557,14 +553,15 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
     size_t i;
     int32_t relocrel = 0;
     
-    /* Blobs are optional */if (apply->bloblen) {
+    /* Blobs are optional */
+    if (apply->bloblen) {
         if (!blob_p || !writes_p || !apply || !arg) {
             DMSG("error invalid parameters in read_patch_data2\n");
             return SANDBOX_ERR_INVALID;
         }
-        
-        *blob_p = aligned_zalloc(64, apply->bloblen);
 
+        *blob_p = (unsigned char *)get_sandbox_memory(apply->bloblen);
+        
         if (!(*blob_p)) {
             DMSG("error allocating %d bytes memory in read_patch_data2\n",
                  apply->bloblen);
@@ -582,6 +579,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         arg = (unsigned char *)arg + apply->bloblen;
 
         /* Calculate offset of relocations */
+        /* reloc relative to _start ?? */
         relocrel = (uint64_t)(uintptr_t)(*blob_p) - apply->refabs;
     }
 
@@ -631,6 +629,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         char off = pw->dataoff;
 
         /*
+          should be pw->hvabs + constant 0x555555554000
         if (pw->hvabs < (uint64_t)_start ||
             pw->hvabs >= (uint64_t)_fini {
             printk("invalid hvabs value %lx\n", pw->hvabs);

@@ -9,7 +9,7 @@ create_platform() {
     echo "#define PLATFORM_PAGE_SIZE $PAGESIZE" >> platform.h
     echo "#define PLATFORM_RELOC_SIZE  0x04" >> platform.h
     echo "#define PLATFORM_PAGE_MASK (~($(getconf PAGESIZE) - 1))" >> platform.h
-    echo "#define MAX_PATCH_SIZE PLATFORM_PAGE_MASK" >> platform.h
+    echo "#define MAX_PATCH_SIZE PLATFORM_PAGE_SIZE * 4" >> platform.h
     echo "#define PLATFORM_ALLOC_SIZE 0x1000" >> platform.h
     case $(uname -i) in
 	"x86_64")
