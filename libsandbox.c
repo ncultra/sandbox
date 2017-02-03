@@ -552,6 +552,8 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
 {
     size_t i;
     int32_t relocrel = 0;
+    uint64_t runtime_constant = 0;
+    
     
     /* Blobs are optional */
     if (apply->bloblen) {
@@ -579,8 +581,17 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         arg = (unsigned char *)arg + apply->bloblen;
 
         /* Calculate offset of relocations */
-        /* reloc relative to _start ?? */
+        /* reloc relative to _start */
+        /*  blob - _start (before relocation) - 
+            0x5555557ce1c0 - 0x189823 = 0x55555564499D (relocrel)
+            relocrel + pw->hvabs = jump landing (new code in blob)
+
+         */
         relocrel = (uint64_t)(uintptr_t)(*blob_p) - apply->refabs;
+        runtime_constant = (uint64_t)_start - apply->refabs;
+        DMSG("runtime constant: %llx\n _start: %p\n relocrel: %llx\n",
+             runtime_constant, _start, relocrel);
+        
     }
 
     /* Read relocs */
@@ -605,6 +616,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
             }
 
             /* blob -> HV .text  - adjust absolute offsets to this process mem */
+            /* write the offset from blob to _start to the blob */
             *((int32_t *)(*blob_p + off)) -= relocrel;
         }
         xfree(relocs);
@@ -624,17 +636,27 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
     arg = (unsigned char *)arg + (apply->numwrites * sizeof((*writes_p)[0]));
 
     /* Verify writes and apply any relocations in writes */
+
+/* 
+   pw->hvabs = resting address of function to be patched, (jmp location)
+   pw->data contains the jmp instruction
+   pw->dataoff needs the offset within pw->data where to place the jmp distance
+
+   (apply->refabs - pw->hvabs) + _start (run time) 
+
+   hvabs
+   relocrel at this point is the relative location from the jump to the blob
+
+ */ 
     for (i = 0; i < apply->numwrites; i++) {
         struct xenlp_patch_write *pw = &((*writes_p)[i]);
         char off = pw->dataoff;
-
-        /*
-          should be pw->hvabs + constant 0x555555554000
+        pw->hvabs += runtime_constant; 
         if (pw->hvabs < (uint64_t)_start ||
-            pw->hvabs >= (uint64_t)_fini {
-            printk("invalid hvabs value %lx\n", pw->hvabs);
+            pw->hvabs >= (uint64_t)_end ) {
+                printk("invalid hvabs value %lx\n", pw->hvabs);
         }
-        */
+        
         if (off < 0)
             continue;
 
@@ -646,7 +668,8 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
                     printk("invalid dataoff value %d\n", off);
                     return -EINVAL;
                 }
-
+                /* update the jmp distance within the patch write */
+                /* relocrel should be the distance between pw->hvabs  and blob */
                 *((uint64_t *)(pw->data + off)) += relocrel;
                 break;
             case XENLP_RELOC_INT32:
