@@ -8,7 +8,7 @@
 #define str(s) str1(s)
 
 
-extern uintptr_t _start, _end;
+extern uint64_t _start, _end;
 uint64_t sandbox_cur_rip;
 
 /************************************************************
@@ -70,6 +70,8 @@ uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
 
 struct sandbox_header sh;
 struct sandbox_header *sandhead = &sh;
+uintptr_t __start = (uintptr_t)&_start;
+
 struct sandbox_header *(*blob_buf)(int) = fill_sandbox;
 //#if defined (__X86_64__) || defined (__i386__)
 struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
@@ -588,10 +590,9 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
 
          */
         relocrel = (uint64_t)(uintptr_t)(*blob_p) - apply->refabs;
-        runtime_constant = (uint64_t)_start - apply->refabs;
-        DMSG("runtime constant: %llx\n _start: %p\n relocrel: %llx\n",
-             runtime_constant, _start, relocrel);
-        
+        runtime_constant = (uint64_t)__start - apply->refabs;
+        DMSG("runtime constant: %p\n__start: %p\nrelocrel: %p\n",
+             runtime_constant, __start, relocrel);
     }
 
     /* Read relocs */
@@ -651,9 +652,10 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
     for (i = 0; i < apply->numwrites; i++) {
         struct xenlp_patch_write *pw = &((*writes_p)[i]);
         char off = pw->dataoff;
-        pw->hvabs += runtime_constant; 
-        if (pw->hvabs < (uint64_t)_start ||
-            pw->hvabs >= (uint64_t)_end ) {
+        
+        pw->hvabs += runtime_constant;
+        if (pw->hvabs < (uint64_t)__start ||
+            pw->hvabs >= (uint64_t)&_end ) {
                 printk("invalid hvabs value %lx\n", pw->hvabs);
         }
         
@@ -679,6 +681,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
                 }
 
                 *((int32_t *)(pw->data + off)) += relocrel;
+
                 break;
             default:
                 
