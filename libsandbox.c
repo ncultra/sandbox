@@ -280,9 +280,39 @@ void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 	
 	for (i = 0; i < numwrites; i++) {
 		struct xenlp_patch_write *pw = &writes[i];
+                uint8_t data[8];
+                uint8_t hvabs[8];
+                uint8_t temp[8];
+                
+                memcpy(data, pw->data, 8);
+                memcpy(hvabs, (const void * restrict)pw->hvabs, 8);
+                memcpy(temp, data, 8);
+                
+//void __atomic_exchange (type *ptr, type *val, type *ret, int memorder)
+                DMSG("preparing to swap tramopolines: hvabs %p, data %p\n", pw->hvabs,
+                     pw->data);
 
-	    atomic_xchg((uintptr_t *)&pw->hvabs,
-			(uintptr_t *)&pw->data);
+                DMSG("saved values: data, %8x; hvabs, %8x; temp, %8x\n",
+                     (uint64_t)data[0], (uint64_t)hvabs[0], (uint64_t)temp[0]);
+
+                uint8_t *jmp, *landing;
+                
+                for(int i = 0; i < 8; i++ ) {
+                    jmp = (uint8_t *)pw->hvabs;
+                    landing = data;
+                    *jmp = *landing;
+                    jmp++; landing++;
+                    
+                }
+                
+                for(int i = 0; i < 8; i++) {
+                    jmp = hvabs;
+                    landing = (uint8_t *)pw->data;
+                    *landing = *jmp;
+                    jmp++; landing++;
+                    
+                }
+                DMSG("swap completed: hvabs %x, data %x\n", *hvabs, *data);
         }
 }
 
@@ -305,8 +335,6 @@ void make_text_writeable(struct xenlp_patch_write *writes,
 		}	
 	}
 }
-
-
 
 /* server-side apply function */
 /* corresponds to do_lp_apply on the raxl side */
@@ -654,6 +682,8 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         char off = pw->dataoff;
         
         pw->hvabs += runtime_constant;
+        DMSG("Jmp location: %p; _start: %p; _end: %p\n", pw->hvabs, __start, &_end);
+        
         if (pw->hvabs < (uint64_t)__start ||
             pw->hvabs >= (uint64_t)&_end ) {
                 printk("invalid hvabs value %lx\n", pw->hvabs);
@@ -759,6 +789,7 @@ int xenlp_apply3(void *arg)
         DMSG("tags: %s\n", patch->tags);
     }
 
+    make_text_writeable(writes, apply.numwrites);
     /* Nothing should be possible to fail now, so do all of the writes */
     swap_trampolines(writes, apply.numwrites);
 
