@@ -244,51 +244,6 @@ void usage(void)
 #endif
 
 
-#ifndef sandbox_port
-int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
-               struct xenlp_patch_info **patch)
-{
-    /* Do a list first and make sure patch isn't already applied yet */
-    struct xenlp_list list = { .skippatches = 0 };
-
-    int ret = do_lp_list(xch, &list);
-    if (ret < 0) {
-        fprintf(stderr, "failed to get list: %m\n");
-        return -1;
-    }
-
-    int totalpatches = 0;
-    while (1) {
-        int i;
-        for (i = 0; i < list.numpatches; i++) {
-            struct xenlp_patch_info *pi = &list.patches[i];
-
-            /* int j; this is from the original file, appears to be extraneous */
-            
-            if (memcmp(pi->sha1, sha1, sha1_size) == 0) {
-                *patch = pi;
-                return 0;
-            }
-
-            totalpatches++;
-        }
-
-        if (list.numpatches < MAX_LIST_PATCHES)
-            break;
-
-        list.skippatches = totalpatches;
-
-        ret = do_lp_list(xch, &list);
-        if (ret < 0) {
-            fprintf(stderr, "failed to get list: %m\n");
-            return -1;
-        }
-    }
-    return 0;
-}
-
-#endif
-
 int find_patch3(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
                struct xenlp_patch_info3 **patch)
 {
