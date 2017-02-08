@@ -179,7 +179,7 @@ void LMSG(char *fmt, ...)
 
 /* Linked list of applied patches */
 /* TODO: remove lp_patch_head2, we don't need it */
-LIST_HEAD(lp_patch_head2);
+//LIST_HEAD(lp_patch_head2);
 LIST_HEAD(lp_patch_head3);
 
 uintptr_t get_sandbox_start(void)
