@@ -181,15 +181,6 @@ int _do_lp_buf_op(xc_interface_t xch, void *buf, size_t buflen, uint64_t op)
 }
 
 #endif /* ! sandbox_port */
-int do_lp_apply(xc_interface_t xch, void *buf, size_t buflen)
-{
-#ifndef sandbox_port
-    return _do_lp_buf_op(xch, buf, buflen, XENLP_apply);
-#else
-    return __do_lp_apply(xch, buf, buflen);
-#endif /* ! sandbox_port */
-}
-
 
 int do_lp_apply3(xc_interface_t xch, void *buf, size_t buflen)
 {
