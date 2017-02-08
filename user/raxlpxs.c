@@ -736,63 +736,6 @@ static void print_list_footer()
 }
 
 
-# if 0
-int _cmd_list2(xc_interface_t xch)
-{
-    struct xenlp_list3 list = { .skippatches = 0 };
-
-    int ret = do_lp_list(xch, &list);
-    if (ret < 0) {
-        fprintf(stderr, "failed to get list: %m\n");
-        return -1;
-    }
-
-    print_list_header();
-    int last = 0;
-    int totalpatches = 0;
-    while (1) {
-        int i;
-        for (i = 0; i < list.numpatches; i++) {
-
-#ifdef sandbox_port
-            struct xenlp_patch_info3 *pi = &list.patches[i];
-#else
-            struct xenlp_patch_info *pi = &list.patches[i];
-#endif
-            int j;
-            if (list.numpatches < MAX_LIST_PATCHES && i == list.numpatches - 1)
-                last = 1;
-
-            if (json)
-                printf("\n  {\"sha1\": \"");
-
-            for (j = 0; j < sizeof(pi->sha1); j++)
-                printf("%02x", pi->sha1[j]);
-
-            if (json)
-                printf("\", \"hvaddr\": \"0x%llx\"}%s",
-                       (long long unsigned)pi->hvaddr, ((last) ? "\n" : ","));
-            else
-                printf(" @ %llx\n", (long long unsigned)pi->hvaddr);
-
-            totalpatches++;
-        }
-
-        if (list.numpatches < MAX_LIST_PATCHES)
-            break;
-
-        list.skippatches = totalpatches;
-
-        ret = do_lp_list(xch, &list);
-        if (ret < 0) {
-            fprintf(stderr, "failed to get list: %m\n");
-            return -1;
-        }
-    }
-    print_list_footer();
-    return 0;
-}
-#endif
 
 void print_patch_info3(struct xenlp_patch_info3 *pi, int last)
 {
