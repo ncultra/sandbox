@@ -335,40 +335,6 @@ int find_patch3(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
 #define AD(d)		ADR(&d, sizeof(d))
 #define ADA(d, n)	ADR(d, sizeof(d[0]) * n)
 
-size_t fill_patch_buf(unsigned char *buf, struct patch3 *patch,
-                      uint32_t numwrites, struct xenlp_patch_write *writes)
-{
-    unsigned char *ptr = buf;
-    struct xenlp_apply3 apply = {
-        bloblen: patch->bloblen,
-
-        numrelocs: patch->numrelocs,
-        numwrites: numwrites,
-
-        refabs: patch->refabs,
-    };
-
-    size_t buflen = sizeof(apply) + patch->bloblen +
-                    (patch->numrelocs * sizeof(patch->relocs[0])) +
-                    (numwrites * sizeof(writes[0]));
-
-    if (buf == NULL)
-        return buflen;
-
-    memcpy(apply.sha1, patch->sha1, sizeof(apply.sha1));
-
-    AD(apply);					/* struct xenlp_apply */
-    if (patch->bloblen > 0)
-        ADR(patch->blob, patch->bloblen);	/* blob */
-    if (patch->numrelocs > 0)
-        ADA(patch->relocs, patch->numrelocs);	/* relocs */
-    if (numwrites > 0)
-        ADA(writes, numwrites);			/* writes */
-
-    return (ptr - buf);
-}
-
-
 size_t fill_patch_buf3(unsigned char *buf, struct patch3 *patch,
                       uint32_t numwrites, struct xenlp_patch_write *writes)
 {
