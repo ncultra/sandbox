@@ -736,7 +736,7 @@ static void print_list_footer()
 }
 
 
-
+# if 0
 int _cmd_list2(xc_interface_t xch)
 {
     struct xenlp_list3 list = { .skippatches = 0 };
@@ -792,7 +792,7 @@ int _cmd_list2(xc_interface_t xch)
     print_list_footer();
     return 0;
 }
-
+#endif
 
 void print_patch_info3(struct xenlp_patch_info3 *pi, int last)
 {
@@ -876,10 +876,10 @@ int cmd_list(int argc, char *argv[])
     do_lp_caps(xch, &caps);
     if (caps.flags & XENLP_CAPS_V3)
         return _cmd_list3(xch);
-    else {
-        fprintf(stderr, "warn: using v2 livepatch ABI\n");
-        return _cmd_list2(xch);
-    }
+
+    fprintf(stderr, "warn:  v2 livepatch ABI is obsolete\n");
+    return -1;
+    
 }
 
 
