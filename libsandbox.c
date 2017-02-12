@@ -423,7 +423,39 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
     int32_t relocrel = 0;
     uint64_t runtime_constant = 0;
     
+/****
+     Everything about the patch at this time is relative to the the _start symbol.
+     however t _start symbol has been relocated when this program was executed.
+     Further, we are placing the new patched code somewhere in the sandbox memory, 
+     which we didn't know until now. 
+
+     Here are some variables we will be using to make this 2nd-stage relocation work:
+
+    refabs: a reference point for all other address offsets. We use _start in the 
+            elf file and in the patch file. We need to get the current 
+           (relocated) address of _start in order to continue with relocations. 
     
+
+  uint64_t hvabs;              Absolute address in HV to apply patch
+
+    
+    hvabs: the absolute, relocated position of the code to be patched. We don't
+           know the absolute address until run time. So in the patch file,
+           is relative to refabs before relocation. at run time, we can
+           convert this to the relocated absolute address of the code to patch.
+          
+    relocrel: the newly patched code relative to the old code, after relocation.
+              We will write a jmp <relocrel> into the old code (hvabs). 
+              relocrel ends up being the distance (positive or negative)
+              between the trampoline and the landing.
+
+     runtime_constant: the difference in refabs before and after relocation.
+                       used as a sanity check, may be removed at a later time. 
+
+    relocrel  blob_p - refabs: distance from _start (refabs) to the new code 
+                        (landing in the sandbox) at runtime (abs).
+
+ ***/
     /* Blobs are optional */
     if (apply->bloblen) {
         if (!blob_p || !writes_p || !apply || !arg) {
@@ -432,6 +464,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         }
 
         *blob_p = (unsigned char *)get_sandbox_memory(apply->bloblen);
+        /* *blob_p is now the landing point */
         
         if (!(*blob_p)) {
             DMSG("error allocating %d bytes memory in read_patch_data2\n",
@@ -449,19 +482,16 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         /* Skip over blob */
         arg = (unsigned char *)arg + apply->bloblen;
 
-        /* Calculate offset of relocations */
-        /* reloc relative to _start */
-        /*  blob - _start (before relocation) - 
-            0x5555557ce1c0 - 0x189823 = 0x55555564499D (relocrel)
-            relocrel + pw->hvabs = jump landing (new code in blob)
 
-         */
-        relocrel = (uint64_t)(uintptr_t)(*blob_p) - apply->refabs;
-        runtime_constant = (uint64_t)__start - apply->refabs;
-        DMSG("runtime constant: %p\n__start: %p\nrelocrel: %p\n",
-             runtime_constant, __start, relocrel);
+        DMSG("adjusting refabs, before: %lx\n", apply->refabs);
+        runtime_constant = (int64_t)__start - apply->refabs;
+        apply->refabs += runtime_constant;
+        DMSG("refabs adjusted: %lx\n", apply->refabs);
+
     }
-
+    relocrel = (uint64_t)(*blob_p) - apply->refabs;
+    DMSG("relocrel: %lx (%ld)\n", relocrel, relocrel);
+    
     /* Read relocs */
     if (apply->numrelocs) {
         uint32_t *relocs;
@@ -475,7 +505,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         
         memcpy(relocs, arg, apply->numrelocs * sizeof(relocs[0]));
         arg = (unsigned char *)arg + (apply->numrelocs * sizeof(relocs[0]));
-
+        
         for (i = 0; i < apply->numrelocs; i++) {
             uint32_t off = relocs[i];
             if (off > apply->bloblen - sizeof(int32_t)) {
@@ -484,8 +514,10 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
             }
 
             /* blob -> HV .text  - adjust absolute offsets to this process mem */
-            /* write the offset from blob to _start to the blob */
+            DMSG("Writing 32-bit offset from blob to _start to the blob\n");
+            DMSG("value before write: %lx\n", *(int32_t *)(*blob_p + off));
             *((int32_t *)(*blob_p + off)) -= relocrel;
+            DMSG("value after write: %lx\n", *(int32_t *)(*blob_p + off));
         }
         xfree(relocs);
     }
@@ -497,37 +529,30 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
              apply->numwrites * sizeof(struct xenlp_patch_write));
         return SANDBOX_ERR_NOMEM;
     }
-    
     memcpy(*writes_p, arg, apply->numwrites * sizeof(struct xenlp_patch_write));
     
     /* Move over all of the writes */
     arg = (unsigned char *)arg + (apply->numwrites * sizeof((*writes_p)[0]));
 
-    /* Verify writes and apply any relocations in writes */
+    /* Verify writes and apply any relocations in writes
 
-/* 
+
    pw->hvabs = resting address of function to be patched, (jmp location)
-   pw->data contains the jmp instruction
+   pw->data contains the jmp instruction to apply
    pw->dataoff needs the offset within pw->data where to place the jmp distance
 
-   (apply->refabs - pw->hvabs) + _start (run time) 
-
-   hvabs
    relocrel at this point is the relative location from the jump to the blob
+*/
+        for (i = 0; i < apply->numwrites; i++) {
+            struct xenlp_patch_write *pw = &((*writes_p)[i]);
+            char off = pw->dataoff;            
+            pw->hvabs += runtime_constant;
 
- */ 
-    for (i = 0; i < apply->numwrites; i++) {
-        struct xenlp_patch_write *pw = &((*writes_p)[i]);
-        char off = pw->dataoff;
-        
-        pw->hvabs += runtime_constant;
-        DMSG("Jmp location: %p; _start: %p; _end: %p\n", pw->hvabs, __start, &_end);
-        
-        if (pw->hvabs < (uint64_t)__start ||
-            pw->hvabs >= (uint64_t)&_end ) {
+            if (pw->hvabs < (uint64_t)__start || pw->hvabs >= (uint64_t)&_end ) {
                 printk("invalid hvabs value %lx\n", pw->hvabs);
-        }
-        
+            }
+            
+            
         if (off < 0)
             continue;
 
@@ -540,17 +565,31 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
                     return -EINVAL;
                 }
                 /* update the jmp distance within the patch write */
-                /* relocrel should be the distance between pw->hvabs  and blob */
+                /* relocrel should be the distance between pw->hvabs and blob */
+                DMSG("jmp distance within 64-bit patch buf before write: %lx (%ld) \n",                                 *((uint64_t *)(pw->data + off)),
+                             *((uint64_t *)(pw->data + off)));
+                
                 *((uint64_t *)(pw->data + off)) += relocrel;
+                
+                DMSG("jmp distance within 64-bit patch buf AFTER write: %lx (%dx) \n",
+                     *((uint64_t *)(pw->data + off)),
+                     *((uint64_t *)(pw->data + off)));
+                
                 break;
             case XENLP_RELOC_INT32:
                 if (off > sizeof(pw->data) - sizeof(int32_t)) {
                     printk("invalid dataoff value %d\n", off);
                     return -EINVAL;
                 }
+                DMSG("jmp distance within 32-bit patch buf before write: %lx (%d)\n",
+                     *((int32_t *)(pw->data + off)),
+                     *((int32_t *)(pw->data + off)));
 
                 *((int32_t *)(pw->data + off)) += relocrel;
 
+                DMSG("jmp distance within 32-bit patch buf AFTER write: %lx (%d)\n",
+                     *((int32_t *)(pw->data + off)),
+                     *((int32_t *)(pw->data + off)));
                 break;
             default:
                 
