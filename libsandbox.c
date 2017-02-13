@@ -425,6 +425,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
     
 /****
      Everything about the patch at this time is relative to the the _start symbol.
+     "_start is just one symbol we could use, blah blah blah."
      however t _start symbol has been relocated when this program was executed.
      Further, we are placing the new patched code somewhere in the sandbox memory, 
      which we didn't know until now. 
@@ -436,7 +437,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
            (relocated) address of _start in order to continue with relocations. 
     
 
-  uint64_t hvabs;              Absolute address in HV to apply patch
+  uint64_t hvabs;      Absolute address in HV of the function to be patched
 
     
     hvabs: the absolute, relocated position of the code to be patched. We don't
@@ -444,10 +445,11 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
            is relative to refabs before relocation. at run time, we can
            convert this to the relocated absolute address of the code to patch.
           
-    relocrel: the newly patched code relative to the old code, after relocation.
-              We will write a jmp <relocrel> into the old code (hvabs). 
-              relocrel ends up being the distance (positive or negative)
-              between the trampoline and the landing.
+    relocrel: the newly patched code relative to refabs after relocation.
+              blob (new) - _start (relocated) =  (1) in the scratch pad
+
+              relocrel is also necessary to normalize distances in the 
+              new code.
 
      runtime_constant: the difference in refabs before and after relocation.
                        used as a sanity check, may be removed at a later time. 
@@ -475,7 +477,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         DMSG("read_patch_data2: blob: %p arg: %p len: %d\n", *blob_p,
              arg, apply->bloblen);
         
-        /* FIXME: Memory allocated for blob can leak in case of error */
+        /* blob is statically allocated within .text */
         /* Copy blob to hypervisor */
         memcpy(*blob_p, arg, apply->bloblen);
     
@@ -514,7 +516,7 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
             }
 
             /* blob -> HV .text  - adjust absolute offsets to this process mem */
-            DMSG("Writing 32-bit offset from blob to _start to the blob\n");
+            DMSG("Normalizing 32-bit offset from blob to _start to the blob\n");
             DMSG("value before write: %lx\n", *(int32_t *)(*blob_p + off));
             *((int32_t *)(*blob_p + off)) -= relocrel;
             DMSG("value after write: %lx\n", *(int32_t *)(*blob_p + off));
@@ -541,17 +543,18 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
    pw->data contains the jmp instruction to apply
    pw->dataoff needs the offset within pw->data where to place the jmp distance
 
-   relocrel at this point is the relative location from the jump to the blob
+   relocrel at this point is the distance of the blob to the 
+   reference (_start)
 */
         for (i = 0; i < apply->numwrites; i++) {
             struct xenlp_patch_write *pw = &((*writes_p)[i]);
             char off = pw->dataoff;            
+            /* adjust the hvabs to the runtime (after 1st relocation) */
             pw->hvabs += runtime_constant;
 
             if (pw->hvabs < (uint64_t)__start || pw->hvabs >= (uint64_t)&_end ) {
                 printk("invalid hvabs value %lx\n", pw->hvabs);
             }
-            
             
         if (off < 0)
             continue;

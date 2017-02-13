@@ -330,7 +330,7 @@ struct check {
 struct function_patch {
     char *funcname;
     uint64_t oldabs;
-    uint32_t newrel;
+    uint32_t newrel;  //relative to beginning of function section in new obj.
 };    
     
 struct table_patch {
@@ -340,7 +340,7 @@ struct table_patch {
     unsigned char *data;
 };
 
-#endif
+#endif 
 /*
  *
  * XENLP_apply (cmd 11)
@@ -403,15 +403,9 @@ struct xenlp_list3 {
 
 typedef struct xenlp_patch_info3 list_response;
 
-
 #ifndef MAX_LIST_PATCHES
 #define MAX_LIST_PATCHES 128
 #endif
-
-/* TODO: we only need the v3 definition of these structs, 
- * remove the original definitions and then use 
- * ifdefs in raxlpxs to allow a non-sandbox build 
- */
 /* layout in memory:
  *
  * struct xenlp_apply
@@ -427,7 +421,7 @@ struct xenlp_apply3 {
     uint32_t numrelocs;		/* Number of relocations */
     uint32_t numwrites;		/* Number of writes */
     char __pad1[4];
-    uint64_t refabs;		/* Reference address for relocations */
+    uint64_t refabs;        /* Reference address for relocations */
     uint32_t numdeps;       /* Number of dependendencies */
     uint32_t taglen;        /* length of tags string */
 };
