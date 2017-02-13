@@ -271,49 +271,22 @@ void hex2bin(char *buf, size_t buflen, unsigned char *bin, size_t binlen)
     }	
 }
 
+
 void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
 {
-	
-	int i;
-	
-	for (i = 0; i < numwrites; i++) {
-		struct xenlp_patch_write *pw = &writes[i];
-                uint8_t data[8];
-                uint8_t hvabs[8];
-                uint8_t temp[8];
-                
-                memcpy(data, pw->data, 8);
-                memcpy(hvabs, (const void * restrict)pw->hvabs, 8);
-                memcpy(temp, data, 8);
-                
-//void __atomic_exchange (type *ptr, type *val, type *ret, int memorder)
-                DMSG("preparing to swap tramopolines: hvabs %p, data %p\n", pw->hvabs,
-                     pw->data);
+    int i;
+    for (i = 0; i < numwrites; i++) {
+        struct xenlp_patch_write *pw = &writes[i];
 
-                DMSG("saved values: data, %8x; hvabs, %8x; temp, %8x\n",
-                     (uint64_t)data[0], (uint64_t)hvabs[0], (uint64_t)temp[0]);
+        uint64_t old_data;
+        memcpy(&old_data, (void *)pw->hvabs, sizeof(pw->data));
+        memcpy((void *)pw->hvabs, pw->data, sizeof(pw->data));
+        memcpy(pw->data, &old_data, sizeof(pw->data));
 
-                uint8_t *jmp, *landing;
-                
-                for(int i = 0; i < 8; i++ ) {
-                    jmp = (uint8_t *)pw->hvabs;
-                    landing = data;
-                    *jmp = *landing;
-                    jmp++; landing++;
-                    
-                }
-                
-                for(int i = 0; i < 8; i++) {
-                    jmp = hvabs;
-                    landing = (uint8_t *)pw->data;
-                    *landing = *jmp;
-                    jmp++; landing++;
-                    
-                }
-                DMSG("swap completed: hvabs %x, data %x\n", *hvabs, *data);
-        }
+/* void __atomic_exchange (type *ptr, type *val, type *ret, int memorder) */
+        
+    }
 }
-
 
 /* unlike the xen kernel, there is a good chance that the .text is not writeable. 
  * So, make the text page that will host the trampoline writeable.
@@ -477,8 +450,8 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         DMSG("read_patch_data2: blob: %p arg: %p len: %d\n", *blob_p,
              arg, apply->bloblen);
         
-        /* blob is statically allocated within .text */
-        /* Copy blob to hypervisor */
+        
+        /* Copy blob to hypervisor  - destination is static memory in .text */
         memcpy(*blob_p, arg, apply->bloblen);
     
         /* Skip over blob */
