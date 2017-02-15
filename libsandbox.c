@@ -200,13 +200,11 @@ static uintptr_t get_sandbox_memory(ptrdiff_t size)
 	assert(get_sandbox_free() > size);
         assert(size < (unsigned int)MAX_PATCH_SIZE);
         
-	p = (uintptr_t)ALIGN_POINTER(sandhead->_cursor,
-                                     PLATFORM_CACHE_LINE_SIZE);
+	p = (uintptr_t)ALIGN_POINTER(sandhead->_cursor, 0x10);
 	
 	memset((void *)p, 0xc3, size);	
 	sandhead->_cursor += size;
-	sandhead->_cursor = (uintptr_t) ALIGN_POINTER(sandhead->_cursor,
-						PLATFORM_CACHE_LINE_SIZE);
+	sandhead->_cursor = (uintptr_t) ALIGN_POINTER(sandhead->_cursor, 0x10);
 	return p;
 }
 
