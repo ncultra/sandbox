@@ -85,7 +85,7 @@ struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
         return &sh;
     __asm__ volatile ("mfence\n"
                       ".align 8\n");
-    __asm__ volatile (".fill " str(PLATFORM_ALLOC_SIZE) " * " str(PLATFORM_ALLOC_SIZE) ",1,0xc3");
+    __asm__ volatile (".fill 0x10000, 0x1000, 0xc3");
     return &sh;
 }
 //#endif

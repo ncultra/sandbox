@@ -591,9 +591,8 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 			dump_sandbox(&ap->sha1, 20);
 			memcpy(&r[current].sha1, ap->sha1, sizeof(ap->sha1));
 			DMSG("reading %d patch sha1: \n", current);
-			dump_sandbox(&r[current].sha1, 24);
+			dump_sandbox(&r[current].sha1, 20);
                         r[current].hvaddr = (uint64_t)ap->blob;
-
 			current++;
 			if (current == count)
 				break;
@@ -758,20 +757,21 @@ ssize_t dispatch_undo_req(int fd, int len, void **bufp)
     uint8_t sha1[20];
     char sha1_txt_buf[42];
 
-    int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
+    int remaining_bytes = len - SANDBOX_MSG_HDRLEN - sizeof(ccode);
     DMSG("undo request dispatcher: remaining bytes = %d\n", remaining_bytes);
     /* message should be 20 bytes sha1 of patch to undo */
-    if (remaining_bytes != 20) {
+    if (remaining_bytes != sizeof(sha1)) {
         DMSG("undo request wrong size: %d, not dispatched.\n", remaining_bytes);
         ccode =  SANDBOX_ERR_PARSE;
         goto exit;
     }
 
-    if (readn(fd, &sha1[0], remaining_bytes) != remaining_bytes) {
+    if (readn(fd, &sha1[0], sizeof(sha1)) != sizeof(sha1)) {
         DMSG("error reading sha1 in undo message\n");
         ccode =  SANDBOX_ERR_RW;
         goto exit;
     }
+
     memset(sha1_txt_buf, 0x00, sizeof(sha1_txt_buf));
     bin2hex(sha1, sizeof(sha1), sha1_txt_buf, sizeof(sha1_txt_buf) - 1);
     DMSG("Undoing patch %s\n", sha1_txt_buf);
