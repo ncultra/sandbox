@@ -79,13 +79,13 @@ struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
     uintptr_t sandbox_cur_rip = (uintptr_t)*blob_buf;
     
     sh._start = sandbox_cur_rip; 
-    sh._end = sh._start + (PLATFORM_ALLOC_SIZE * PLATFORM_ALLOC_SIZE);
+    sh._end = sh._start + SANDBOX_ALLOC_SIZE;
     sh._cursor = sh._start + 0x100;;
     if (c)
         return &sh;
     __asm__ volatile ("mfence\n"
                       ".align 8\n");
-    __asm__ volatile (".fill 0x10000, 0x1000, 0xc3");
+    __asm__ volatile (".fill 0x100000, 0x04, 0xc3");
     return &sh;
 }
 //#endif
@@ -320,7 +320,6 @@ uintptr_t make_sandbox_writeable(void)
 		     PROT_READ|PROT_EXEC|PROT_WRITE)) {
 		DMSG("memprotect failed, %i\n", errno);
 		perror("err: ");
-		
 	}
 	return p;
 }

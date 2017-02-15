@@ -295,7 +295,7 @@ static inline void *aligned_zalloc(int align, int size)
 #define XEN_GUEST_HANDLE(a) a
 
 /* must be page-aligned. */
-#define SANDBOX_ALLOC_SIZE PLATFORM_PAGE_SIZE
+#define SANDBOX_ALLOC_SIZE 0x100000
 
 typedef uint8_t * reloc_ptr_t;
 
