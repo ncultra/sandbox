@@ -256,6 +256,7 @@ int client_func(void *p)
 		perror(NULL);
 		goto errout;
 	}
+        unlink(cpath);
 	DMSG("connected\n");
 	return s;
 errout:

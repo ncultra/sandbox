@@ -45,7 +45,7 @@ build_ref_file() {
 
  xtract_patch() {
      pushd $BUILD_ROOT &>/dev/null
-     rm *raxlpxs && rm sandbox/user/*raxlpxs &>/dev/null
+     rm *.raxlpxs && rm sandbox/user/*.raxlpxs #&>/dev/null
      $XTRACT --qemu --function $1 $2 $3
      mv *.raxlpxs $BUILD_ROOT/sandbox/user
    popd &>/dev/null 

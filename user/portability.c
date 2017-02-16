@@ -130,7 +130,7 @@ int __find_patch(int fd, uint8_t sha1[20], struct xenlp_list3 *list)
             if (memcmp(sha1, response[i].sha1, 20) == 0) {
                 memcpy(&list->patches[0], &response[i], sizeof(struct xenlp_patch_info3));
                 list->numpatches = 1;
-                ccode = SANDBOX_SUCCESS;
+                ccode = list->numpatches;
                 LMSG("one matching applied patch\n");
                 goto exit;
             }    
@@ -182,10 +182,10 @@ int find_patch(xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
             }
             memcpy(*patch, &list.patches[0],
                    list.numpatches * sizeof(struct xenlp_patch_info3));
-            ccode = SANDBOX_OK;    
     }       
     
     return ccode;
+    
 }
 
 

@@ -1290,7 +1290,6 @@ int cmd_undo(int argc, char *argv[])
             ccode = -1;
             goto out;
         }
-        
     } else {
         fprintf(stderr, "error: no v3 ABI detected, undo disabled\n");
         ccode = -1;
@@ -1392,7 +1391,7 @@ static inline void get_options(int argc, char **argv)
             {0,0,0,0}
         };
         int option_index = 0;
-        c = getopt_long_only(argc, argv, "ila:u:s:dh",
+        c = getopt_long_only(argc, argv, "ila:f:u:s:dh",
                              long_options, &option_index);
         if (c == -1) {
             break;
@@ -1445,11 +1444,15 @@ static inline void get_options(int argc, char **argv)
         }break;
                     
         case 2: /* list */
+            list_flag = 1;
+            DMSG("selected option %s\n", long_options[option_index].name);
             break;
         case 3: /* find */
         {
+            find_flag = 1;
+            DMSG("selected option %s\n", long_options[option_index].name);
             strncpy((char *)patch_hash, optarg, SHA_DIGEST_LENGTH * 2 + 1);
-            DMSG("find patch %s: %s\n", patch_hash);
+            DMSG("find patch %s\n", patch_hash);
             break;
         }
         case 4: /* apply */
@@ -1529,13 +1532,14 @@ int main(int argc, char **argv)
     }
 
     
-    if (find_flag) {
-        struct xenlp_patch_info3 **patch_buf = NULL;
+    if (find_flag > 0) {
+        struct xenlp_patch_info3 *patch_buf = NULL;
         unsigned char sha1[SHA_DIGEST_LENGTH + 2] = { 0 };
+        DMSG("WHAT THE BUTT\n");
         
         string2sha1(patch_hash, sha1);
 
-        ccode = find_patch(sockfd, sha1, SHA_DIGEST_LENGTH, patch_buf);
+        ccode = find_patch(sockfd, sha1, SHA_DIGEST_LENGTH, &patch_buf);
         if (ccode == 1) {
             DMSG("found patch: %s\n", patch_hash);
             /* TODO: print all patch info int txt, json */
@@ -1545,7 +1549,7 @@ int main(int argc, char **argv)
             patch_buf < 0) {
             DMSG("error in find_patch: %d\n", ccode);
         }
-        if (*patch_buf == NULL) {
+        if (patch_buf != NULL) {
             free(patch_buf);
         }
     }
@@ -1565,9 +1569,10 @@ int main(int argc, char **argv)
         
     }
         
-    if (sockfd > 0)
+    if (sockfd > 0) {    
         close(sockfd);
-	
+    }
+    
     LMSG("bye\n");
     return SANDBOX_OK;
 	
