@@ -28,6 +28,7 @@ alternate_ref_file() {
 
 # swaps exes and sources, then builds new exe
 build_ref_file() {
+    
     # copy runfile to ref, build new runfile
     alternate_files $BUILD_FILE $BACK_FILE
     alternate_files $RUN_FILE $REF_FILE
@@ -45,14 +46,21 @@ build_ref_file() {
 
  xtract_patch() {
      pushd $BUILD_ROOT &>/dev/null
-     rm *.raxlpxs && rm sandbox/user/*.raxlpxs #&>/dev/null
+     rm *.raxlpxs && rm sandbox/user/*.raxlpxs &>/dev/null
      $XTRACT --qemu --function $1 $2 $3
      mv *.raxlpxs $BUILD_ROOT/sandbox/user
    popd &>/dev/null 
 }
 
-build_ref_file
-xtract_patch hmp_info_version $PATCHED_OBJ $REF_FILE
 
-#run ref qemu
-#sudo $REF_FILE --monitor stdio --cdrom $ISO_FILE
+
+build_ref_file
+xtract_patch hmp_info_version $PATCHED_OBJ $REF_FILE 
+
+if (( $1 > 0 )); then
+    pushd $BUILD_ROOT/x86_64-softmmu/
+    sudo gdb $REF_FILE  --command gdbin.txt
+    popd
+fi
+
+

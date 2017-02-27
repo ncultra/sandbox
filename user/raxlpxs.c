@@ -1417,7 +1417,7 @@ static inline void get_options(int argc, char **argv)
                 option_index = 4;
                 apply_flag = 1;
                 goto restart_long;
-            case 'u':
+            case 'r':a
                 option_index = 5;
                 remove_flag = 1;
                 goto restart_long;
@@ -1466,10 +1466,10 @@ static inline void get_options(int argc, char **argv)
             DMSG("patch file: %s\n", patch_basename);
             break;
         }
-        case 5: /* undo */
+        case 5: /* remove */
         {
             strncpy((char *)patch_hash, optarg, SHA_DIGEST_LENGTH * 2 + 1);
-            DMSG("undo (remove)  patch: %s \n", patch_hash);
+            DMSG("remove  patch: %s \n", patch_hash);
             break;
         }
         case 6: /* set socket */
