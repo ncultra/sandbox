@@ -25,38 +25,6 @@ uint64_t sandbox_cur_rip;
 
 uint64_t fill = PLATFORM_ALLOC_SIZE;
 
-__asm__(".text");
-
-#if defined (__X86_64__) || defined (__i386__)
-	__asm__(".align " str(PLATFORM_CACHE_LINE_SIZE));
-#endif
-
-#ifdef  PPC64LE
-	__asm__(".align 0x0c");
-#endif
-
-/* sandbox is 4MB,  can make it larger or smaller if needed. */
-
-
-#ifdef PPC64LE
-	__asm__("b patch_sandbox_end");
-	__asm__(".fill 1000 * 1000,1,0x00");
-	__asm__(".align 3");
-
-#endif
-
-#if defined (__X86_64__)
-	__asm__("retq");
-#endif
-
-#if defined (__i386__)
-	__asm__("ret");
-#endif
-
-#ifdef PPC64LE
-	__asm__("blr");
-#endif
-
 
 uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
  { 
@@ -73,7 +41,7 @@ struct sandbox_header *sandhead = &sh;
 uintptr_t __start = (uintptr_t)&_start;
 
 struct sandbox_header *(*blob_buf)(int) = fill_sandbox;
-//#if defined (__X86_64__) || defined (__i386__)
+
 struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
 {
     uintptr_t sandbox_cur_rip = (uintptr_t)*blob_buf;
@@ -81,14 +49,16 @@ struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
     sh._start = sandbox_cur_rip; 
     sh._end = sh._start + SANDBOX_ALLOC_SIZE;
     sh._cursor = sh._start + 0x100;;
-    if (c)
-        return &sh;
-    __asm__ volatile ("mfence\n"
+    
+    return &sh;
+
+    __asm__ volatile (".text\n"  /* *probably* unnecessary, but its harmless */
+                      "mfence\n"
                       ".align 8\n");
     __asm__ volatile (".fill 0x100000, 0x04, 0xc3");
     return &sh;
 }
-//#endif
+
 uintptr_t update_patch_cursor(uintptr_t offset)
 {
     assert(sandhead != NULL);
