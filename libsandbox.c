@@ -59,6 +59,7 @@ struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
     return &sh;
 }
 
+/* for production, #define NDEBUG to nuetralize the assertion */
 ptrdiff_t get_sandbox_free(void)
 {
     assert(sandhead != NULL);
@@ -154,7 +155,7 @@ uintptr_t get_sandbox_end(void)
 	
 }
 
-
+/* for production, #define NDEBUG to nuetralize the assertions */
 static uintptr_t get_sandbox_memory(ptrdiff_t size)
 {
 	uintptr_t p = 0L;
