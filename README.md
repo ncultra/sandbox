@@ -36,7 +36,7 @@ Notes
 ------------
 
 ###sandbox size###
-The "sandbox" is actually an area in the .text segment that is full of no-ops. The default size of the sandbox is 4k. Live patches are copied to this area. The "sandbox" is not dynamically allocated, so its important to make the sandbox large enough to hold the anticipated number of patches.
+The "sandbox" is actually an area in the .text segment that is full of 0xc3 (return) instructions. The size of the sandbox is set by a constant at build time, SANDBOX_ALLOC. Live patches are copied to this area. The "sandbox" is not dynamically allocated, so its important to make the sandbox large enough to hold the anticipated number of patches.
 
 ###logging###
 By default every message over the domain socket is logged to a local text file. This can be turned off. 
