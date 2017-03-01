@@ -1417,7 +1417,7 @@ static inline void get_options(int argc, char **argv)
                 option_index = 4;
                 apply_flag = 1;
                 goto restart_long;
-            case 'r':a
+            case 'r':
                 option_index = 5;
                 remove_flag = 1;
                 goto restart_long;
