@@ -192,30 +192,6 @@ void bin2hex(unsigned char *bin, size_t binlen, char *buf,
         *buf = 0;
 }
 
-static unsigned int __attribute__((used))
-hex_to_int(const char *ptr)
-{
-    unsigned int value = 0;
-    char ch = *ptr;
-    int i;
-
-    while (ch == ' ' || ch == '\t')
-        ch = *(++ptr);
-
-    for (i = 0; i < 4; i++) {
-
-        if (ch >= '0' && ch <= '9')
-            value = (value << 4) + (ch - '0');
-        else if (ch >= 'A' && ch <= 'F')
-            value = (value << 4) + (ch - 'A' + 10);
-        else if (ch >= 'a' && ch <= 'f')
-            value = (value << 4) + (ch - 'a' + 10);
-        else
-            return value;
-        ch = *(++ptr);
-    }
-    return value;
-}
 
 void hex2bin(char *buf, size_t buflen, unsigned char *bin, size_t binlen)
 {
