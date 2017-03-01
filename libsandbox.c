@@ -41,7 +41,7 @@ struct sandbox_header *sandhead = &sh;
 uintptr_t __start = (uintptr_t)&_start;
 
 struct sandbox_header *(*blob_buf)(int) = fill_sandbox;
-
+/* TODO: make the code more clear per suggestions from johannes and constantine. */
 struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
 {
     uintptr_t sandbox_cur_rip = (uintptr_t)*blob_buf;
@@ -58,13 +58,6 @@ struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
     __asm__ volatile (".fill 0x100000, 0x04, 0xc3");
     return &sh;
 }
-
-uintptr_t update_patch_cursor(uintptr_t offset)
-{
-    assert(sandhead != NULL);
-    return sandhead->_cursor += offset;
-}
-
 
 ptrdiff_t get_sandbox_free(void)
 {
