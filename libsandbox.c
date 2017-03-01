@@ -264,6 +264,7 @@ uintptr_t make_sandbox_writeable(void)
 	return p;
 }
 
+/* TODO: rewrite to fulfill intent, currently makes data segment executable */
 void init_sandbox(void)
 {
     sandhead = fill_sandbox(1);
@@ -516,7 +517,7 @@ int xenlp_apply3(void *arg)
     unsigned char *blob = NULL;
     struct xenlp_patch_write *writes;
     struct applied_patch3 *patch;
-    char sha1[41];
+    char sha1[SHA_DIGEST_LENGTH*2+1];
     int res;
 
     memcpy(&apply, arg, sizeof(struct xenlp_apply3)); 
