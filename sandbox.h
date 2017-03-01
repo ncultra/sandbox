@@ -29,6 +29,7 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <libgen.h>
+#include </usr/include/openssl/sha.h>
 #include "platform.h" 
 
 #ifndef __SANDBOX_H

@@ -521,9 +521,8 @@ int xenlp_apply3(void *arg)
     int res;
 
     memcpy(&apply, arg, sizeof(struct xenlp_apply3)); 
-    /* FIXME: Manipulating arg.p seems a bit ugly */
 
-    /* Skip over struct xenlp_apply */
+    /* Skip over struct xenlp_apply3 */
     arg = (unsigned char *)arg + sizeof(struct xenlp_apply3);
 /* Do some initial sanity checking */
     if (apply.bloblen > MAX_PATCH_SIZE) {
