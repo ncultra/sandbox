@@ -1,5 +1,4 @@
 #define _GNU_SOURCE
-#include <link.h>
 #include <sys/mman.h>
 #include "atomic.h"
 #include "sandbox.h"
@@ -524,7 +523,7 @@ int xenlp_apply3(void *arg)
 
     /* Skip over struct xenlp_apply3 */
     arg = (unsigned char *)arg + sizeof(struct xenlp_apply3);
-/* Do some initial sanity checking */
+    /* Do some initial sanity checking */
     if (apply.bloblen > MAX_PATCH_SIZE) {
         printk("live patch size %u is too large\n", apply.bloblen);
         return SANDBOX_ERR_INVALID;
