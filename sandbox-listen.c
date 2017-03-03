@@ -121,7 +121,12 @@ void *listen_thread(void *arg)
                     DMSG("%s\n", strerror(errno));
 
                 }
-                while (client_fd > 0) {
+/* sched_yield is needed in the inner loop to prevent a DOS by a client flooding the server with request messages; the loop will keep reading messages until the client closes the socket. A bad client can send msg after msg after msg, ad infinutum. In addition to a yield, I think there should also be a counter to limit how many times through the inner loop the server will allow for a client.  
+ */
+                int number_of_client_messages = 0;
+                
+                while (client_fd > 0 &&
+                       number_of_client_messages < SANDBOX_MSG_SESSION_LIMIT) {
                     uint16_t version, id;
                     uint32_t len;
                     quit   = read_sandbox_message_header(client_fd,
@@ -136,6 +141,7 @@ void *listen_thread(void *arg)
                     else if (quit < 0) {
                         DMSG("error reading header %d\n", quit);
                     }
+                    number_of_client_messages++;
                     sched_yield();
                 }
             } else {

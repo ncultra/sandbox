@@ -464,6 +464,8 @@ uintptr_t get_sandbox_end(void);
 */
 
 /* TODO: re-index to remove dummy msgs */
+/* limit client requests per connection, to prevent DOS by a bad client */
+#define SANDBOX_MSG_SESSION_LIMIT 0x64 
 #define SANDBOX_MSG_HDRLEN 0x10
 #define SANDBOX_MSG_HBUFLEN 0x18
 #define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
