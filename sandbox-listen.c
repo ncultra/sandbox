@@ -76,9 +76,7 @@ handler dispatch[] =
 }
 
 
-#define QLEN 5 /* depth of the listening queue */
-#define STALE 30 /* timout for client user id data */
-
+static int LISTEN_QUEUE_LEN = 5;
 pthread_t *thr;
 
 pthread_t *run_listener(struct listen *l){
@@ -179,7 +177,7 @@ int listen_sandbox_sock(struct listen *l)
 		ccode = -3;
 		goto errout;
 	}
-	if (listen(l->sock, QLEN) < 0) {
+	if (listen(l->sock, LISTEN_QUEUE_LEN) < 0) {
 		ccode = -4;
 		goto errout;
 	}
@@ -356,7 +354,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 	DMSG("reading %d bytes from %d into %p\n", SANDBOX_MSG_HDRLEN, fd, hbuf);
 
 	for (; i < SANDBOX_MSG_HDRLEN; i++) {
-		if ((ccode = readn(fd, &hbuf[i], 1)) != 1) {
+	 	if ((ccode = readn(fd, &hbuf[i], 1)) != 1) {
 			if (ccode == 0) {
                             DMSG("read_sandbox_message_header: other party" \
                                  " closed the socket\n");
@@ -816,7 +814,7 @@ char *get_sandbox_build_info(int fd)
 {
 	uint16_t version, id;
 	uint32_t len;
-	char *listen_buf = NULL, *info;
+	char *listen_buf = NULL, *info = NULL;
 
 	if (send_rr_buf(fd, SANDBOX_MSG_GET_BLD, SANDBOX_LAST_ARG) == SANDBOX_OK) {
             DMSG("get_sandbox_build_info: fd %d\n", fd);

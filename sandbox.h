@@ -47,6 +47,8 @@
         _a < _b ? _a : _b; })
 
 
+
+/* TODO: refactor to use </usr/include/sys/queue.h> */
 #define container_of(ptr, type, member) ({ \
                 const typeof( ((type *)0)->member ) *__mptr = (ptr);  \
 		(type *)( (char *)__mptr - offsetof(type,member) );})
@@ -460,6 +462,8 @@ uintptr_t get_sandbox_end(void);
 /* TODO: add a msg nonce (transaction id)
  from sandbox-listen.h
 */
+
+/* TODO: re-index to remove dummy msgs */
 #define SANDBOX_MSG_HDRLEN 0x10
 #define SANDBOX_MSG_HBUFLEN 0x18
 #define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
