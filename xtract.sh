@@ -1,17 +1,8 @@
 #! /bin/bash
 
-BUILD_ROOT="/home/mdday/src/QEMU"
-BACK_FILE="$BUILD_ROOT/hmp.c.bak"
-BUILD_FILE="$BUILD_ROOT/hmp.c"
-XTRACT="/home/mdday/src/xen-livepatch/user/extract_patch"
-PATCHED_OBJ="$BUILD_ROOT/hmp.o"
-REF_FILE="/home/mdday/src/QEMU/x86_64-softmmu/qemu-system-x86_64-ref"
-RUN_FILE="$BUILD_ROOT/x86_64-softmmu/qemu-system-x86_64"
-ISO_FILE="$BUILD_ROOT/x86_64-softmmu/ttylinux-virtio_x86_64-16.1.iso"
-
 # $1 is first file, $2 is 2nd file 
 alternate_files()  {
-    echo $BUILD_ROOT
+    echo "$BUILD_ROOT"
     pushd "$BUILD_ROOT"&>/dev/null
     RAND_FILE="$$.bak"
     cp -f $1 $RAND_FILE
@@ -22,6 +13,7 @@ alternate_files()  {
                                     
 alternate_ref_file() {
     pushd "$BUILD_ROOT/x86_64-softmmu" &>/dev/null
+    echo "$RUN_FILE $REF_FILE"
     alternate_files $RUN_FILE $REF_FILE
     popd &>/dev/null
 }
@@ -31,8 +23,8 @@ alternate_ref_file() {
 build_ref_file() {
     
     # copy runfile to ref, build new runfile
-    alternate_files $BUILD_FILE $BACK_FILE
-    alternate_files $RUN_FILE $REF_FILE
+    alternate_files "$BUILD_FILE" "$BACK_FILE"
+    alternate_files "$RUN_FILE" "$REF_FILE"
     pushd $BUILD_ROOT &>/dev/null
     # build the new run file
     rm $PATCHED_OBJ &>/dev/null    # force a rebuild of the relevant source
@@ -55,14 +47,96 @@ build_ref_file() {
 }
 
 
+RUN_QEMU=0
+CONFIG_FILE=""
+
+usage() {
+    echo "$PROGRAM --config=<config file>"
+    echo "           [--run]"
+    exit 1
+}
+
+PROGRAM=$0
+
+
+check_parms() {
+    if ((${#CONFIG_FILE} != 0 )) ; then
+	echo "${#CONFIG_FILE}"
+	return 0
+    fi
+    usage
+}
+
+
+until [ -z "$1" ]; do    
+    case "${1:0:2}" in
+        "--")
+        case "${1:2:3}" in 
+            "run") RUN_QEMU=1;; 
+	    "con") CONFIG_FILE="${1##--config=}";;
+            "hel") usage ;;
+        esac ;;
+        *)usage;;
+    esac
+        shift;
+done
+
+check_parms
+
+
+echo "file $CONFIG_FILE"
+echo "$RUN_QEMU"
+
+
+typeset -A config # init array
+config=( # set default values in config array
+    [BUILD_ROOT]=""
+    [BACK_FILE]=""
+    [BUILD_FILE]=""
+    [EXTRACT_PATCH]=""
+    [PATCHED_OBJ]=""
+    [REF_FILE]=""    #the exe that will be patched
+    [RUN_FILE]=""    #the exe with the new code to generate the patch
+    [ISO_FILE]=""    #the bootable image to run in qemu
+)
+
+
+while read line
+do
+    if echo $line | grep -F = &>/dev/null
+    then
+        varname=$(echo "$line" | cut -d '=' -f 1)
+        config[$varname]=$(echo "$line" | cut -d '=' -f 2-)
+    fi
+done < xtract.conf
+
+export BUILD_ROOT=${config[BUILD_ROOT]} 
+export BACK_FILE=${config[BUILD_ROOT]}${config[BACK_FILE]}
+export BUILD_FILE=${config[BUILD_ROOT]}${config[BUILD_FILE]}
+export EXTRACT_PATCH=${config[BUILD_ROOT]}${config[EXTRACT_PATCH]}
+export PATCHED_OBJ=${config[BUILD_ROOT]}${config[PATCHED_OBJ]}
+export REF_FILE=${config[BUILD_ROOT]}${config[REF_FILE]}
+export RUN_FILE=${config[BUILD_ROOT]}${config[RUN_FILE]}
+export ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}
+
+echo "BUILD_ROOT=${config[BUILD_ROOT]}"
+echo "BACK_FILE=${config[BUILD_ROOT]}${config[BACK_FILE]}"
+echo "BUILD_FILE=${config[BUILD_ROOT]}${config[BUILD_FILE]}"
+echo "EXTRACT_PATCH=${config[BUILD_ROOT]}${config[EXTRACT_PATCH]}"
+echo "PATCHED_OBJ=${config[BUILD_ROOT]}${config[PATCHED_OBJ]}"
+echo "REF_FILE=${config[BUILD_ROOT]}${config[REF_FILE]}"
+echo "RUN_FILE=${config[BUILD_ROOT]}${config[RUN_FILE]}"
+echo "ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}"
+
+
 
 build_ref_file
-xtract_patch hmp_info_version $PATCHED_OBJ $REF_FILE 
+$EXTRACT_PATCH --qemu --function hmp_info_version $PATCHED_OBJ $REF_FILE 
 
-if (( $1 > 0 )); then
-    pushd $BUILD_ROOT/x86_64-softmmu/
-    sudo gdb $REF_FILE  --command gdbin.txt
-    popd
-fi
+#if (( $RUN_QEMU > 0 )); then
+#    pushd $BUILD_ROOT/x86_64-softmmu/
+#    sudo gdb $REF_FILE  --command gdbin.txt
+#    popd
+#fi
 
 
