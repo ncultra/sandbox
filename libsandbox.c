@@ -476,8 +476,9 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
                 }
                 /* update the jmp distance within the patch write */
                 /* relocrel should be the distance between pw->hvabs and blob */
-                DMSG("jmp distance within 64-bit patch buf before write: %lx (%ld) \n",                                 *((uint64_t *)(pw->data + off)),
-                             *((uint64_t *)(pw->data + off)));
+                DMSG("jmp distance within 64-bit patch buf before write: %lx (%ld) \n"
+                     *((uint64_t *)(pw->data + off)),
+                     *((uint64_t *)(pw->data + off)));
                 
                 *((uint64_t *)(pw->data + off)) += relocrel;
                 
