@@ -51,16 +51,13 @@ int connect_to_sandbox(char *sandbox_name)
 	return client_func(sandbox_name);	
 }
 
-
-/*TODO: need to fix the double connect */
 int open_xc(xc_interface_t *xch)
 {
 
     if (sockfd <= 0) {
         sockfd = connect_to_sandbox(sockname);
     }
-    sockfd = connect_to_sandbox(sockname);
-
+ 
     *xch = sockfd;
     if (sockfd < 0) {
         printf("xc_interface_open failed\n");    

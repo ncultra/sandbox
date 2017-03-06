@@ -1571,6 +1571,7 @@ int main(int argc, char **argv)
         
     if (sockfd > 0) {    
         close(sockfd);
+        sockfd = 0;
     }
     
     LMSG("bye\n");

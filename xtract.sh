@@ -133,10 +133,8 @@ echo "ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}"
 build_ref_file
 $EXTRACT_PATCH --qemu --function hmp_info_version $PATCHED_OBJ $REF_FILE 
 
-#if (( $RUN_QEMU > 0 )); then
-#    pushd $BUILD_ROOT/x86_64-softmmu/
-#    sudo gdb $REF_FILE  --command gdbin.txt
-#    popd
-#fi
-
-
+if (( $RUN_QEMU > 0 )); then
+    pushd $BUILD_ROOT/x86_64-softmmu/
+    sudo gdb $REF_FILE  --command gdbin.txt
+    popd
+fi
