@@ -110,7 +110,8 @@ void DMSG(char *fmt, ...)
 extern void va_copy(va_list dest, va_list src);
 void LMSG(char *fmt, ...)
 {
-	va_list va;
+    va_list va;
+    
 	if (log_fd == NULL) {
 		DMSG("opening log file\n");		
 		log_fd = open_log();
@@ -121,11 +122,10 @@ void LMSG(char *fmt, ...)
 		}
 	}
 	if (log_level > 0) {
-		va_list vb;
-		va_copy(vb, va);
-		va_start(vb, fmt);
-		vfprintf(stdout, fmt, vb);
-		va_end(vb);
+            va_list vb;
+            va_start(vb, fmt);
+            vfprintf(stdout, fmt, vb);
+            va_end(vb);
 	}
 	
 	va_start(va, fmt);

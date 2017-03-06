@@ -52,7 +52,7 @@ int connect_to_sandbox(char *sandbox_name)
 }
 
 
-
+/*TODO: need to fix the double connect */
 int open_xc(xc_interface_t *xch)
 {
 
