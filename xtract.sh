@@ -23,8 +23,8 @@ alternate_ref_file() {
 build_ref_file() {
     
     # copy runfile to ref, build new runfile
-    alternate_files "$BUILD_FILE" "$BACK_FILE"
-    alternate_files "$RUN_FILE" "$REF_FILE"
+    alternate_files $BUILD_FILE $BACK_FILE
+    alternate_files $RUN_FILE $REF_FILE
     pushd $BUILD_ROOT &>/dev/null
     # build the new run file
     rm $PATCHED_OBJ &>/dev/null    # force a rebuild of the relevant source

@@ -304,13 +304,10 @@ typedef uint8_t * reloc_ptr_t;
 
 
 struct sandbox_header {
-    uintptr_t _start;
-    uintptr_t _end;
-    uintptr_t _cursor;
+    uint8_t *_start;
+    uint8_t *_end;
+    uint8_t *_cursor;
 };
-
-struct sandbox_header *fill_sandbox(int);
-
 
 #ifdef sandbox_port
 #define INFO_STRING_LEN 255
@@ -379,12 +376,12 @@ struct xenlp_hash {
 };
 
 struct xenlp_patch_write {
-    uint64_t hvabs;		/* Absolute address in HV to apply patch */
+    uintptr_t hvabs;		/* Absolute address in HV to apply patch */
 
     unsigned char data[8];	/* 8-bytes of data to write at location */
 
     uint8_t reloctype;		/* XENLP_RELOC_ABS, XENLP_RELOC_REL */
-    char dataoff;		/* Offset into data to apply relocation */
+    uint8_t  dataoff;		/* Offset into data to apply relocation */
 
     char __pad[6];
 };
@@ -424,7 +421,7 @@ struct xenlp_apply3 {
     uint32_t numrelocs;		/* Number of relocations */
     uint32_t numwrites;		/* Number of writes */
     char __pad1[4];
-    uint64_t refabs;        /* Reference address for relocations */
+    uintptr_t refabs;        /* Reference address for relocations */
     uint32_t numdeps;       /* Number of dependendencies */
     uint32_t taglen;        /* length of tags string */
 };
@@ -446,11 +443,9 @@ extern uintptr_t patch_cursor;
 
 extern struct list_head lp_patch_head3;
 
-uintptr_t  make_sandbox_writeable(void);
 struct patch *alloc_patch(char *name, uint64_t size);
 void free_patch(struct patch *p);
 int apply_patch(struct patch *new_patch);
-void init_sandbox(void);
 void dump_sandbox(const void* data, size_t size);
 uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset);
 
@@ -589,7 +584,7 @@ struct listen
 int set_debug(int db);
 void DMSG(char *fmt, ...);
 void LMSG(char *fmt, ...);
-
+uint8_t *init_sandbox(void);
 pthread_t *run_listener(struct listen *l);
 void *listen_thread(void *arg);
 int listen_sandbox_sock(struct listen *);

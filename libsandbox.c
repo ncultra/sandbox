@@ -1,4 +1,4 @@
-#define _GNU_SOURCE
+
 #include <sys/mman.h>
 #include "atomic.h"
 #include "sandbox.h"
@@ -7,8 +7,7 @@
 #define str(s) str1(s)
 
 
-extern uint64_t _start, _end;
-uint64_t sandbox_cur_rip;
+extern uintptr_t _start, _end;
 
 /************************************************************
  * The .align instruction has a different syntax on X86_64
@@ -35,34 +34,30 @@ uintptr_t ALIGN_POINTER(uintptr_t p, uintptr_t offset)
 }
 
 
-struct sandbox_header sh;
-struct sandbox_header *sandhead = &sh;
-uintptr_t __start = (uintptr_t)&_start;
+uint8_t
+sbox_exebuf[SANDBOX_ALLOC_SIZE]
+__attribute__ ((section (".text"), aligned (0x1000))) = {0};
 
-struct sandbox_header *(*blob_buf)(int) = fill_sandbox;
-/* TODO: make the code more clear per suggestions from johannes and constantine. */
-struct sandbox_header *__attribute__((optimize("O0")))fill_sandbox(int c)
-{
-    uintptr_t sandbox_cur_rip = (uintptr_t)*blob_buf;
-    
-    sh._start = sandbox_cur_rip; 
-    sh._end = sh._start + SANDBOX_ALLOC_SIZE;
-    sh._cursor = sh._start + 0x100;;
-    
-    return &sh;
+uint8_t *sbox_start = sbox_exebuf;
+uint8_t *sbox_end = &sbox_exebuf[SANDBOX_ALLOC_SIZE];
+uint8_t *sbox_cursor = sbox_exebuf;
 
-    __asm__ volatile (".text\n"  /* *probably* unnecessary, but its harmless */
-                      "mfence\n"
-                      ".align 8\n");
-    __asm__ volatile (".fill 0x100000, 0x04, 0xc3");
-    return &sh;
+uint8_t * init_sandbox()
+{    
+    if (mprotect(&sbox_exebuf[0], SANDBOX_ALLOC_SIZE,
+                 PROT_READ|PROT_EXEC|PROT_WRITE) == -1) {
+        DMSG("memprotect failed, %i\n", errno);
+        perror("err: ");
+        return NULL;
+    } else {
+        memset(sbox_exebuf, 0x90, SANDBOX_ALLOC_SIZE);
+    }
+    return sbox_cursor;
 }
 
-/* for production, #define NDEBUG to nuetralize the assertion */
 ptrdiff_t get_sandbox_free(void)
 {
-    assert(sandhead != NULL);
-    return (ptrdiff_t) sandhead->_end - sandhead->_cursor;
+    return (ptrdiff_t) (uintptr_t)sbox_end - (uintptr_t )sbox_cursor;
 }
 
 FILE *log_fd = NULL;
@@ -144,31 +139,21 @@ void LMSG(char *fmt, ...)
 /* Linked list of applied patches */
 LIST_HEAD(lp_patch_head3);
 
-uintptr_t get_sandbox_start(void)
-{
-	return  sandhead->_start;
-}
-
-uintptr_t get_sandbox_end(void)
-{
-	return sandhead->_end;
-	
-}
-
 /* for production, #define NDEBUG to nuetralize the assertions */
-static uintptr_t get_sandbox_memory(ptrdiff_t size)
+/* TODO handle case of zero=initialized sh */
+uint8_t *get_sandbox_memory(ptrdiff_t size)
 {
-	uintptr_t p = 0L;
+	uint8_t * sbox_ptr = NULL;
 
-        assert(sandhead != NULL);
+
 	assert(get_sandbox_free() > size);
         assert(size < (unsigned int)MAX_PATCH_SIZE);
         
-	p = (uintptr_t)ALIGN_POINTER(sandhead->_cursor, 0x10);
+	sbox_ptr = (uint8_t *)ALIGN_POINTER((uintptr_t)sbox_cursor, 0x10);
 	
-	sandhead->_cursor += size;
-	sandhead->_cursor = (uintptr_t) ALIGN_POINTER(sandhead->_cursor, 0x10);
-	return p;
+	sbox_cursor  += size;
+	sbox_cursor =  (uint8_t *)ALIGN_POINTER((uintptr_t)sbox_cursor, 0x10);
+	return sbox_ptr;
 }
 
 
@@ -223,59 +208,20 @@ void swap_trampolines(struct xenlp_patch_write *writes, uint32_t numwrites)
     }
 }
 
-/* unlike the xen kernel, there is a good chance that the .text is not writeable. 
- * So, make the text page that will host the trampoline writeable.
- */
+
 void make_text_writeable(struct xenlp_patch_write *writes,
 				uint32_t numwrites)
 {
 	int i;
 	for (i = 0; i < numwrites; i++) {
-		struct xenlp_patch_write *pw = &writes[i];
-		uintptr_t p = (uintptr_t)pw->hvabs;
-		p &= PLATFORM_PAGE_MASK;
-		if (mprotect((void *)p , PLATFORM_PAGE_SIZE,
+		struct xenlp_patch_write *pwrite = &writes[i];
+		uintptr_t write_ptr  = (uintptr_t)pwrite->hvabs;
+		write_ptr  &= PLATFORM_PAGE_MASK;
+		if (mprotect((void *)write_ptr , PLATFORM_PAGE_SIZE,
 			     PROT_READ|PROT_EXEC|PROT_WRITE)){			
 			perror("err: ");
-
-		}	
+		}
 	}
-}
-
-uintptr_t make_sandbox_writeable(void) 
-{
-
-	
-	uintptr_t p = (uintptr_t)sandhead->_start;
-	
-	DMSG ("sandbox start before alignment\n %016lx\n", sandhead->_start);
-	p &= PLATFORM_PAGE_MASK;
-	DMSG("page mask: %016lx\n", (uintptr_t)PLATFORM_PAGE_MASK);
-	
-	DMSG ("sandbox start %016lx\n", (uintptr_t) sandhead->_start);
-	DMSG ("page size: %016lx\n", (uintptr_t)PLATFORM_PAGE_SIZE);
-	printf("page-aligned address: %p\n", (void *)p);
-	
-	if (mprotect((void *)p, SANDBOX_ALLOC_SIZE,
-		     PROT_READ|PROT_EXEC|PROT_WRITE)) {
-		DMSG("memprotect failed, %i\n", errno);
-		perror("err: ");
-	}
-	return p;
-}
-
-/* TODO: rewrite to fulfill intent, currently makes data segment executable */
-void init_sandbox(void)
-{
-    sandhead = fill_sandbox(1);
-    make_sandbox_writeable(); 
-    uintptr_t p  = (uintptr_t) &lp_patch_head3;
-    p &= PLATFORM_PAGE_MASK;
-    if (
-        mprotect((void *)p, PLATFORM_PAGE_SIZE,
-                 PROT_READ|PROT_EXEC|PROT_WRITE)) {    
-        perror("err: ");
-    }        
 }
 
 void dump_sandbox(const void* data, size_t size) {
@@ -324,12 +270,14 @@ void dump_sandbox(const void* data, size_t size) {
 /* arg points to the apply buffer just past the xenlp_apply struct */
 /* apply points to the xenlp_apply struct (also beginning of the original buffer */
 /* blob_p and writes_p both point to stack variables in the caller's stack */
+/* blob_p is a pointer to a pointer to void */
+
 int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
-                            unsigned char **blob_p, struct xenlp_patch_write **writes_p)
+                             void  **blob_p, struct xenlp_patch_write **writes_p)
 {
     size_t i;
-    int32_t relocrel = 0;
-    uint64_t runtime_constant = 0;
+    uintptr_t relocrel = 0;
+    uintptr_t runtime_constant = 0;
     
 /****
      Everything about the patch at this time is relative to the the _start symbol.
@@ -373,7 +321,9 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
             return SANDBOX_ERR_INVALID;
         }
 
-        *blob_p = (unsigned char *)get_sandbox_memory(apply->bloblen);
+        
+        *blob_p = get_sandbox_memory(apply->bloblen);;
+        
         /* *blob_p is now the landing point */
         
         if (!(*blob_p)) {
@@ -394,12 +344,14 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
 
 
         DMSG("adjusting refabs, before: %lx\n", apply->refabs);
-        runtime_constant = (int64_t)__start - apply->refabs;
+        runtime_constant = (uintptr_t) &_start - (uintptr_t)apply->refabs;
         apply->refabs += runtime_constant;
         DMSG("refabs adjusted: %lx\n", apply->refabs);
 
     }
-    relocrel = (uint64_t)(*blob_p) - apply->refabs;
+
+
+    relocrel = (uintptr_t)(*blob_p) - apply->refabs;
     DMSG("relocrel: %lx (%ld)\n", relocrel, relocrel);
     
     /* Read relocs */
@@ -415,19 +367,23 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         
         memcpy(relocs, arg, apply->numrelocs * sizeof(relocs[0]));
         arg = (unsigned char *)arg + (apply->numrelocs * sizeof(relocs[0]));
-        
+        uintptr_t off = 0;
         for (i = 0; i < apply->numrelocs; i++) {
-            uint32_t off = relocs[i];
+            off = relocs[i];
             if (off > apply->bloblen - sizeof(int32_t)) {
                 printk("invalid off value %d\n", off);
                 return -EINVAL;
             }
 
-            /* blob -> HV .text  - adjust absolute offsets to this process mem */
+            uint32_t *blob_value = (*blob_p + off);
+
+/* blob -> HV .text  - adjust absolute offsets to this process mem */
             DMSG("Normalizing 32-bit offset from blob to _start to the blob\n");
-            DMSG("value before write: %lx\n", *(int32_t *)(*blob_p + off));
-            *((int32_t *)(*blob_p + off)) -= relocrel;
-            DMSG("value after write: %lx\n", *(int32_t *)(*blob_p + off));
+            DMSG("value before write: %lx\n", *blob_value);
+            *blob_value -=  (uint32_t)relocrel;
+            
+//            *((uintptr_t)(*blob_p + off)) -= relocrel;
+            DMSG("value after write: %lx\n", *blob_value);
         }
         xfree(relocs);
     }
@@ -456,11 +412,11 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
 */
         for (i = 0; i < apply->numwrites; i++) {
             struct xenlp_patch_write *pw = &((*writes_p)[i]);
-            char off = pw->dataoff;            
+            int8_t  off = pw->dataoff;       
             /* adjust the hvabs to the runtime (after 1st relocation) */
             pw->hvabs += runtime_constant;
 
-            if (pw->hvabs < (uint64_t)__start || pw->hvabs >= (uint64_t)&_end ) {
+            if (pw->hvabs < (uintptr_t)&_start || pw->hvabs >= (uintptr_t)&_end ) {
                 printk("invalid hvabs value %lx\n", pw->hvabs);
             }
             
@@ -471,20 +427,20 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
         /* HV .text -> blob */
         switch (pw->reloctype) {
             case XENLP_RELOC_UINT64:
+                
                 if (off > sizeof(pw->data) - sizeof(uint64_t)) {
                     printk("invalid dataoff value %d\n", off);
                     return -EINVAL;
                 }
                 /* update the jmp distance within the patch write */
                 /* relocrel should be the distance between pw->hvabs and blob */
-                DMSG("jmp distance within 64-bit patch buf before write: %lx (%ld) \n",
-                     *((uint64_t *)(pw->data + off)),
+
+                DMSG("jmp distance within 64-bit patch buf before write: %lx\n",
                      *((uint64_t *)(pw->data + off)));
+
+                *((uint64_t *)(pw->data + off)) += (uintptr_t)relocrel;
                 
-                *((uint64_t *)(pw->data + off)) += relocrel;
-                
-                DMSG("jmp distance within 64-bit patch buf AFTER write: %lx (%dx) \n",
-                     *((uint64_t *)(pw->data + off)),
+                DMSG("jmp distance within 64-bit patch buf AFTER write: %lx \n",
                      *((uint64_t *)(pw->data + off)));
                 
                 break;
@@ -493,14 +449,12 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
                     printk("invalid dataoff value %d\n", off);
                     return -EINVAL;
                 }
-                DMSG("jmp distance within 32-bit patch buf before write: %lx (%d)\n",
-                     *((int32_t *)(pw->data + off)),
+                DMSG("jmp distance within 32-bit patch buf before write: %lx\n",
                      *((int32_t *)(pw->data + off)));
 
                 *((int32_t *)(pw->data + off)) += relocrel;
 
-                DMSG("jmp distance within 32-bit patch buf AFTER write: %lx (%d)\n",
-                     *((int32_t *)(pw->data + off)),
+                DMSG("jmp distance within 32-bit patch buf AFTER write: %lx\n",
                      *((int32_t *)(pw->data + off)));
                 break;
             default:
@@ -515,11 +469,12 @@ int read_patch_data2(XEN_GUEST_HANDLE(void) *arg, struct xenlp_apply3 *apply,
 int xenlp_apply3(void *arg)
 {
     struct xenlp_apply3 apply;
-    unsigned char *blob = NULL;
+    void *blob = NULL;
     struct xenlp_patch_write *writes;
-    struct applied_patch3 *patch;
+    struct applied_patch3 *patch = NULL;
     char sha1[SHA_DIGEST_LENGTH*2+1];
     int res;
+    
 
     memcpy(&apply, arg, sizeof(struct xenlp_apply3)); 
 
@@ -545,6 +500,7 @@ int xenlp_apply3(void *arg)
     /* FIXME: Memory allocated for patch can leak in case of error */
 
     res = read_patch_data2(arg, (struct xenlp_apply3 *)&apply, &blob, &writes);
+
     if (res < 0) {
         DMSG("fault %d reading patch data\n", res);
         return res;
