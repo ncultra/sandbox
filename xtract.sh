@@ -108,7 +108,7 @@ do
         varname=$(echo "$line" | cut -d '=' -f 1)
         config[$varname]=$(echo "$line" | cut -d '=' -f 2-)
     fi
-done < xtract.conf
+done < $CONFIG_FILE
 
 export BUILD_ROOT=${config[BUILD_ROOT]} 
 export BACK_FILE=${config[BUILD_ROOT]}${config[BACK_FILE]}
