@@ -27,7 +27,7 @@
 /*      |    field  n                    ...                            |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
-ssize_t check_magic(uint8_t *magic)
+int check_magic(uint8_t *magic)
 {
     uint8_t m[] = SANDBOX_MSG_MAGIC;
 
@@ -40,22 +40,22 @@ ssize_t check_magic(uint8_t *magic)
  * in the message that follow the header */
 
 /**************** declared in sandbox.h ***********************
- * ssize_t dispatch_apply(int, int, void **);
- * ssize_t dispatch_list(int, int, void **);
- * ssize_t dispatch_getbld(int, int, void **);
- * ssize_t dummy(int, int, void **);
- * ssize_t dispatch_getbld_res(int fd, int len, void **);
- * ssize_t dispatch_test_req(int fd, int len, void ** bufp);
- * ssize_t dispatch_test_rep(int, int len, void **);
- * ssize_t dispatch_undo_req(int fd, int len, void **bufp);
- * ssize_t dispatch_undo_rep(int fd, int len, void **bufp);
+ * int dispatch_apply(int, int, void **);
+ * int dispatch_list(int, int, void **);
+ * int dispatch_getbld(int, int, void **);
+ * int dummy(int, int, void **);
+ * int dispatch_getbld_res(int fd, int len, void **);
+ * int dispatch_test_req(int fd, int len, void ** bufp);
+ * int dispatch_test_rep(int, int len, void **);
+ * int dispatch_undo_req(int fd, int len, void **bufp);
+ * int dispatch_undo_rep(int fd, int len, void **bufp);
  *************************************************************/
 
-typedef ssize_t (*handler)(int, int, void **);
+typedef int (*handler)(int, int, void **);
 
 handler dispatch[] =
 {
-    dummy, /* message ids are indexed starting at 1*/
+    NO_MSG_ID, /* message ids are indexed starting at 1*/
     dispatch_apply,
     dispatch_apply_response,
     dispatch_list,
@@ -66,8 +66,8 @@ handler dispatch[] =
     dispatch_test_rep,
     dispatch_undo_req,
     dispatch_undo_rep,
-    dummy,
-    dummy
+    NO_MSG_ID,
+    NO_MSG_ID
 };
 
 int get_handler_count(void)
@@ -505,7 +505,7 @@ errout:
  *
  *****************************************************************/
 /* TODO - init message len field */
-ssize_t dispatch_apply(int fd, int len, void **bufp)
+int dispatch_apply(int fd, int len, void **bufp)
 {
 
     uint32_t ccode = SANDBOX_OK, remaining_bytes = len - SANDBOX_MSG_HDRLEN;;
@@ -547,7 +547,7 @@ err_out:
 }
 
 
-ssize_t dispatch_apply_response(int fd, int len, void **bufp)
+int dispatch_apply_response(int fd, int len, void **bufp)
 {
     uint32_t response_code;
 
@@ -560,7 +560,7 @@ ssize_t dispatch_apply_response(int fd, int len, void **bufp)
 }
 
 
-ssize_t dispatch_list(int fd, int len, void **bufp)
+int dispatch_list(int fd, int len, void **bufp)
 {
     int ccode = SANDBOX_ERR_PARSE;
     DMSG("patch list dispatcher\n");
@@ -621,7 +621,7 @@ ssize_t dispatch_list(int fd, int len, void **bufp)
 
 /* allocates a response buffer using the clients double pointer */
 /* buffer will contain an array of struct list_response or NULL */
-ssize_t dispatch_list_response(int fd, int len, void **bufp)
+int dispatch_list_response(int fd, int len, void **bufp)
 {
     int ccode, remaining_bytes = len - SANDBOX_MSG_HDRLEN;
     DMSG("patch list responder\n");
@@ -654,7 +654,7 @@ ssize_t dispatch_list_response(int fd, int len, void **bufp)
 }
 
 
-ssize_t dispatch_getbld(int fd, int len, void **bufp)
+int dispatch_getbld(int fd, int len, void **bufp)
 {
 /* construct a string buffer with each data on a separate line */
 
@@ -690,7 +690,7 @@ ssize_t dispatch_getbld(int fd, int len, void **bufp)
      uint32 first field size - length of buildinfo string
      uint8 *buildinfo
 ***/
-ssize_t dispatch_getbld_res(int fd, int len, void **bufp)
+int dispatch_getbld_res(int fd, int len, void **bufp)
 {
     int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
 
@@ -716,7 +716,7 @@ ssize_t dispatch_getbld_res(int fd, int len, void **bufp)
 
 
 
-ssize_t dispatch_test_req(int fd, int len, void ** bufp)
+int dispatch_test_req(int fd, int len, void ** bufp)
 {
     int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
     DMSG("test req dispatcher: remaining bytes = %d\n", remaining_bytes);
@@ -738,7 +738,7 @@ ssize_t dispatch_test_req(int fd, int len, void ** bufp)
                        &code, SANDBOX_LAST_ARG);
 }
 
-ssize_t dispatch_test_rep(int fd, int len, void **bufp)
+int dispatch_test_rep(int fd, int len, void **bufp)
 {
     uint32_t c = 0xffffffff;
     DMSG("received a test response - remaining bytes = %d\n", len - SANDBOX_MSG_HDRLEN);
@@ -756,7 +756,7 @@ ssize_t dispatch_test_rep(int fd, int len, void **bufp)
      HEADER
      uint8_t[20] sha1
 ***/
-ssize_t dispatch_undo_req(int fd, int len, void **bufp)
+int dispatch_undo_req(int fd, int len, void **bufp)
 {
 
 /*  reply = 0 for success, < 0 for not applied or error */
@@ -789,7 +789,7 @@ exit:
 		       &ccode, SANDBOX_LAST_ARG));
 }
 
-ssize_t dispatch_undo_rep(int fd, int len, void **bufp)
+int dispatch_undo_rep(int fd, int len, void **bufp)
 {
     /* read remainder of message - ccode
        return ccode - 1 for success, 0 for not applied
@@ -805,9 +805,9 @@ ssize_t dispatch_undo_rep(int fd, int len, void **bufp)
 }
 
 
-ssize_t dummy(int fd, int len, void **bufp)
+int NO_MSG_ID(int fd, int len, void **bufp)
 {
-    DMSG("dummy dispatcher\n");
+    DMSG("NO_MSG_ID dispatcher\n");
     return(send_rr_buf(fd, SANDBOX_ERR_BAD_MSGID, SANDBOX_ERR_BAD_MSGID,
                        SANDBOX_LAST_ARG));
 }

@@ -458,7 +458,7 @@ uintptr_t get_sandbox_end(void);
  from sandbox-listen.h
 */
 
-/* TODO: re-index to remove dummy msgs */
+/* TODO: re-index using NO_MSG_ID */
 /* limit client requests per connection, to prevent DOS by a bad client */
 #define SANDBOX_MSG_SESSION_LIMIT 0x64 
 #define SANDBOX_MSG_HDRLEN 0x10
@@ -605,17 +605,17 @@ int xenlp_undo3(XEN_GUEST_HANDLE(void *) arg);
 char *get_sandbox_build_info(int fd);
 int client_func(void *p);
 void *sandbox_list_patches(int fd);
-ssize_t dispatch_list(int fd, int len, void **bufp);
-ssize_t dispatch_list_response(int fd, int len, void **bufp);
-ssize_t dispatch_apply(int fd, int len, void **bufp);
-ssize_t dispatch_apply_response(int fd, int len, void **bufp);
-ssize_t dispatch_getbld(int, int, void **);
-ssize_t dummy(int, int, void **);
-ssize_t dispatch_getbld_res(int fd, int len, void **);
-ssize_t dispatch_test_req(int fd, int len, void ** bufp);
-ssize_t dispatch_test_rep(int, int len, void **);
-ssize_t dispatch_undo_req(int fd, int len, void **bufp);
-ssize_t dispatch_undo_rep(int fd, int len, void **bufp);
+int dispatch_list(int fd, int len, void **bufp);
+int dispatch_list_response(int fd, int len, void **bufp);
+int dispatch_apply(int fd, int len, void **bufp);
+int dispatch_apply_response(int fd, int len, void **bufp);
+int dispatch_getbld(int, int, void **);
+int NO_MSG_ID(int, int, void **);
+int dispatch_getbld_res(int fd, int len, void **);
+int dispatch_test_req(int fd, int len, void ** bufp);
+int dispatch_test_rep(int, int len, void **);
+int dispatch_undo_req(int fd, int len, void **bufp);
+int dispatch_undo_rep(int fd, int len, void **bufp);
 void hex2bin(char *buf, size_t buflen, unsigned char *bin, size_t binlen);
 int do_lp_apply(int fd, void *buf, size_t buflen);
 int xenlp_apply(void *arg);
