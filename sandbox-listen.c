@@ -758,6 +758,10 @@ int dispatch_undo_rep(int fd, int len, void **bufp)
 }
 
 
+/****
+ *
+ ***/
+
 int NO_MSG_ID(int fd, int len, void **bufp)
 {
     DMSG("NO_MSG_ID dispatcher\n");
@@ -767,7 +771,7 @@ int NO_MSG_ID(int fd, int len, void **bufp)
 
 /******** 
  * info is returned as one string, with each field on a separate line
-/* info is returned in a buffer allocated by the message handler, 
+ * info is returned in a buffer allocated by the message handler, 
  * simply pass a pointer to the buffer to the caller, avoiding an 
  * extra copy. 
  */
