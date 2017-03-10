@@ -62,8 +62,8 @@ handler dispatch[] =
     dispatch_list_response,
     dispatch_getbld,
     dispatch_getbld_res,
-    dispatch_test_req,
-    dispatch_test_rep,
+    NO_MSG_ID,
+    NO_MSG_ID,
     dispatch_undo_req,
     dispatch_undo_rep,
     NO_MSG_ID,
@@ -713,44 +713,6 @@ int dispatch_getbld_res(int fd, int len, void **bufp)
 
     return SANDBOX_OK;
 }
-
-
-
-int dispatch_test_req(int fd, int len, void ** bufp)
-{
-    int remaining_bytes = len - SANDBOX_MSG_HDRLEN;
-    DMSG("test req dispatcher: remaining bytes = %d\n", remaining_bytes);
-    /* message should be 4 byte test code (len of first field
-       has already be read)*/
-
-    uint32_t code;
-
-    if (readn(fd, &code, sizeof(uint32_t)) != sizeof(uint32_t)) {
-        DMSG("error reading test message\n");
-        return SANDBOX_ERR_RW;
-    }
-    DMSG("%08x ", code);
-    dump_sandbox(&code, sizeof(code));
-    DMSG("undo test	 code: %d\n", code);
-
-    /* send a test response */
-    return send_rr_buf(fd, SANDBOX_TEST_REP, sizeof(uint32_t),
-                       &code, SANDBOX_LAST_ARG);
-}
-
-int dispatch_test_rep(int fd, int len, void **bufp)
-{
-    uint32_t c = 0xffffffff;
-    DMSG("received a test response - remaining bytes = %d\n", len - SANDBOX_MSG_HDRLEN);
-    if (readn(fd, &c, sizeof(uint32_t)) != sizeof(uint32_t)) {
-        DMSG("error reading test message\n");
-        return SANDBOX_ERR_RW;
-    }
-    printf("response code: %d\n", c);
-    return SANDBOX_OK;
-}
-
-
 
 /*** undo request msg
      HEADER

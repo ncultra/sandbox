@@ -479,8 +479,7 @@ uintptr_t get_sandbox_end(void);
 #define SANDBOX_MSG_GET_BLD                    5
 #define SANDBOX_MSG_BLD_BUFSIZE 512
 #define SANDBOX_MSG_GET_BLDRSP                 6
-#define SANDBOX_TEST_REQ                       7
-#define SANDBOX_TEST_REP                       8
+
 #define SANDBOX_MSG_UNDO_REQ                   9
 #define SANDBOX_MSG_UNDO_REP                  10
 
