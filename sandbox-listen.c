@@ -36,26 +36,17 @@ int check_magic(uint8_t *magic)
 
 
 
-/* dispatch functions need to drain the socket buy reading all the bytes
- * in the message that follow the header */
-
-/**************** declared in sandbox.h ***********************
- * int dispatch_apply(int, int, void **);
- * int dispatch_list(int, int, void **);
- * int dispatch_getbld(int, int, void **);
- * int dummy(int, int, void **);
- * int dispatch_getbld_res(int fd, int len, void **);
- * int dispatch_test_req(int fd, int len, void ** bufp);
- * int dispatch_test_rep(int, int len, void **);
- * int dispatch_undo_req(int fd, int len, void **bufp);
- * int dispatch_undo_rep(int fd, int len, void **bufp);
- *************************************************************/
-
+/************************************************************************ 
+ * *dispatch* is an array of function pointers corresponding 
+ * to message IDs defined in sandbox.h. NO_MSG_ID handles 
+ * requests with an illegal or undefined identifier
+ * legal message IDs start at 1 with the apply ID. 
+ */
 typedef int (*handler)(int, int, void **);
 
 handler dispatch[] =
 {
-    NO_MSG_ID, /* message ids are indexed starting at 1*/
+    NO_MSG_ID,
     dispatch_apply,
     dispatch_apply_response,
     dispatch_list,
