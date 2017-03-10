@@ -825,10 +825,9 @@ char *get_sandbox_build_info(int fd)
         read_sandbox_message_header(fd, &version, &id, &len, (void **)&listen_buf);
         if (listen_buf != NULL) {
             info = strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
-            free(listen_buf);
         }
     }
-
+    free(listen_buf);
     return info;
 }
 
@@ -860,10 +859,7 @@ void  *sandbox_list_patches(int fd)
     return listen_buf;
 
 errout:
-    if (listen_buf != NULL) {
-	free(listen_buf);
-	listen_buf = NULL;
-    }
+    free(listen_buf);
     return NULL;
 }
 
