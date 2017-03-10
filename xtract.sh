@@ -68,6 +68,21 @@ check_parms() {
 }
 
 
+# currently other tools are assuming the patch directory\
+# is /var/opt/sandbox, which is the default value for OPT_DIR 
+# patch files are currently of the pattern *.raxlpx
+
+mv_patch_files() {
+    if [[ -e  $OPT_DIR ]] && [[ -d $OPT_DIR ]]
+    then
+	:
+    else
+	sudo mkdir $OPT_DIR
+    fi
+    sudo mv ./*.raxlpxs $OPT_DIR/
+}
+
+
 until [ -z "$1" ]; do    
     case "${1:0:2}" in
         "--")
@@ -98,6 +113,8 @@ config=( # set default values in config array
     [REF_FILE]=""    #the exe that will be patched
     [RUN_FILE]=""    #the exe with the new code to generate the patch
     [ISO_FILE]=""    #the bootable image to run in qemu
+    [OPT_DIR]="/var/opt/sandbox"
+    [RUN_DIR]="/var/run/sandbox"
 )
 
 
@@ -118,6 +135,8 @@ export PATCHED_OBJ=${config[BUILD_ROOT]}${config[PATCHED_OBJ]}
 export REF_FILE=${config[BUILD_ROOT]}${config[REF_FILE]}
 export RUN_FILE=${config[BUILD_ROOT]}${config[RUN_FILE]}
 export ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}
+export RUN_DIR=${config[RUN_DIR]}
+export OPT_DIR=${config[OPT_DIR]}
 
 echo "BUILD_ROOT=${config[BUILD_ROOT]}"
 echo "BACK_FILE=${config[BUILD_ROOT]}${config[BACK_FILE]}"
@@ -127,11 +146,13 @@ echo "PATCHED_OBJ=${config[BUILD_ROOT]}${config[PATCHED_OBJ]}"
 echo "REF_FILE=${config[BUILD_ROOT]}${config[REF_FILE]}"
 echo "RUN_FILE=${config[BUILD_ROOT]}${config[RUN_FILE]}"
 echo "ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}"
-
+echo "RUN_DIR=${config[RUN_DIR]}"
+echo "OPT_DIR=${config[OPT_DIR]}"
 
 
 build_ref_file
-$EXTRACT_PATCH --qemu --function hmp_info_version $PATCHED_OBJ $REF_FILE 
+$EXTRACT_PATCH --qemu --function hmp_info_version $PATCHED_OBJ $REF_FILE
+mv_patch_files # creates /var/opt/sandbox if necessary, moves patch files
 
 if (( $RUN_QEMU > 0 )); then
     pushd $BUILD_ROOT/x86_64-softmmu/

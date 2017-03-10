@@ -1436,9 +1436,8 @@ static inline void get_options(int argc, char **argv)
                 usage();			
             }
             DMSG("selected option %s\n", long_options[option_index].name);
-        case 1:
-        {
-                    
+        case 1: /* info */
+        {      
             info_flag = 1;
             DMSG("selected option %s\n", long_options[option_index].name);
         }break;
