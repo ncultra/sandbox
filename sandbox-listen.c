@@ -154,7 +154,7 @@ void *listen_thread(void *arg)
 */
 int listen_sandbox_sock(struct listen *l)
 {
-    int len, err, ccode;
+    int len, err, ccode = SANDBOX_OK;
     struct sockaddr_un un;
     char sn[PATH_MAX];
 
@@ -173,11 +173,11 @@ int listen_sandbox_sock(struct listen *l)
     len = offsetof(struct sockaddr_un, sun_path) + strlen((char *)l->arg);
     strncpy(un.sun_path, (char *)l->arg, len);
     if (bind(l->sock, (struct sockaddr *)&un, len) < 0) {
-	ccode = -3;
+	ccode = EFAULT;
 	goto errout;
     }
     if (listen(l->sock, LISTEN_QUEUE_LEN) < 0) {
-	ccode = -4;
+	ccode = EIO;
 	goto errout;
     }
     DMSG("server now listening on %d %s\n", l->sock, (char *)l->arg);
@@ -350,7 +350,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 /* TODO: reconsider buffer handling for this function. &len or len? */
 /* allocate dispatch buffer or not? */
     uint8_t hbuf[SANDBOX_MSG_HBUFLEN];
-    uint32_t ccode = 0;
+    uint32_t ccode = SANDBOX_OK;
     int i = 0;
 
     DMSG("reading sandbox messsge header...\n");
