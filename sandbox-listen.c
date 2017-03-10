@@ -208,6 +208,10 @@ int accept_sandbox_sock(int listenfd, uid_t *uidptr)
     return(clifd);
 }
 
+/*
+ *  a UNIX domain socket path is 108 bytes
+ */
+#define SUN_PATH_SIZE 108
 int client_func(void *p)
 {
     DMSG("client %d\n", getpid());
@@ -216,7 +220,7 @@ int client_func(void *p)
     int s, len;
     int should_unlink = 0;
     struct sockaddr_un un, sun;
-    char cpath[PATH_MAX];
+    char cpath[SUN_PATH_SIZE];
     memset(cpath, 0, sizeof(cpath));
     sprintf(cpath, "%d", getpid());
 
@@ -227,7 +231,7 @@ int client_func(void *p)
     should_unlink = 1;
     memset(&un, 0, sizeof(un));
     un.sun_family = AF_UNIX;
-    sprintf(un.sun_path, "%s", cpath);
+    snprintf(un.sun_path, SUN_PATH_SIZE, "%s", cpath);
 
     len = offsetof(struct sockaddr_un, sun_path) + strlen(un.sun_path);
     unlink(un.sun_path);

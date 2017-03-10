@@ -1,4 +1,3 @@
-h
 #include <sys/mman.h>
 #include "atomic.h"
 #include "sandbox.h"
