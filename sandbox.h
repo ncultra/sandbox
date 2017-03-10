@@ -1,10 +1,10 @@
 /***************************************************************
-* Sandbox allows a user-space process to live-patch itself.
-* Patches are placed in the "sandbox," which is a area in the
-* .text segment
-* 
-* Copyright 2015-16 Rackspace, Inc.
-***************************************************************/
+ * Sandbox allows a user-space process to live-patch itself.
+ * Patches are placed in the "sandbox," which is a area in the
+ * .text segment
+ *
+ * Copyright 2015-16 Rackspace, Inc.
+ ***************************************************************/
 #define _GNU_SOURCE
 #include <limits.h>
 #include <string.h>
@@ -14,7 +14,7 @@
 #include <stdarg.h>
 #include <signal.h>
 #include <sched.h>
-#include <memory.h> 
+#include <memory.h>
 #include <sys/mman.h>
 #include <errno.h>
 #include <getopt.h>
@@ -30,7 +30,7 @@
 #include <pthread.h>
 #include <libgen.h>
 #include </usr/include/openssl/sha.h>
-#include "platform.h" 
+#include "platform.h"
 
 #ifndef __SANDBOX_H
 #define __SANDBOX_H 1
@@ -49,36 +49,36 @@
 
 
 /* TODO: refactor to use </usr/include/sys/queue.h> */
-#define container_of(ptr, type, member) ({ \
-                const typeof( ((type *)0)->member ) *__mptr = (ptr);  \
-		(type *)( (char *)__mptr - offsetof(type,member) );})
+#define container_of(ptr, type, member) ({                              \
+            const typeof( ((type *)0)->member ) *__mptr = (ptr);        \
+            (type *)( (char *)__mptr - offsetof(type,member) );})
 
 #define htoi(x) (isdigit(x) ? x-'0' : toupper(x)-'A'+10)
 
 struct list_head {
-	struct list_head *next, *prev;
+    struct list_head *next, *prev;
 };
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
 
-#define LIST_HEAD(name) \
-	struct list_head name = LIST_HEAD_INIT(name)
+#define LIST_HEAD(name)                                 \
+    struct list_head name = LIST_HEAD_INIT(name)
 
 static __inline__ void INIT_LIST_HEAD(struct list_head *list)
 {
-	list->next = list;
-	list->prev = list;
+    list->next = list;
+    list->prev = list;
 }
 
 
 static __inline__ void __list_add(struct list_head *new,
-			      struct list_head *prev,
-			      struct list_head *next)
+                                  struct list_head *prev,
+                                  struct list_head *next)
 {
-	next->prev = new;
-	new->next = next;
-	new->prev = prev;
-	prev->next = new;
+    next->prev = new;
+    new->next = next;
+    new->prev = prev;
+    prev->next = new;
 }
 
 /**
@@ -91,7 +91,7 @@ static __inline__ void __list_add(struct list_head *new,
  */
 static __inline__ void list_add(struct list_head *new, struct list_head *head)
 {
-	__list_add(new, head->prev, head->next);
+    __list_add(new, head->prev, head->next);
 }
 
 
@@ -104,8 +104,8 @@ static __inline__ void list_add(struct list_head *new, struct list_head *head)
  */
 static __inline__ void __list_del(struct list_head * prev, struct list_head * next)
 {
-	next->prev = prev;
-	prev->next = next;
+    next->prev = prev;
+    prev->next = next;
 }
 
 /**
@@ -120,14 +120,14 @@ static __inline__ void __list_del(struct list_head * prev, struct list_head * ne
 #define LIST_POISON2 ((void *) 0x200)
 static __inline__ void __list_del_entry(struct list_head *entry)
 {
-	__list_del(entry->prev, entry->next);
+    __list_del(entry->prev, entry->next);
 }
 
 static __inline__ void list_del(struct list_head *entry)
 {
-	__list_del(entry->prev, entry->next);
-	entry->next = LIST_POISON1;
-	entry->prev = LIST_POISON2;
+    __list_del(entry->prev, entry->next);
+    entry->next = LIST_POISON1;
+    entry->prev = LIST_POISON2;
 }
 
 
@@ -138,7 +138,7 @@ static __inline__ void list_del(struct list_head *entry)
  */
 static __inline__ int list_empty(const struct list_head *head)
 {
-	return head->next == head;
+    return head->next == head;
 }
 
 /**
@@ -147,8 +147,8 @@ static __inline__ int list_empty(const struct list_head *head)
  * @type:	the type of the struct this is embedded in.
  * @member:	the name of the list_head within the struct.
  */
-#define list_entry(ptr, type, member) \
-	container_of(ptr, type, member)
+#define list_entry(ptr, type, member)           \
+    container_of(ptr, type, member)
 
 /**
  * list_first_entry - get the first element from a list
@@ -158,8 +158,8 @@ static __inline__ int list_empty(const struct list_head *head)
  *
  * Note, that list is expected to be not empty.
  */
-#define list_first_entry(ptr, type, member) \
-	list_entry((ptr)->next, type, member)
+#define list_first_entry(ptr, type, member)     \
+    list_entry((ptr)->next, type, member)
 
 /**
  * list_last_entry - get the last element from a list
@@ -169,8 +169,8 @@ static __inline__ int list_empty(const struct list_head *head)
  *
  * Note, that list is expected to be not empty.
  */
-#define list_last_entry(ptr, type, member) \
-	list_entry((ptr)->prev, type, member)
+#define list_last_entry(ptr, type, member)      \
+    list_entry((ptr)->prev, type, member)
 
 /**
  * list_first_entry_or_null - get the first element from a list
@@ -180,40 +180,40 @@ static __inline__ int list_empty(const struct list_head *head)
  *
  * Note that if the list is empty, it returns NULL.
  */
-#define list_first_entry_or_null(ptr, type, member) \
-	(!list_empty(ptr) ? list_first_entry(ptr, type, member) : NULL)
+#define list_first_entry_or_null(ptr, type, member)                     \
+    (!list_empty(ptr) ? list_first_entry(ptr, type, member) : NULL)
 
 /**
  * list_next_entry - get the next element in list
  * @pos:	the type * to cursor
  * @member:	the name of the list_head within the struct.
  */
-#define list_next_entry(pos, member) \
-	list_entry((pos)->member.next, typeof(*(pos)), member)
+#define list_next_entry(pos, member)                            \
+    list_entry((pos)->member.next, typeof(*(pos)), member)
 
 /**
  * list_prev_entry - get the prev element in list
  * @pos:	the type * to cursor
  * @member:	the name of the list_head within the struct.
  */
-#define list_prev_entry(pos, member) \
-	list_entry((pos)->member.prev, typeof(*(pos)), member)
+#define list_prev_entry(pos, member)                            \
+    list_entry((pos)->member.prev, typeof(*(pos)), member)
 
 /**
  * list_for_each	-	iterate over a list
  * @pos:	the &struct list_head to use as a loop cursor.
  * @head:	the head for your list.
  */
-#define list_for_each(pos, head) \
-	for (pos = (head)->next; pos != (head); pos = pos->next)
+#define list_for_each(pos, head)                                \
+    for (pos = (head)->next; pos != (head); pos = pos->next)
 
 /**
  * list_for_each_prev	-	iterate over a list backwards
  * @pos:	the &struct list_head to use as a loop cursor.
  * @head:	the head for your list.
  */
-#define list_for_each_prev(pos, head) \
-	for (pos = (head)->prev; pos != (head); pos = pos->prev)
+#define list_for_each_prev(pos, head)                           \
+    for (pos = (head)->prev; pos != (head); pos = pos->prev)
 
 
 /**
@@ -222,10 +222,10 @@ static __inline__ int list_empty(const struct list_head *head)
  * @head:	the head for your list.
  * @member:	the name of the list_head within the struct.
  */
-#define list_for_each_entry(pos, head, member)				\
-	for (pos = list_first_entry(head, typeof(*pos), member);	\
-	     &pos->member != (head);					\
-	     pos = list_next_entry(pos, member))
+#define list_for_each_entry(pos, head, member)                  \
+    for (pos = list_first_entry(head, typeof(*pos), member);	\
+         &pos->member != (head);                                \
+         pos = list_next_entry(pos, member))
 
 /**
  * list_for_each_entry_reverse - iterate backwards over list of given type.
@@ -233,10 +233,10 @@ static __inline__ int list_empty(const struct list_head *head)
  * @head:	the head for your list.
  * @member:	the name of the list_head within the struct.
  */
-#define list_for_each_entry_reverse(pos, head, member)			\
-	for (pos = list_last_entry(head, typeof(*pos), member);		\
-	     &pos->member != (head); 					\
-	     pos = list_prev_entry(pos, member))
+#define list_for_each_entry_reverse(pos, head, member)          \
+    for (pos = list_last_entry(head, typeof(*pos), member);     \
+         &pos->member != (head);                                \
+         pos = list_prev_entry(pos, member))
 
 /**
  * list_prepare_entry - prepare a pos entry for use in list_for_each_entry_continue()
@@ -246,8 +246,8 @@ static __inline__ int list_empty(const struct list_head *head)
  *
  * Prepares a pos entry for use as a start point in list_for_each_entry_continue().
  */
-#define list_prepare_entry(pos, head, member) \
-	((pos) ? : list_entry(head, typeof(*pos), member))
+#define list_prepare_entry(pos, head, member)           \
+    ((pos) ? : list_entry(head, typeof(*pos), member))
 
 /**
  * list_for_each_entry_continue - continue iteration over list of given type
@@ -258,10 +258,10 @@ static __inline__ int list_empty(const struct list_head *head)
  * Continue to iterate over list of given type, continuing after
  * the current position.
  */
-#define list_for_each_entry_continue(pos, head, member) 		\
-	for (pos = list_next_entry(pos, member);			\
-	     &pos->member != (head);					\
-	     pos = list_next_entry(pos, member))
+#define list_for_each_entry_continue(pos, head, member) \
+    for (pos = list_next_entry(pos, member);            \
+         &pos->member != (head);                        \
+         pos = list_next_entry(pos, member))
 
 
 
@@ -272,10 +272,10 @@ static __inline__ int list_empty(const struct list_head *head)
 #define printk DMSG
 
 static inline uintptr_t ___align(uintptr_t p, uintptr_t align)
-{ 
-     p += (align - 1);
-     p &= ~(align - 1);
-     return p;
+{
+    p += (align - 1);
+    p &= ~(align - 1);
+    return p;
 }
 
 static inline void *aligned_zalloc(int align, int size)
@@ -287,17 +287,21 @@ static inline void *aligned_zalloc(int align, int size)
 
 
 /* Allocate space for array of typed objects. */
-#define xmalloc_array(_type, _num) \
+#define xmalloc_array(_type, _num)                                      \
     ((_type *)aligned_alloc(__alignof__(_type), sizeof(_type) * _num))
 
 
-#define xzalloc_array(_type, _num) \
+#define xzalloc_array(_type, _num)                                      \
     ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type) * _num))
 
 #undef XEN_GUEST_HANDLE
 #define XEN_GUEST_HANDLE(a) a
 
-/* must be page-aligned. */
+/*******************************************************************
+ *  SANDBOX_ALLOC_SIZE
+ *  determines the size of the static sandbox buffer
+ *  must be page-aligned.
+ */
 #define SANDBOX_ALLOC_SIZE 0x100000
 
 typedef uint8_t * reloc_ptr_t;
@@ -317,7 +321,7 @@ struct sandbox_header {
 
 
 #ifndef XEN_LIVEPATCH_PATCH_FILE_H_H
-/* NOTE: defined externally in patch_file.h 
+/* NOTE: defined externally in patch_file.h
  * must guarantee commonality with original struct definition
  */
 struct check {
@@ -331,8 +335,8 @@ struct function_patch {
     char *funcname;
     uint64_t oldabs;
     uint32_t newrel;  //relative to beginning of function section in new obj.
-};    
-    
+};
+
 struct table_patch {
     char *tablename;
     uintptr_t hvabs;
@@ -340,7 +344,7 @@ struct table_patch {
     unsigned char *data;
 };
 
-#endif 
+#endif
 /*
  *
  * XENLP_apply (cmd 11)
@@ -366,7 +370,7 @@ struct applied_patch3 {
 };
 
 
-/* NOTE: defined externally in patch_file.h 
+/* NOTE: defined externally in patch_file.h
  * must guarantee commonality with original struct definition
  */
 struct xenlp_hash {
@@ -437,7 +441,7 @@ struct xenlp_caps {
 
 /* these const strings contain information generated at build time. */
 extern const char *gitversion, *cc, *cflags;
-extern uintptr_t patch_sandbox_start, patch_sandbox_end; 
+extern uintptr_t patch_sandbox_start, patch_sandbox_end;
 
 extern uintptr_t patch_cursor;
 
@@ -455,16 +459,16 @@ uintptr_t get_sandbox_start(void);
 uintptr_t get_sandbox_end(void);
 
 /* TODO: add a msg nonce (transaction id)
- from sandbox-listen.h
+   from sandbox-listen.h
 */
 
 /* TODO: re-index using NO_MSG_ID */
 /* limit client requests per connection, to prevent DOS by a bad client */
-#define SANDBOX_MSG_SESSION_LIMIT 0x64 
+#define SANDBOX_MSG_SESSION_LIMIT 0x64
 #define SANDBOX_MSG_HDRLEN 0x10
 #define SANDBOX_MSG_HBUFLEN 0x18
 #define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
-#define SANDBOX_MSG_VERSION (uint16_t)0x0001				      
+#define SANDBOX_MSG_VERSION (uint16_t)0x0001
 #define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 4))
 #define SANDBOX_MSG_GET_ID(b) (*(uint16_t *)((uint8_t *)b + 6))
 #define SANDBOX_MSG_MAX_LEN (MAX_PATCH_SIZE + SANDBOX_MSG_HDRLEN)
@@ -480,7 +484,7 @@ uintptr_t get_sandbox_end(void);
 #define SANDBOX_MSG_BLD_BUFSIZE 512
 #define SANDBOX_MSG_GET_BLDRSP                 6
 #define SANDBOX_MSG_UNDO_REQ                   9
-#define SANDBOX_MSG_UNDO_REP                  10 
+#define SANDBOX_MSG_UNDO_REP                  10
 
 #define SANDBOX_MSG_FIRST SANDBOX_MSG_APPLY
 #define SANDBOX_MSG_LAST SANDBOX_MSG_UNDO_REP
@@ -531,7 +535,7 @@ uintptr_t get_sandbox_end(void);
    4) patch size
    5) patch buf
    6) canary (32 bytes of binary instructions), used to
-      verify the jump address.
+   verify the jump address.
    7) jump location (uintptr_t  absolute address for jump)
    7) sha1 of the patch bytes (20 bytes)
    8) count of extended fields (4 bytes, always zero for this version).
@@ -539,14 +543,14 @@ uintptr_t get_sandbox_end(void);
    reply msg: ID 2
    1) header
    2) uint32_t  0L "OK," or error code
- */
+*/
 
 /* Message ID 3: list patch ********************************************/
 /* Fields:
    1) header
    2) patch name (string, wild cards ok)
    3) sha1 of the patch (corresponding to field 5 of message ID 1),
-      20-byte buffer
+   20-byte buffer
 
    reply msg ID 4:
    1) header
@@ -563,20 +567,20 @@ uintptr_t get_sandbox_end(void);
 
    reply msg ID 6:
    1) header
-   2) buildinfo contents 
+   2) buildinfo contents
 */
 
-#define SSANDBOX "sandbox-sock" 
- 
+#define SSANDBOX "sandbox-sock"
+
 struct sandbox_buf {
-	uint32_t size;
-	uint8_t *buf;
+    uint32_t size;
+    uint8_t *buf;
 };
 
-struct listen 
+struct listen
 {
-	int sock;
-	void *arg;
+    int sock;
+    void *arg;
 };
 
 int set_debug(int db);
@@ -594,7 +598,7 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 				    uint16_t *id, uint32_t *len, void **buf);
 ssize_t send_rr_buf(int fd, uint16_t id, ...);
 void bin2hex(unsigned char *bin, size_t binlen, char *buf,
-                    size_t buflen);
+             size_t buflen);
 int write_sandbox_message_header(int fd,
 				 uint16_t version, uint16_t id);
 int xenlp_undo3(XEN_GUEST_HANDLE(void *) arg);

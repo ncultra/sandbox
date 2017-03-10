@@ -9,7 +9,6 @@ create_platform() {
     echo "#define PLATFORM_PAGE_SIZE $PAGESIZE" >> platform.h
     echo "#define PLATFORM_RELOC_SIZE  0x04" >> platform.h
     echo "#define PLATFORM_PAGE_MASK (~($(getconf PAGESIZE) - 1))" >> platform.h
-    echo "#define MAX_PATCH_SIZE PLATFORM_PAGE_SIZE * 4" >> platform.h
     echo "#define PLATFORM_ALLOC_SIZE 0x1000" >> platform.h
     case $(uname -i) in
 	"x86_64")
@@ -24,13 +23,6 @@ create_platform() {
 	    echo "#define X86_32 1"  >> platform.h
 	    echo "#define PLATFORM_CACHE_LINE_SIZE 0x20" >> platform.h
 	    echo "#define PLATFORM_INSTRUCTION_DIVISOR 2" >> platform.h
-	    ;;
-
-	"ppc64le")
-	    echo "#define PPC64LE 1" >> platform.h
-	    echo "#define PLATFORM_CACHE_LINE_SIZE 0x80" >> platform.h
-	    echo "#define PLATFORM_INSTRUCTION_DIVISOR 0x10" >> platform.h
-
 	    ;;
 
     esac

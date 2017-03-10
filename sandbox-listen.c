@@ -42,6 +42,8 @@ int check_magic(uint8_t *magic)
  * requests with an illegal or undefined identifier
  * legal message IDs start at 1 with the apply ID.
  */
+
+/* TODO: this should be a switch instead of a table */
 typedef int (*handler)(int, int, void **);
 
 handler dispatch[] =
@@ -382,13 +384,16 @@ ssize_t read_sandbox_message_header(int fd, uint16_t *version,
 
     DMSG("read header: msglen %d\n", SANDBOX_MSG_GET_LEN(hbuf));
     dump_sandbox(hbuf + 8, 4);
-    if (SANDBOX_MSG_MAX_LEN < (*len = SANDBOX_MSG_GET_LEN(hbuf))) {
-	DMSG("max length: %d; this length:%d\n", SANDBOX_MSG_MAX_LEN, *len);
+    if (SANDBOX_ALLOC_SIZE < (*len = SANDBOX_MSG_GET_LEN(hbuf))) {
+	DMSG("max length: %d; this length:%d\n",
+             SANDBOX_ALLOC_SIZE, *len);
 	ccode = SANDBOX_ERR_BAD_LEN;
 	goto errout;
     }
     DMSG("dispatching...type %d\n",*id);
+/* TODO: this needs to be a switch instead of a table */
     ccode = dispatch[*id](fd, SANDBOX_MSG_GET_LEN(hbuf), buf);
+
     if (ccode == SANDBOX_OK)
 	return ccode;
 errout:
@@ -435,11 +440,11 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
     DMSG("last va arg index: %d, size %d\n", lastbuf, bufs[lastbuf].size);
 
     /* the length of the first bufsize is already calculated in
-       the header length. Further bufsizes (1...n) add the the
+       the header length. Futher bufsizes (1...n) add the the
        message length */
 
     DMSG("message length estimated to be %d bytes\n", len);
-    if (len > SANDBOX_MSG_MAX_LEN) {
+    if (len > SANDBOX_ALLOC_SIZE) {
 	DMSG("message calculated to exceed the maximum size\n");
 	goto errout;
     }
@@ -468,7 +473,6 @@ ssize_t send_rr_buf(int fd, uint16_t id, ...)
 /* go through the buf descriptors, this time write the values */
     for (index = 0; index < 255; index++) {
 	if (bufs[index].size == SANDBOX_LAST_ARG) {
-	    assert(index == lastbuf);
 	    if (index == 0) {
 		/* write for bytes of zero to complete the header */
 		DMSG("writing null size to the message header, no varargs\n");
@@ -502,7 +506,7 @@ int dispatch_apply(int fd, int len, void **bufp)
     uint32_t ccode = SANDBOX_OK, remaining_bytes = len - SANDBOX_MSG_HDRLEN;;
     DMSG("apply patch dispatcher\n");
 
-    if (remaining_bytes >= SANDBOX_MSG_MAX_LEN) {
+    if (remaining_bytes >= SANDBOX_ALLOC_SIZE) {
 	ccode = SANDBOX_ERR_PARSE;
 	goto err_out;
     }
@@ -769,11 +773,11 @@ int NO_MSG_ID(int fd, int len, void **bufp)
 		       SANDBOX_LAST_ARG));
 }
 
-/******** 
+/********
  * info is returned as one string, with each field on a separate line
- * info is returned in a buffer allocated by the message handler, 
- * simply pass a pointer to the buffer to the caller, avoiding an 
- * extra copy. 
+ * info is returned in a buffer allocated by the message handler,
+ * simply pass a pointer to the buffer to the caller, avoiding an
+ * extra copy.
  */
 char *get_sandbox_build_info(int fd)
 {
