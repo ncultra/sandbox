@@ -19,7 +19,6 @@ int __attribute__((deprecated))
 copy_to_guest(XEN_GUEST_HANDLE(int) fd, void *src, int size)
 {
     return writen(fd, src, (size_t)size);
-
 }
 
 static char sockname[PATH_MAX];

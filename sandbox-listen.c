@@ -761,8 +761,8 @@ ssize_t dispatch_undo_req(int fd, int len, void **bufp)
 
 /*  reply = 0 for success, < 0 for not applied or error */
     uint32_t ccode;
-    uint8_t sha1[20];
-    char sha1_txt_buf[42];
+    uint8_t sha1[SHA_DIGEST_LENGTH];
+    char sha1_txt_buf[(SHA_DIGEST_LENGTH * 2) + 2];
 
     int remaining_bytes = len - SANDBOX_MSG_HDRLEN - sizeof(ccode);
     DMSG("undo request dispatcher: remaining bytes = %d\n", remaining_bytes);
@@ -773,7 +773,7 @@ ssize_t dispatch_undo_req(int fd, int len, void **bufp)
 	goto exit;
     }
 
-    if (readn(fd, &sha1[0], sizeof(sha1)) != sizeof(sha1)) {
+    if (readn(fd, &sha1[0], SHA_DIGEST_LENGTH) != SHA_DIGEST_LENGTH) {
 	DMSG("error reading sha1 in undo message\n");
 	ccode =	 SANDBOX_ERR_RW;
 	goto exit;
