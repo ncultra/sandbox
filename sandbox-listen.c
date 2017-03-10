@@ -695,7 +695,7 @@ int dispatch_getbld_res(int fd, int len, void **bufp)
     if (*bufp == NULL )
 	return SANDBOX_ERR_NOMEM;
 
-    /* read the buildinfo string into *bufp */
+    /* read the buildinfo string into *bufp, caller frees the buf */
 
     if (readn(fd, *bufp, remaining_bytes) != remaining_bytes) {
 	DMSG("buildinfo buffer unexpected size\n");
@@ -765,23 +765,23 @@ int NO_MSG_ID(int fd, int len, void **bufp)
 		       SANDBOX_LAST_ARG));
 }
 
-/* info is returned as one string, with each field on a separate line */
+/******** 
+ * info is returned as one string, with each field on a separate line
+/* info is returned in a buffer allocated by the message handler, 
+ * simply pass a pointer to the buffer to the caller, avoiding an 
+ * extra copy. 
+ */
 char *get_sandbox_build_info(int fd)
 {
     uint16_t version, id;
     uint32_t len;
-    char *listen_buf = NULL, *info = NULL;
+    char *listen_buf = NULL;
 
     if (send_rr_buf(fd, SANDBOX_MSG_GET_BLD, SANDBOX_LAST_ARG) == SANDBOX_OK) {
 	DMSG("get_sandbox_build_info: fd %d\n", fd);
-
 	read_sandbox_message_header(fd, &version, &id, &len, (void **)&listen_buf);
-	if (listen_buf != NULL) {
-	    info = strndup((char *)listen_buf, SANDBOX_MSG_MAX_LEN);
-	}
     }
-    free(listen_buf);
-    return info;
+    return listen_buf;
 }
 
 /* server will return with a block of sha1's that describes all the patches applied */
