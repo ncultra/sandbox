@@ -1505,7 +1505,7 @@ int main(int argc, char **argv)
     get_options(argc, argv);
 
     if (sock_flag == 0 || (sockfd = connect_to_sandbox(sockname)) < 0) {
-        DMSG("error connecting to sandbox server, did you specify the --socket? \n");
+        DMSG("error connecting to sandbox server, did you specify the socket? \n");
         return SANDBOX_ERR_RW;
     }
         

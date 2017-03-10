@@ -1,24 +1,11 @@
 #!/bin/bash
 
-test() {
-    pushd ~/src/QEMU/sandbox/user &>/dev/null
-    SOCK="/var/run/sandbox/$(ls -t /var/run/sandbox/ | head -n1 )"
-    FILE=$(ls -t ./*.raxlpxs | head -n1)
-    #./raxlpxs --socket $SOCK --apply $FILE
-    #./raxlpxs --socket $SOCK --info
-    ./raxlpxs --socket $SOCK --remove "59dd0ad6af3fdd7f6aef27ef079964d9b007d7f4"
-    popd &>/dev/null
-}
-
-
-
 SOCK=""
-FILE=""
 PROGRAM="raxlpxs"
 PATCH_FILE=""
 PATCH_SHA1=""
 COMMAND=""
-
+SOCK=""
 
 get_newest_qemu_sock() {
     SOCK="/var/run/sandbox/$(ls -t /var/run/sandbox/ | head -n1 )"
@@ -31,20 +18,24 @@ get_newest_patch_file() {
 
 usage() {
     echo "$PROGRAM -c <apply | remove | info | find | list>"
-    echo "        [-p patch file]"
-    echo "        [-s patch sha1]"
-    echo "        [-h print this help message]"
+    echo "	  [-p patch file]"
+    echo "	  [-s patch sha1]"
+    echo "	  [-h print this help message]"
     exit 1
 }
 
 
-while getopts "p:s:c:h" OPT; do
+while getopts "f:p:u:c:s:h" OPT; do
     case $OPT in
-	p) PATCH_FILE=$OPTARG
+	p) PROGRAM=$OPTARG
 	   ;;
-	s) PATCH_SHA1=$OPTARG
+	f) PATCH_FILE=$OPTARG
+	   ;;
+	u) PATCH_SHA1=$OPTARG
 	   ;;
 	c) COMMAND=$OPTARG
+	   ;;
+	s) SOCK=$OPTARG
 	   ;;
 	h) usage
 	   ;;
@@ -53,24 +44,24 @@ while getopts "p:s:c:h" OPT; do
     esac
 done
 
-# these "newest files"  are an expedient option to start testing qemu
-# before this script is finished
-get_newest_qemu_sock
-get_newest_patch_file
+if [[ -z $SOCK ]] ; then
+      get_newest_qemu_sock
+fi
+
+if [[ -z $PATCH_FILE ]] ; then
+   get_newest_patch_file
+fi
 
 case $COMMAND in
-    apply) echo "$PROGRAM --socket=$SOCK --apply $PATCH_FILE"
+    apply) $PROGRAM --socket $SOCK --apply $PATCH_FILE
 	   ;;
-    info) echo "$PROGRAM --socket=$SOCK --info"
+    info) $PROGRAM --socket $SOCK --info
 	  ;;
-    remove) echo "$PROGRAM --socket=$SOCK --remove $PATCH_SHA1"
+    remove) $PROGRAM --socket $SOCK --remove $PATCH_SHA1
 	    ;;
-    find) echo "$PROGRAM --socket=$SOCK --find  $PATCH_SHA1"
+    find) $PROGRAM --socket $SOCK --find  $PATCH_SHA1
 	  ;;
-    list) echo "$PROGRAM --socket=$SOCK --list"
+    list) $PROGRAM --socket $SOCK --list
 	  ;;
     *) echo "invalid command option"; exit 1;;
 esac
-
-
-
