@@ -10,7 +10,7 @@ alternate_files()  {
     mv -f $RAND_FILE $2
     popd &>/dev/null
 }
-                                    
+				    
 alternate_ref_file() {
     pushd "$BUILD_ROOT/x86_64-softmmu" &>/dev/null
     echo "$RUN_FILE $REF_FILE"
@@ -27,7 +27,7 @@ build_ref_file() {
     alternate_files $RUN_FILE $REF_FILE
     pushd $BUILD_ROOT &>/dev/null
     # build the new run file
-    rm $PATCHED_OBJ &>/dev/null    # force a rebuild of the relevant source
+    rm $PATCHED_OBJ &>/dev/null	   # force a rebuild of the relevant source
     qconf.sh --x86 --patch  --make
     pushd $BUILD_ROOT/sandbox/user
     make raxlpxs
@@ -52,7 +52,7 @@ CONFIG_FILE=""
 
 usage() {
     echo "$PROGRAM --config=<config file>"
-    echo "           [--run]"
+    echo "	     [--run]"
     exit 1
 }
 
@@ -83,17 +83,17 @@ mv_patch_files() {
 }
 
 
-until [ -z "$1" ]; do    
+until [ -z "$1" ]; do	 
     case "${1:0:2}" in
-        "--")
-        case "${1:2:3}" in 
-            "run") RUN_QEMU=1;; 
+	"--")
+	case "${1:2:3}" in 
+	    "run") RUN_QEMU=1;; 
 	    "con") CONFIG_FILE="${1##--config=}";;
-            "hel") usage ;;
-        esac ;;
-        *)usage;;
+	    "hel") usage ;;
+	esac ;;
+	*)usage;;
     esac
-        shift;
+	shift;
 done
 
 check_parms
@@ -122,8 +122,8 @@ while read line
 do
     if echo $line | grep -F = &>/dev/null
     then
-        varname=$(echo "$line" | cut -d '=' -f 1)
-        config[$varname]=$(echo "$line" | cut -d '=' -f 2-)
+	varname=$(echo "$line" | cut -d '=' -f 1)
+	config[$varname]=$(echo "$line" | cut -d '=' -f 2-)
     fi
 done < $CONFIG_FILE
 
@@ -156,6 +156,6 @@ mv_patch_files # creates /var/opt/sandbox if necessary, moves patch files
 
 if (( $RUN_QEMU > 0 )); then
     pushd $BUILD_ROOT/x86_64-softmmu/
-    sudo gdb $REF_FILE  --command gdbin.txt
+    sudo gdb $REF_FILE	--command gdbin.txt
     popd
 fi
