@@ -441,7 +441,7 @@ int send_rr_buf (int fd, uint16_t id, ...)
 	    break;
 	}
 	bufs[index].buf = va_arg (va, uint8_t *);
-	if (bufs[index].buf <= 0)
+	if (bufs[index].buf == 0)
 	    break;
 	if (index > 0) {
 	    /* the first length field is included in the header,
