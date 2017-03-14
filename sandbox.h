@@ -37,37 +37,37 @@
 
 
 #define __max(a,b)                              \
-    ({ __typeof__ (a) _a = (a);                 \
-        __typeof__ (b) _b = (b);                \
-        _a > _b ? _a : _b; })
+     ({ __typeof__ (a) _a = (a);                \
+          __typeof__ (b) _b = (b);              \
+          _a > _b ? _a : _b; })
 
 #define __min(a,b)                              \
-    ({ __typeof__ (a) _a = (a);                 \
-        __typeof__ (b) _b = (b);                \
-        _a < _b ? _a : _b; })
+     ({ __typeof__ (a) _a = (a);                \
+          __typeof__ (b) _b = (b);              \
+          _a < _b ? _a : _b; })
 
 
 
 /* TODO: refactor to use </usr/include/sys/queue.h> */
 #define container_of(ptr, type, member) ({                              \
-            const typeof( ((type *)0)->member ) *__mptr = (ptr);        \
-            (type *)( (char *)__mptr - offsetof(type,member) );})
+               const typeof( ((type *)0)->member ) *__mptr = (ptr);     \
+               (type *)( (char *)__mptr - offsetof(type,member) );})
 
 #define htoi(x) (isdigit(x) ? x-'0' : toupper(x)-'A'+10)
 
 struct list_head {
-    struct list_head *next, *prev;
+     struct list_head *next, *prev;
 };
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
 
 #define LIST_HEAD(name)                                 \
-    struct list_head name = LIST_HEAD_INIT(name)
+     struct list_head name = LIST_HEAD_INIT(name)
 
 static __inline__ void INIT_LIST_HEAD(struct list_head *list)
 {
-    list->next = list;
-    list->prev = list;
+     list->next = list;
+     list->prev = list;
 }
 
 
@@ -75,10 +75,10 @@ static __inline__ void __list_add(struct list_head *new,
                                   struct list_head *prev,
                                   struct list_head *next)
 {
-    next->prev = new;
-    new->next = next;
-    new->prev = prev;
-    prev->next = new;
+     next->prev = new;
+     new->next = next;
+     new->prev = prev;
+     prev->next = new;
 }
 
 /**
@@ -91,7 +91,7 @@ static __inline__ void __list_add(struct list_head *new,
  */
 static __inline__ void list_add(struct list_head *new, struct list_head *head)
 {
-    __list_add(new, head->prev, head->next);
+     __list_add(new, head->prev, head->next);
 }
 
 
@@ -104,8 +104,8 @@ static __inline__ void list_add(struct list_head *new, struct list_head *head)
  */
 static __inline__ void __list_del(struct list_head * prev, struct list_head * next)
 {
-    next->prev = prev;
-    prev->next = next;
+     next->prev = prev;
+     prev->next = next;
 }
 
 /**
@@ -120,14 +120,14 @@ static __inline__ void __list_del(struct list_head * prev, struct list_head * ne
 #define LIST_POISON2 ((void *) 0x200)
 static __inline__ void __list_del_entry(struct list_head *entry)
 {
-    __list_del(entry->prev, entry->next);
+     __list_del(entry->prev, entry->next);
 }
 
 static __inline__ void list_del(struct list_head *entry)
 {
-    __list_del(entry->prev, entry->next);
-    entry->next = LIST_POISON1;
-    entry->prev = LIST_POISON2;
+     __list_del(entry->prev, entry->next);
+     entry->next = LIST_POISON1;
+     entry->prev = LIST_POISON2;
 }
 
 
@@ -138,7 +138,7 @@ static __inline__ void list_del(struct list_head *entry)
  */
 static __inline__ int list_empty(const struct list_head *head)
 {
-    return head->next == head;
+     return head->next == head;
 }
 
 /**
@@ -148,7 +148,7 @@ static __inline__ int list_empty(const struct list_head *head)
  * @member:	the name of the list_head within the struct.
  */
 #define list_entry(ptr, type, member)           \
-    container_of(ptr, type, member)
+     container_of(ptr, type, member)
 
 /**
  * list_first_entry - get the first element from a list
@@ -159,7 +159,7 @@ static __inline__ int list_empty(const struct list_head *head)
  * Note, that list is expected to be not empty.
  */
 #define list_first_entry(ptr, type, member)     \
-    list_entry((ptr)->next, type, member)
+     list_entry((ptr)->next, type, member)
 
 /**
  * list_last_entry - get the last element from a list
@@ -170,7 +170,7 @@ static __inline__ int list_empty(const struct list_head *head)
  * Note, that list is expected to be not empty.
  */
 #define list_last_entry(ptr, type, member)      \
-    list_entry((ptr)->prev, type, member)
+     list_entry((ptr)->prev, type, member)
 
 /**
  * list_first_entry_or_null - get the first element from a list
@@ -181,7 +181,7 @@ static __inline__ int list_empty(const struct list_head *head)
  * Note that if the list is empty, it returns NULL.
  */
 #define list_first_entry_or_null(ptr, type, member)                     \
-    (!list_empty(ptr) ? list_first_entry(ptr, type, member) : NULL)
+     (!list_empty(ptr) ? list_first_entry(ptr, type, member) : NULL)
 
 /**
  * list_next_entry - get the next element in list
@@ -189,7 +189,7 @@ static __inline__ int list_empty(const struct list_head *head)
  * @member:	the name of the list_head within the struct.
  */
 #define list_next_entry(pos, member)                            \
-    list_entry((pos)->member.next, typeof(*(pos)), member)
+     list_entry((pos)->member.next, typeof(*(pos)), member)
 
 /**
  * list_prev_entry - get the prev element in list
@@ -197,7 +197,7 @@ static __inline__ int list_empty(const struct list_head *head)
  * @member:	the name of the list_head within the struct.
  */
 #define list_prev_entry(pos, member)                            \
-    list_entry((pos)->member.prev, typeof(*(pos)), member)
+     list_entry((pos)->member.prev, typeof(*(pos)), member)
 
 /**
  * list_for_each	-	iterate over a list
@@ -205,7 +205,7 @@ static __inline__ int list_empty(const struct list_head *head)
  * @head:	the head for your list.
  */
 #define list_for_each(pos, head)                                \
-    for (pos = (head)->next; pos != (head); pos = pos->next)
+     for (pos = (head)->next; pos != (head); pos = pos->next)
 
 /**
  * list_for_each_prev	-	iterate over a list backwards
@@ -213,7 +213,7 @@ static __inline__ int list_empty(const struct list_head *head)
  * @head:	the head for your list.
  */
 #define list_for_each_prev(pos, head)                           \
-    for (pos = (head)->prev; pos != (head); pos = pos->prev)
+     for (pos = (head)->prev; pos != (head); pos = pos->prev)
 
 
 /**
@@ -223,9 +223,9 @@ static __inline__ int list_empty(const struct list_head *head)
  * @member:	the name of the list_head within the struct.
  */
 #define list_for_each_entry(pos, head, member)                  \
-    for (pos = list_first_entry(head, typeof(*pos), member);	\
-         &pos->member != (head);                                \
-         pos = list_next_entry(pos, member))
+     for (pos = list_first_entry(head, typeof(*pos), member);	\
+          &pos->member != (head);                               \
+          pos = list_next_entry(pos, member))
 
 /**
  * list_for_each_entry_reverse - iterate backwards over list of given type.
@@ -234,9 +234,9 @@ static __inline__ int list_empty(const struct list_head *head)
  * @member:	the name of the list_head within the struct.
  */
 #define list_for_each_entry_reverse(pos, head, member)          \
-    for (pos = list_last_entry(head, typeof(*pos), member);     \
-         &pos->member != (head);                                \
-         pos = list_prev_entry(pos, member))
+     for (pos = list_last_entry(head, typeof(*pos), member);    \
+          &pos->member != (head);                               \
+          pos = list_prev_entry(pos, member))
 
 /**
  * list_prepare_entry - prepare a pos entry for use in list_for_each_entry_continue()
@@ -247,7 +247,7 @@ static __inline__ int list_empty(const struct list_head *head)
  * Prepares a pos entry for use as a start point in list_for_each_entry_continue().
  */
 #define list_prepare_entry(pos, head, member)           \
-    ((pos) ? : list_entry(head, typeof(*pos), member))
+     ((pos) ? : list_entry(head, typeof(*pos), member))
 
 /**
  * list_for_each_entry_continue - continue iteration over list of given type
@@ -259,9 +259,9 @@ static __inline__ int list_empty(const struct list_head *head)
  * the current position.
  */
 #define list_for_each_entry_continue(pos, head, member) \
-    for (pos = list_next_entry(pos, member);            \
-         &pos->member != (head);                        \
-         pos = list_next_entry(pos, member))
+     for (pos = list_next_entry(pos, member);           \
+          &pos->member != (head);                       \
+          pos = list_next_entry(pos, member))
 
 
 
@@ -273,14 +273,14 @@ static __inline__ int list_empty(const struct list_head *head)
 
 static inline uintptr_t ___align(uintptr_t p, uintptr_t align)
 {
-    p += (align - 1);
-    p &= ~(align - 1);
-    return p;
+     p += (align - 1);
+     p &= ~(align - 1);
+     return p;
 }
 
 static inline void *aligned_zalloc(int align, int size)
 {
-    return  (void *)___align((uintptr_t)calloc(size + (align - 1), sizeof(char)), align);
+     return  (void *)___align((uintptr_t)calloc(size + (align - 1), sizeof(char)), align);
 }
 
 #define xzalloc(_type) ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type)))
@@ -288,11 +288,11 @@ static inline void *aligned_zalloc(int align, int size)
 
 /* Allocate space for array of typed objects. */
 #define xmalloc_array(_type, _num)                                      \
-    ((_type *)aligned_alloc(__alignof__(_type), sizeof(_type) * _num))
+     ((_type *)aligned_alloc(__alignof__(_type), sizeof(_type) * _num))
 
 
 #define xzalloc_array(_type, _num)                                      \
-    ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type) * _num))
+     ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type) * _num))
 
 #undef XEN_GUEST_HANDLE
 #define XEN_GUEST_HANDLE(a) a
@@ -308,9 +308,9 @@ typedef uint8_t * reloc_ptr_t;
 
 
 struct sandbox_header {
-    uint8_t *_start;
-    uint8_t *_end;
-    uint8_t *_cursor;
+     uint8_t *_start;
+     uint8_t *_end;
+     uint8_t *_cursor;
 };
 
 #ifdef sandbox_port
@@ -325,23 +325,23 @@ struct sandbox_header {
  * must guarantee commonality with original struct definition
  */
 struct check {
-    uintptr_t hvabs;
-    uint16_t datalen;
-    unsigned char *data;
+     uintptr_t hvabs;
+     uint16_t datalen;
+     unsigned char *data;
 };
 
 
 struct function_patch {
-    char *funcname;
-    uint64_t oldabs;
-    uint32_t newrel;  //relative to beginning of function section in new obj.
+     char *funcname;
+     uint64_t oldabs;
+     uint32_t newrel;  //relative to beginning of function section in new obj.
 };
 
 struct table_patch {
-    char *tablename;
-    uintptr_t hvabs;
-    uint16_t datalen;
-    unsigned char *data;
+     char *tablename;
+     uintptr_t hvabs;
+     uint16_t datalen;
+     unsigned char *data;
 };
 
 #endif
@@ -359,14 +359,14 @@ struct table_patch {
 #define MAX_LIST_PATCHES3	16
 
 struct applied_patch3 {
-    void *blob;
-    unsigned char sha1[20];		/* binary encoded */
-    uint32_t numwrites;
-    struct xenlp_patch_write *writes;
-    uint32_t numdeps;
-    struct xenlp_hash *deps;
-    char tags[MAX_TAGS_LEN];
-    struct list_head l;
+     void *blob;
+     unsigned char sha1[20];		/* binary encoded */
+     uint32_t numwrites;
+     struct xenlp_patch_write *writes;
+     uint32_t numdeps;
+     struct xenlp_hash *deps;
+     char tags[MAX_TAGS_LEN];
+     struct list_head l;
 };
 
 
@@ -374,35 +374,35 @@ struct applied_patch3 {
  * must guarantee commonality with original struct definition
  */
 struct xenlp_hash {
-    unsigned char sha1[20];
+     unsigned char sha1[20];
 
-    char __pad0[4];
+     char __pad0[4];
 };
 
 struct xenlp_patch_write {
-    uintptr_t hvabs;		/* Absolute address in HV to apply patch */
+     uintptr_t hvabs;		/* Absolute address in HV to apply patch */
 
-    unsigned char data[8];	/* 8-bytes of data to write at location */
+     unsigned char data[8];	/* 8-bytes of data to write at location */
 
-    uint8_t reloctype;		/* XENLP_RELOC_ABS, XENLP_RELOC_REL */
-    uint8_t  dataoff;		/* Offset into data to apply relocation */
+     uint8_t reloctype;		/* XENLP_RELOC_ABS, XENLP_RELOC_REL */
+     uint8_t  dataoff;		/* Offset into data to apply relocation */
 
-    char __pad[6];
+     char __pad[6];
 };
 
 struct xenlp_patch_info3 {
-    uint64_t hvaddr;		/* virtual address in hypervisor memory */
-    unsigned char sha1[20];	/* binary encoded */
-    char __pad[4];
-    char tags[MAX_TAGS_LEN];
-    struct xenlp_hash deps[MAX_LIST_DEPS];
+     uint64_t hvaddr;		/* virtual address in hypervisor memory */
+     unsigned char sha1[20];	/* binary encoded */
+     char __pad[4];
+     char tags[MAX_TAGS_LEN];
+     struct xenlp_hash deps[MAX_LIST_DEPS];
 };
 
 struct xenlp_list3 {
-    uint16_t skippatches;	/* input, number of patches to skip */
-    uint16_t numpatches;	/* output, number of patches returned */
-    char __pad[4];
-    struct xenlp_patch_info3 patches[MAX_LIST_PATCHES3];	/* output */
+     uint16_t skippatches;	/* input, number of patches to skip */
+     uint16_t numpatches;	/* output, number of patches returned */
+     char __pad[4];
+     struct xenlp_patch_info3 patches[MAX_LIST_PATCHES3];	/* output */
 };
 
 typedef struct xenlp_patch_info3 list_response;
@@ -419,20 +419,20 @@ typedef struct xenlp_patch_info3 list_response;
  * deps (numdeps * struct xenlp_dep)
  * tags (taglen) */
 struct xenlp_apply3 {
-    unsigned char sha1[20];	/* SHA1 of patch file (binary) */
-    char __pad0[4];
-    uint32_t bloblen;		/* Length of blob */
-    uint32_t numrelocs;		/* Number of relocations */
-    uint32_t numwrites;		/* Number of writes */
-    char __pad1[4];
-    uintptr_t refabs;        /* Reference address for relocations */
-    uint32_t numdeps;       /* Number of dependendencies */
-    uint32_t taglen;        /* length of tags string */
+     unsigned char sha1[20];	/* SHA1 of patch file (binary) */
+     char __pad0[4];
+     uint32_t bloblen;		/* Length of blob */
+     uint32_t numrelocs;		/* Number of relocations */
+     uint32_t numwrites;		/* Number of writes */
+     char __pad1[4];
+     uintptr_t refabs;        /* Reference address for relocations */
+     uint32_t numdeps;       /* Number of dependendencies */
+     uint32_t taglen;        /* length of tags string */
 };
 
 
 struct xenlp_caps {
-    uint64_t flags;
+     uint64_t flags;
 };
 
 #ifndef INFO_STRING_LEN
@@ -466,7 +466,7 @@ uintptr_t get_sandbox_end(void);
 /* limit client requests per connection, to prevent DOS by a bad client */
 #define SANDBOX_MSG_SESSION_LIMIT 0x64
 #define SANDBOX_MSG_HDRLEN 0x10
-#define SANDBOX_MSG_HBUFLEN 0x18
+#define SANDBOX_MSG_HBUFLEN 0x12
 #define SANDBOX_MSG_MAGIC  {'S', 'A', 'N', 'D'}
 #define SANDBOX_MSG_VERSION (uint16_t)0x0001
 #define SANDBOX_MSG_GET_VER(b) (*(uint16_t *)((uint8_t *)b + 4))
@@ -573,14 +573,14 @@ uintptr_t get_sandbox_end(void);
 #define SSANDBOX "sandbox-sock"
 
 struct sandbox_buf {
-    uint32_t size;
-    uint8_t *buf;
+     uint32_t size;
+     uint8_t *buf;
 };
 
 struct listen
 {
-    int sock;
-    void *arg;
+     int sock;
+     void *arg;
 };
 
 int set_debug(int db);
