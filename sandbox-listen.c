@@ -863,10 +863,6 @@ dispatch_undo_rep (int fd, int len, void **bufp)
 }
 
 
-/****
- *
- ***/
-
 int
 NO_MSG_ID (int fd, int len, void **bufp)
 {
@@ -914,10 +910,10 @@ sandbox_list_patches (int fd)
         ccode =
             read_sandbox_message_header (fd, &version, &id, &len,
                                          (void **) &listen_buf);
-        if (ccode || len < 0)
+        if (ccode || !len)
 	{
-            goto errout;
             dump_sandbox (listen_buf, 32);
+            goto errout;
 	}
     }
 
