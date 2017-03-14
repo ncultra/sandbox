@@ -342,7 +342,7 @@ int  read_sandbox_message_header (int fd, uint16_t * version,
 	    if (ccode == 0) {
 		DMSG ("read_sandbox_message_header: other party"
 		      " closed the socket\n");
-		return SANDBOX_ERR_CLOSED;
+                return SANDBOX_ERR_CLOSED;
 	    }
 	    goto errout;
 	}
@@ -415,7 +415,7 @@ int  read_sandbox_message_header (int fd, uint16_t * version,
 	return ccode;
   errout:
     DMSG ("read a bad or incomplete sandbox header\n");
-    return SANDBOX_ERR_BAD_HDR;
+    return ccode;
 }
 
 
