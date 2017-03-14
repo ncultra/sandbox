@@ -453,6 +453,11 @@ int send_rr_buf (int fd, uint16_t id, ...)
 	index++;
     } while (index < 255);
     va_end (va);
+    if (index >= 255) {
+        lastbuf = 255;
+        bufs[lastbuf].size = SANDBOX_LAST_ARG;
+        bufs[lastbuf].buf = (uint8_t *) & nullsize;
+    }
     DMSG ("last va arg index: %d, size %d\n", lastbuf, bufs[lastbuf].size);
 
     /* the length of the first bufsize is already calculated in
