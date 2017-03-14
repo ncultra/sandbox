@@ -554,7 +554,6 @@ int dispatch_apply (int fd, int len, void **bufp)
 	ccode = SANDBOX_ERR_RW;
     }
 
-/* allocate bufp and read the remainder of the message */
   err_out:
     send_rr_buf (fd, SANDBOX_MSG_APPLYRSP,
 		 sizeof (ccode), &ccode, SANDBOX_LAST_ARG);
@@ -610,10 +609,10 @@ int dispatch_list (int fd, int len, void **bufp)
 
 
 	list_for_each_entry (ap, &lp_patch_head3, l) {
-	    dump_sandbox (&ap->sha1, 20);
-	    memcpy (&r[current].sha1, ap->sha1, sizeof (ap->sha1));
+	    dump_sandbox (&ap->sha1, SHA_DIGEST_LENGTH);
+	    memcpy (&r[current].sha1, ap->sha1, SHA_DIGEST_LENGTH);
 	    DMSG ("reading %d patch sha1: \n", current);
-	    dump_sandbox (&r[current].sha1, 20);
+	    dump_sandbox (&r[current].sha1, SHA_DIGEST_LENGTH);
 	    r[current].hvaddr = (uint64_t) ap->blob;
 	    current++;
 	    if (current == count)
