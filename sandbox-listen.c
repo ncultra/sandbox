@@ -558,6 +558,7 @@ int dispatch_apply (int fd, int len, void **bufp)
   err_out:
     send_rr_buf (fd, SANDBOX_MSG_APPLYRSP,
 		 sizeof (ccode), &ccode, SANDBOX_LAST_ARG);
+    free(patch_buf);
 
     return ccode;
 }
