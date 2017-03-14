@@ -596,7 +596,7 @@ ssize_t	readn(int fd, void *vptr, size_t n);
 ssize_t writen(int fd, const void *vptr, size_t n);
 int read_sandbox_message_header(int fd, uint16_t *version,
                                 uint16_t *id, uint32_t *len, void **buf);
-ssize_t send_rr_buf(int fd, uint16_t id, ...);
+int  send_rr_buf(int fd, uint16_t id, ...);
 void bin2hex(unsigned char *bin, size_t binlen, char *buf,
              size_t buflen);
 int write_sandbox_message_header(int fd,

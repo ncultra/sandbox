@@ -421,7 +421,7 @@ int  read_sandbox_message_header (int fd, uint16_t * version,
 
 
 
-ssize_t send_rr_buf (int fd, uint16_t id, ...)
+int send_rr_buf (int fd, uint16_t id, ...)
 {
     uint32_t len = SANDBOX_MSG_HDRLEN;
     uint8_t sand[] = SANDBOX_MSG_MAGIC;
