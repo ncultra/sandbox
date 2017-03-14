@@ -323,7 +323,7 @@ int write_sandbox_message_header (int fd, uint16_t version, uint16_t id)
 /* if it returns 0, ptr parameters will have correct values */
 /* void **buf is for the dispatch function to place data for the caller. */
 /*  buf points to a pointer to null (*(void **)buf == NULL) */
-ssize_t read_sandbox_message_header (int fd, uint16_t * version,
+int  read_sandbox_message_header (int fd, uint16_t * version,
 				     uint16_t * id, uint32_t * len,
 				     void **buf)
 {

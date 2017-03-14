@@ -594,8 +594,8 @@ int accept_sandbox_sock(int listenfd, uid_t *uidptr);
 int cli_conn(char *sock_name);
 ssize_t	readn(int fd, void *vptr, size_t n);
 ssize_t writen(int fd, const void *vptr, size_t n);
-ssize_t read_sandbox_message_header(int fd, uint16_t *version,
-				    uint16_t *id, uint32_t *len, void **buf);
+int read_sandbox_message_header(int fd, uint16_t *version,
+                                uint16_t *id, uint32_t *len, void **buf);
 ssize_t send_rr_buf(int fd, uint16_t id, ...);
 void bin2hex(unsigned char *bin, size_t binlen, char *buf,
              size_t buflen);
