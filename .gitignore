@@ -34,7 +34,6 @@ makefile.patch
 merge.patch
 pc-bios/
 qdict-test-data.txt
-qemu-version.sh
 roms/
 sand_log_*
 tests/
