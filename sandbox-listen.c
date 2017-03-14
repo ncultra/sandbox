@@ -846,7 +846,7 @@ void *sandbox_list_patches (int fd)
     return listen_buf;
 
   errout:
-    free (listen_buf);
+    free(listen_buf);
     return NULL;
 }
 

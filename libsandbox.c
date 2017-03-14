@@ -384,8 +384,6 @@ int read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
 			DMSG ("Normalizing 32-bit offset from blob to _start to the blob\n");
 			DMSG ("value before write: %lx\n", *blob_value);
 			*blob_value -= (uint32_t) relocrel;
-
-//            *((uintptr_t)(*blob_p + off)) -= relocrel;
 			DMSG ("value after write: %lx\n", *blob_value);
 		}
 		xfree (relocs);
