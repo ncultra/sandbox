@@ -615,9 +615,7 @@ int dispatch_list (int fd, int len, void **bufp)
 	    dump_sandbox (&r[current].sha1, SHA_DIGEST_LENGTH);
 	    r[current].hvaddr = (uint64_t) ap->blob;
 	    current++;
-	    if (current == count)
-		break;
-	}
+        }
 	ccode = send_rr_buf (fd, SANDBOX_MSG_LISTRSP,
 			     rsize, rbuf, SANDBOX_LAST_ARG);
 	free (rbuf);
