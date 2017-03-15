@@ -189,18 +189,15 @@ void hex2bin (char *buf, size_t buflen, unsigned char *bin, size_t binlen)
 void swap_trampolines (struct xenlp_patch_write *writes,
 		       uint32_t numwrites)
 {
-	int i;
-	for (i = 0; i < numwrites; i++) {
-		struct xenlp_patch_write *pw = &writes[i];
+    int i;
+    for (i = 0; i < numwrites; i++) {
+        struct xenlp_patch_write *pw = &writes[i];
 
-		uint64_t old_data;
-		memcpy (&old_data, (void *) pw->hvabs, sizeof (pw->data));
-		memcpy ((void *) pw->hvabs, pw->data, sizeof (pw->data));
-		memcpy (pw->data, &old_data, sizeof (pw->data));
-
-/* void __atomic_exchange (type *ptr, type *val, type *ret, int memorder) */
-
-	}
+        uint64_t old_data;
+        __atomic_exchange((uint64_t *)pw->hvabs, (uint64_t *)pw->data,
+                          &old_data, __ATOMIC_RELAXED);
+        memcpy (pw->data, &old_data, sizeof (pw->data));
+    }
 }
 
 
