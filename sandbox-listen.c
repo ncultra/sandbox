@@ -41,7 +41,7 @@ pthread_t *thr;
 pthread_t *
 run_listener (struct listen *l)
 {
-    int ccode;
+    int ccode = SANDBOX_OK;
     DMSG ("run_listener\n");
     thr = calloc (1, sizeof (pthread_t));
     if (!thr)
@@ -464,7 +464,7 @@ send_rr_buf (int fd, uint16_t id, ...)
     uint32_t len = SANDBOX_MSG_HDRLEN;
     uint8_t sand[] = SANDBOX_MSG_MAGIC;
     uint16_t pver = SANDBOX_MSG_VERSION;
-    struct sandbox_buf bufs[255];
+    struct sandbox_buf bufs[SANDBOX_LAST_ARG + 1];
     va_list va;
     uint32_t nullsize = 0;
     int index = 0, lastbuf = 0;
@@ -575,6 +575,8 @@ int
 dispatch_apply (int fd, int len, void **bufp)
 {
 
+    uint8_t *patch_buf = NULL;
+    
     uint32_t ccode = SANDBOX_OK, remaining_bytes = len - SANDBOX_MSG_HDRLEN;;
     DMSG ("apply patch dispatcher\n");
 
@@ -584,8 +586,7 @@ dispatch_apply (int fd, int len, void **bufp)
         goto err_out;
     }
 
-    uint8_t *patch_buf = calloc (remaining_bytes, sizeof (uint8_t));
-
+    patch_buf = calloc (remaining_bytes, sizeof (uint8_t));
 
     if (patch_buf == NULL)
     {
@@ -645,7 +646,7 @@ dispatch_list (int fd, int len, void **bufp)
     list_response *r;
     struct list_head *xp;
     struct applied_patch3 *ap;
-    char *rbuf = NULL;
+    uint8_t *rbuf = NULL;
 
     uint32_t count = 0, current = 0, rsize = 0;
 

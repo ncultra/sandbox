@@ -399,12 +399,7 @@ int read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
 		apply->numwrites * sizeof (struct xenlp_patch_write));
 
 	/* Move over all of the writes */
-	arg =
-	    (unsigned char *) arg +
-	    (apply->numwrites * sizeof ((*writes_p)[0]));
-
 	/* Verify writes and apply any relocations in writes
-
 
 	   pw->hvabs = resting address of function to be patched, (jmp location)
 	   pw->data contains the jmp instruction to apply
@@ -540,8 +535,6 @@ int xenlp_apply3 (void *arg)
 	if (apply.taglen > 0 && apply.taglen <= MAX_TAGS_LEN) {
 		memcpy (patch->tags, arg, apply.taglen);
 		patch->tags[apply.taglen] = '\0';
-		arg =
-		    (unsigned char *) arg + (apply.taglen * sizeof (char));
 		DMSG ("tags: %s\n", patch->tags);
 	}
 
