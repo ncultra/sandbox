@@ -1,4 +1,3 @@
-BUILD_ROOT := "/home/$(shell id -n -u)/src/sandbox/"
 CC	:= gcc
 CFLAGS = -D sandbox_port -g  -Wall -Werror -fPIC -std=gnu11 -ffunction-sections -fdata-sections -fkeep-static-consts -fno-inline  -fms-extensions -pthread
 
