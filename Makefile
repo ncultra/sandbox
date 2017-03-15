@@ -1,5 +1,5 @@
 CC	:= gcc
-CFLAGS = -D sandbox_port -g  -Wall -Werror -fPIC -std=gnu11 -ffunction-sections -fdata-sections -fkeep-static-consts -fno-inline  -fms-extensions -pthread
+CFLAGS = -D sandbox_port -g  -Wall -Werror -fPIC -ffunction-sections -fdata-sections -fkeep-static-consts -fno-inline -pthread
 
 ifndef BUILD_COMMENT
 	BUILD_COMMENT=""
