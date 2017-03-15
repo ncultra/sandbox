@@ -280,6 +280,7 @@ static inline uintptr_t ___align(uintptr_t p, uintptr_t align)
 
 static inline void *aligned_zalloc(int align, int size)
 {
+     align = __min(0x1000, align);
      return  (void *)___align((uintptr_t)calloc(size + (align - 1), sizeof(char)), align);
 }
 
