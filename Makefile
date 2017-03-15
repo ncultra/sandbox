@@ -14,6 +14,8 @@ LIB_FILES=libsandbox.o  sandbox-listen.o
 CLEAN=rm -f sandbox.out  *.o *.a *.so gitsha.txt platform.h \
 	gitsha.h version.mak sha1.txt gitsha.h
 
+
+
 # this uses the qemu version file
 .PHONY: version.mak
 version.mak:
@@ -111,3 +113,8 @@ static: libsandbox.a
 all:
 	make static
 	cd user && make raxlpxs
+
+.PHONY: lint
+lint:
+	find . -name "*.c"  -exec cppcheck --force {} \;
+	find . -name "*.h"  -exec cppcheck --force {} \;
