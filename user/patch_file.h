@@ -84,8 +84,8 @@ struct dependency {
 #endif
 struct patch3 {
     union {
-        struct patch;
-        struct patch v2;
+	struct patch;
+	struct patch v2;
     };
     int version;
     char tags[MAX_TAGS_LEN];
@@ -97,15 +97,15 @@ struct patch3 {
     struct dependency *deps;
 };
 
-int _read(int fd, const char *filename, void *buf, size_t buflen);
-int _readu64(int fd, const char *filename, uint64_t *value);
-int _readu32(int fd, const char *filename, uint32_t *value);
-int _readu16(int fd, const char *filename, uint16_t *value);
+int _read (int fd, const char *filename, void *buf, size_t buflen);
+int _readu64 (int fd, const char *filename, uint64_t * value);
+int _readu32 (int fd, const char *filename, uint32_t * value);
+int _readu16 (int fd, const char *filename, uint16_t * value);
 
-int load_patch_file3(int fd, const char *filename, struct patch3 *patch);
-int load_patch_file(int fd, const char *filename, struct patch *patch);
+int load_patch_file3 (int fd, const char *filename, struct patch3 *patch);
+int load_patch_file (int fd, const char *filename, struct patch *patch);
 
-void print_patch_file_info(struct patch3 *patch);
-void print_json_patch_info(struct patch3 *patch);
+void print_patch_file_info (struct patch3 *patch);
+void print_json_patch_info (struct patch3 *patch);
 
-#endif //XEN_LIVEPATCH_PATCH_FILE_H_H
+#endif				//XEN_LIVEPATCH_PATCH_FILE_H_H
