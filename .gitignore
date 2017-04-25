@@ -38,3 +38,25 @@ roms/
 sand_log_*
 tests/
 version.mak
+
+####
+.notes.sandbox.buildid
+2017-03-06-103820-16943-1/
+90480c0.diff
+cfg.sh
+client_limit.diff
+hmp_version_info_livepatch.S
+math-terminal
+pr-review-commits
+sandbox-pull-request.txt
+scan-view/
+sha1.txt
+size_of.c
+submodule.patch
+user/gdbin.txt
+user/util.v
+sandbox_dynamic.c
+# test executable
+s_dynamic
+# ghost in the filesystem
+*\033OBq*
