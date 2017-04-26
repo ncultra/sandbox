@@ -125,5 +125,5 @@ pretty:
 	find . -name "*.h"  -exec indent -gnu {} \;
 
 .PHONY: scan-build
-scan-build:m
+scan-build:
 	scan-build make all
