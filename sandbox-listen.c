@@ -763,12 +763,9 @@ dispatch_list_response (int fd, int len, void **bufp)
    */
   if ((ccode = readn (fd, *bufp, remaining_bytes) != remaining_bytes))
     {
-
       DMSG ("error reading list response buffer\n");
-      /*
-       * safe way to free a buffer without checking for null 
-       */
-      *bufp = realloc (*bufp, 0);
+      free(*bufp);
+      /* make sure caller knows this memory had been freed */
       *bufp = NULL;
       ccode = SANDBOX_ERR_PARSE;
     }
