@@ -18,10 +18,10 @@
 
 #ifndef QEMU_GNUC_PREREQ
 #if defined (__GNUC__) && defined (__GNUC_MINOR_)
-# define QEMU_GNUC_PREREQ(maj, min) \
+#define QEMU_GNUC_PREREQ(maj, min) \
             ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
 #else
-# define QEMU_GNUC_PREREQ(maj, min) 0
+#define QEMU_GNUC_PREREQ(maj, min) 0
 #endif
 #endif
 

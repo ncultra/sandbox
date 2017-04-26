@@ -66,48 +66,55 @@ char info_strings[COUNT_INFO_STRINGS][INFO_STRING_LEN + 1];
 
 int get_info_strings (int fd, int display);
 
-static inline char *get_qemu_git_index (int _sockfd)
+static inline char *
+get_qemu_git_index (int _sockfd)
 {
-    INFO_CHECK (_sockfd);
-    return info_strings[INFO_GIT_INDEX];
+  INFO_CHECK (_sockfd);
+  return info_strings[INFO_GIT_INDEX];
 }
 
 
-static inline char *get_qemu_compile (int _sockfd)
+static inline char *
+get_qemu_compile (int _sockfd)
 {
-    INFO_CHECK (_sockfd);
-    return info_strings[INFO_COMPILE_INDEX];
+  INFO_CHECK (_sockfd);
+  return info_strings[INFO_COMPILE_INDEX];
 }
 
-static inline char *get_qemu_flags (int _sockfd)
+static inline char *
+get_qemu_flags (int _sockfd)
 {
-    INFO_CHECK (_sockfd);
-    return info_strings[INFO_FLAGS_INDEX];
+  INFO_CHECK (_sockfd);
+  return info_strings[INFO_FLAGS_INDEX];
 }
 
-static inline char *get_qemu_date (int _sockfd)
+static inline char *
+get_qemu_date (int _sockfd)
 {
-    INFO_CHECK (_sockfd);
-    return info_strings[INFO_DATE_INDEX];
+  INFO_CHECK (_sockfd);
+  return info_strings[INFO_DATE_INDEX];
 }
 
-static inline char *get_qemu_version (int _sockfd)
+static inline char *
+get_qemu_version (int _sockfd)
 {
-    INFO_CHECK (_sockfd);
-    return info_strings[INFO_VER_INDEX];
+  INFO_CHECK (_sockfd);
+  return info_strings[INFO_VER_INDEX];
 }
 
-static inline char *get_qemu_comment (int _sockfd)
+static inline char *
+get_qemu_comment (int _sockfd)
 {
-    INFO_CHECK (_sockfd);
-    return info_strings[INFO_COMMENT_INDEX];
+  INFO_CHECK (_sockfd);
+  return info_strings[INFO_COMMENT_INDEX];
 }
 
-static inline char *get_qemu_sha1 (int _sockfd)
+static inline char *
+get_qemu_sha1 (int _sockfd)
 {
-    INFO_CHECK (_sockfd);
-    return info_strings[INFO_SHA1_INDEX];
+  INFO_CHECK (_sockfd);
+  return info_strings[INFO_SHA1_INDEX];
 }
 
 
-#endif				/* __SANDBOX_PORT_H */
+#endif /* __SANDBOX_PORT_H */

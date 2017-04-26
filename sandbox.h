@@ -55,8 +55,9 @@
 
 #define htoi(x) (isdigit(x) ? x-'0' : toupper(x)-'A'+10)
 
-struct list_head {
-    struct list_head *next, *prev;
+struct list_head
+{
+  struct list_head *next, *prev;
 };
 
 #define LIST_HEAD_INIT(name) { &(name), &(name) }
@@ -64,21 +65,22 @@ struct list_head {
 #define LIST_HEAD(name)                                 \
      struct list_head name = LIST_HEAD_INIT(name)
 
-static __inline__ void INIT_LIST_HEAD (struct list_head *list)
+static __inline__ void
+INIT_LIST_HEAD (struct list_head *list)
 {
-    list->next = list;
-    list->prev = list;
+  list->next = list;
+  list->prev = list;
 }
 
 
-static __inline__ void __list_add (struct list_head *new,
-				   struct list_head *prev,
-				   struct list_head *next)
+static __inline__ void
+__list_add (struct list_head *new,
+	    struct list_head *prev, struct list_head *next)
 {
-    next->prev = new;
-    new->next = next;
-    new->prev = prev;
-    prev->next = new;
+  next->prev = new;
+  new->next = next;
+  new->prev = prev;
+  prev->next = new;
 }
 
 /**
@@ -89,10 +91,10 @@ static __inline__ void __list_add (struct list_head *new,
  * Insert a new entry after the specified head.
  * This is good for implementing stacks.
  */
-static __inline__ void list_add (struct list_head *new,
-				 struct list_head *head)
+static __inline__ void
+list_add (struct list_head *new, struct list_head *head)
 {
-    __list_add (new, head->prev, head->next);
+  __list_add (new, head->prev, head->next);
 }
 
 
@@ -103,11 +105,11 @@ static __inline__ void list_add (struct list_head *new,
  * This is only for internal list manipulation where we know
  * the prev/next entries already!
  */
-static __inline__ void __list_del (struct list_head *prev,
-				   struct list_head *next)
+static __inline__ void
+__list_del (struct list_head *prev, struct list_head *next)
 {
-    next->prev = prev;
-    prev->next = next;
+  next->prev = prev;
+  prev->next = next;
 }
 
 /**
@@ -120,16 +122,18 @@ static __inline__ void __list_del (struct list_head *prev,
 
 #define LIST_POISON1 ((void *) 0x100)
 #define LIST_POISON2 ((void *) 0x200)
-static __inline__ void __list_del_entry (struct list_head *entry)
+static __inline__ void
+__list_del_entry (struct list_head *entry)
 {
-    __list_del (entry->prev, entry->next);
+  __list_del (entry->prev, entry->next);
 }
 
-static __inline__ void list_del (struct list_head *entry)
+static __inline__ void
+list_del (struct list_head *entry)
 {
-    __list_del (entry->prev, entry->next);
-    entry->next = LIST_POISON1;
-    entry->prev = LIST_POISON2;
+  __list_del (entry->prev, entry->next);
+  entry->next = LIST_POISON1;
+  entry->prev = LIST_POISON2;
 }
 
 
@@ -138,9 +142,10 @@ static __inline__ void list_del (struct list_head *entry)
  * list_empty - tests whether a list is empty
  * @head: the list to test.
  */
-static __inline__ int list_empty (const struct list_head *head)
+static __inline__ int
+list_empty (const struct list_head *head)
 {
-    return head->next == head;
+  return head->next == head;
 }
 
 /**
@@ -273,19 +278,21 @@ static __inline__ int list_empty (const struct list_head *head)
 #define xfree(a) if(a) free(a)
 #define printk DMSG
 
-static inline uintptr_t ___align (uintptr_t p, uintptr_t align)
+static inline uintptr_t
+___align (uintptr_t p, uintptr_t align)
 {
-    p += (align - 1);
-    p &= ~(align - 1);
-    return p;
+  p += (align - 1);
+  p &= ~(align - 1);
+  return p;
 }
 
-static inline void *aligned_zalloc (int align, int size)
+static inline void *
+aligned_zalloc (int align, int size)
 {
-    align = __min (0x1000, align);
-    return (void *) ___align ((uintptr_t)
-			      calloc (size + (align - 1), sizeof (char)),
-			      align);
+  align = __min (0x1000, align);
+  return (void *) ___align ((uintptr_t)
+			    calloc (size + (align - 1), sizeof (char)),
+			    align);
 }
 
 #define xzalloc(_type) ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type)))
@@ -312,10 +319,11 @@ static inline void *aligned_zalloc (int align, int size)
 typedef uint8_t *reloc_ptr_t;
 
 
-struct sandbox_header {
-    uint8_t *_start;
-    uint8_t *_end;
-    uint8_t *_cursor;
+struct sandbox_header
+{
+  uint8_t *_start;
+  uint8_t *_end;
+  uint8_t *_cursor;
 };
 
 #ifdef sandbox_port
@@ -329,24 +337,27 @@ struct sandbox_header {
 /* NOTE: defined externally in patch_file.h
  * must guarantee commonality with original struct definition
  */
-struct check {
-    uintptr_t hvabs;
-    uint16_t datalen;
-    unsigned char *data;
+struct check
+{
+  uintptr_t hvabs;
+  uint16_t datalen;
+  unsigned char *data;
 };
 
 
-struct function_patch {
-    char *funcname;
-    uint64_t oldabs;
-    uint32_t newrel;		//relative to beginning of function section in new obj.
+struct function_patch
+{
+  char *funcname;
+  uint64_t oldabs;
+  uint32_t newrel;		//relative to beginning of function section in new obj.
 };
 
-struct table_patch {
-    char *tablename;
-    uintptr_t hvabs;
-    uint16_t datalen;
-    unsigned char *data;
+struct table_patch
+{
+  char *tablename;
+  uintptr_t hvabs;
+  uint16_t datalen;
+  unsigned char *data;
 };
 
 #endif
@@ -363,51 +374,56 @@ struct table_patch {
 #define MAX_LIST_DEPS            8
 #define MAX_LIST_PATCHES3	16
 
-struct applied_patch3 {
-    void *blob;
-    unsigned char sha1[20];	/* binary encoded */
-    uint32_t numwrites;
-    struct xenlp_patch_write *writes;
-    uint32_t numdeps;
-    struct xenlp_hash *deps;
-    char tags[MAX_TAGS_LEN];
-    struct list_head l;
+struct applied_patch3
+{
+  void *blob;
+  unsigned char sha1[20];	/* binary encoded */
+  uint32_t numwrites;
+  struct xenlp_patch_write *writes;
+  uint32_t numdeps;
+  struct xenlp_hash *deps;
+  char tags[MAX_TAGS_LEN];
+  struct list_head l;
 };
 
 
 /* NOTE: defined externally in patch_file.h
  * must guarantee commonality with original struct definition
  */
-struct xenlp_hash {
-    unsigned char sha1[20];
+struct xenlp_hash
+{
+  unsigned char sha1[20];
 
-    char __pad0[4];
+  char __pad0[4];
 };
 
-struct xenlp_patch_write {
-    uintptr_t hvabs;		/* Absolute address in HV to apply patch */
+struct xenlp_patch_write
+{
+  uintptr_t hvabs;		/* Absolute address in HV to apply patch */
 
-    unsigned char data[8];	/* 8-bytes of data to write at location */
+  unsigned char data[8];	/* 8-bytes of data to write at location */
 
-    uint8_t reloctype;		/* XENLP_RELOC_ABS, XENLP_RELOC_REL */
-    uint8_t dataoff;		/* Offset into data to apply relocation */
+  uint8_t reloctype;		/* XENLP_RELOC_ABS, XENLP_RELOC_REL */
+  uint8_t dataoff;		/* Offset into data to apply relocation */
 
-    char __pad[6];
+  char __pad[6];
 };
 
-struct xenlp_patch_info3 {
-    uint64_t hvaddr;		/* virtual address in hypervisor memory */
-    unsigned char sha1[20];	/* binary encoded */
-    char __pad[4];
-    char tags[MAX_TAGS_LEN];
-    struct xenlp_hash deps[MAX_LIST_DEPS];
+struct xenlp_patch_info3
+{
+  uint64_t hvaddr;		/* virtual address in hypervisor memory */
+  unsigned char sha1[20];	/* binary encoded */
+  char __pad[4];
+  char tags[MAX_TAGS_LEN];
+  struct xenlp_hash deps[MAX_LIST_DEPS];
 };
 
-struct xenlp_list3 {
-    uint16_t skippatches;	/* input, number of patches to skip */
-    uint16_t numpatches;	/* output, number of patches returned */
-    char __pad[4];
-    struct xenlp_patch_info3 patches[MAX_LIST_PATCHES3];	/* output */
+struct xenlp_list3
+{
+  uint16_t skippatches;		/* input, number of patches to skip */
+  uint16_t numpatches;		/* output, number of patches returned */
+  char __pad[4];
+  struct xenlp_patch_info3 patches[MAX_LIST_PATCHES3];	/* output */
 };
 
 typedef struct xenlp_patch_info3 list_response;
@@ -423,21 +439,23 @@ typedef struct xenlp_patch_info3 list_response;
  * writes (numwrites * struct xenlp_patch_write)
  * deps (numdeps * struct xenlp_dep)
  * tags (taglen) */
-struct xenlp_apply3 {
-    unsigned char sha1[20];	/* SHA1 of patch file (binary) */
-    char __pad0[4];
-    uint32_t bloblen;		/* Length of blob */
-    uint32_t numrelocs;		/* Number of relocations */
-    uint32_t numwrites;		/* Number of writes */
-    char __pad1[4];
-    uintptr_t refabs;		/* Reference address for relocations */
-    uint32_t numdeps;		/* Number of dependendencies */
-    uint32_t taglen;		/* length of tags string */
+struct xenlp_apply3
+{
+  unsigned char sha1[20];	/* SHA1 of patch file (binary) */
+  char __pad0[4];
+  uint32_t bloblen;		/* Length of blob */
+  uint32_t numrelocs;		/* Number of relocations */
+  uint32_t numwrites;		/* Number of writes */
+  char __pad1[4];
+  uintptr_t refabs;		/* Reference address for relocations */
+  uint32_t numdeps;		/* Number of dependendencies */
+  uint32_t taglen;		/* length of tags string */
 };
 
 
-struct xenlp_caps {
-    uint64_t flags;
+struct xenlp_caps
+{
+  uint64_t flags;
 };
 
 #ifndef INFO_STRING_LEN
@@ -509,6 +527,7 @@ uintptr_t get_sandbox_end (void);
 #define SANDBOX_ERR_INVALID -11
 #define SANDBOX_SUCCESS 1
 
+/* *INDENT-OFF* */
 /*************************************************************************/
 /*                 Message format                                        */
 /*-----------------------------------------------------------------------*/
@@ -529,7 +548,7 @@ uintptr_t get_sandbox_end (void);
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 /*      |    field  n                    ...                            |*/
 /*      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
-
+/* *INDENT-ON* */
 
 
 /* Message ID 1: apply patch ********************************************/
@@ -577,14 +596,16 @@ uintptr_t get_sandbox_end (void);
 
 #define SSANDBOX "sandbox-sock"
 
-struct sandbox_buf {
-    uint32_t size;
-    uint8_t *buf;
+struct sandbox_buf
+{
+  uint32_t size;
+  uint8_t *buf;
 };
 
-struct listen {
-    int sock;
-    void *arg;
+struct listen
+{
+  int sock;
+  void *arg;
 };
 
 int set_debug (int db);
@@ -599,8 +620,7 @@ int cli_conn (char *sock_name);
 ssize_t readn (int fd, void *vptr, size_t n);
 ssize_t writen (int fd, const void *vptr, size_t n);
 int read_sandbox_message_header (int fd, uint16_t * version,
-				 uint16_t * id, uint32_t * len,
-				 void **buf);
+				 uint16_t * id, uint32_t * len, void **buf);
 int send_rr_buf (int fd, uint16_t id, ...);
 void bin2hex (unsigned char *bin, size_t binlen, char *buf, size_t buflen);
 int write_sandbox_message_header (int fd, uint16_t version, uint16_t id);
@@ -626,4 +646,4 @@ int do_lp_apply (int fd, void *buf, size_t buflen);
 int xenlp_apply (void *arg);
 int xenlp_apply3 (void *arg);
 
-#endif				/* __SANDBOX_H */
+#endif /* __SANDBOX_H */

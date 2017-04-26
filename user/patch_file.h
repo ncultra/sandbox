@@ -14,87 +14,96 @@
 #define XSPATCH_COOKIE3	_XSPATCH_COOKIE STR(XSPATCH_VER3)
 
 
-struct check {
-    uintptr_t hvabs;
-    uint16_t datalen;
-    unsigned char *data;
+struct check
+{
+  uintptr_t hvabs;
+  uint16_t datalen;
+  unsigned char *data;
 };
 
 
-struct function_patch {
-    char *funcname;
-    uint64_t oldabs;
-    uint32_t newrel;
+struct function_patch
+{
+  char *funcname;
+  uint64_t oldabs;
+  uint32_t newrel;
 };
 
 
-struct table_patch {
-    char *tablename;
-    uintptr_t hvabs;
-    uint16_t datalen;
-    unsigned char *data;
+struct table_patch
+{
+  char *tablename;
+  uintptr_t hvabs;
+  uint16_t datalen;
+  unsigned char *data;
 };
 
 
-struct patch {
-    unsigned char sha1[SHA_DIGEST_LENGTH];
-    char xenversion[32];
-    char xencompiledate[32];
+struct patch
+{
+  unsigned char sha1[SHA_DIGEST_LENGTH];
+  char xenversion[32];
+  char xencompiledate[32];
 
-    uint64_t crowbarabs;
-    uint64_t refabs;
+  uint64_t crowbarabs;
+  uint64_t refabs;
 
-    uint32_t bloblen;
-    unsigned char *blob;
+  uint32_t bloblen;
+  unsigned char *blob;
 
-    uint16_t numrelocs;
-    uint32_t *relocs;
+  uint16_t numrelocs;
+  uint32_t *relocs;
 
-    uint16_t numchecks;
-    struct check *checks;
+  uint16_t numchecks;
+  struct check *checks;
 
-    uint16_t numfuncs;
-    struct function_patch *funcs;
+  uint16_t numfuncs;
+  struct function_patch *funcs;
 
-    uint16_t numtables;
-    struct table_patch *tables;
+  uint16_t numtables;
+  struct table_patch *tables;
 };
 
 /* V3 patch data structures */
-struct reloc3 {
-    uint16_t index;
-    uint32_t offset;
+struct reloc3
+{
+  uint16_t index;
+  uint32_t offset;
 };
 
-struct symbol {
-    char *name;
-    char *section;
-    uint32_t sec_off;
-    uint32_t sym_off;
+struct symbol
+{
+  char *name;
+  char *section;
+  uint32_t sec_off;
+  uint32_t sym_off;
 };
 
-struct dependency {
-    unsigned char sha1[SHA_DIGEST_LENGTH];
-    uint64_t refabs;
-    uint32_t reladdr;
+struct dependency
+{
+  unsigned char sha1[SHA_DIGEST_LENGTH];
+  uint64_t refabs;
+  uint32_t reladdr;
 };
 
 #ifndef MAX_TAGS_LEN
 #define MAX_TAGS_LEN	       128
 #endif
-struct patch3 {
-    union {
-	struct patch;
-	struct patch v2;
-    };
-    int version;
-    char tags[MAX_TAGS_LEN];
-    uint16_t numrelocs3;
-    struct reloc3 *relocs3;
-    uint16_t numsymbols;
-    struct symbol *symbols;
-    uint16_t numdeps;
-    struct dependency *deps;
+struct patch3
+{
+  union
+  {
+    struct patch;
+    struct patch v2;
+  };
+  int version;
+  char tags[MAX_TAGS_LEN];
+  uint16_t numrelocs3;
+  struct reloc3 *relocs3;
+  uint16_t numsymbols;
+  struct symbol *symbols;
+  uint16_t numdeps;
+  struct dependency *deps;
 };
 
 int _read (int fd, const char *filename, void *buf, size_t buflen);
@@ -108,4 +117,4 @@ int load_patch_file (int fd, const char *filename, struct patch *patch);
 void print_patch_file_info (struct patch3 *patch);
 void print_json_patch_info (struct patch3 *patch);
 
-#endif				//XEN_LIVEPATCH_PATCH_FILE_H_H
+#endif //XEN_LIVEPATCH_PATCH_FILE_H_H

@@ -118,3 +118,12 @@ all:
 lint:
 	find . -name "*.c"  -exec cppcheck --force {} \;
 	find . -name "*.h"  -exec cppcheck --force {} \;
+
+.PHONY: pretty
+pretty:
+	find . -name "*.c"  -exec indent -gnu {} \;
+	find . -name "*.h"  -exec indent -gnu {} \;
+
+.PHONY: scan-build
+scan-build:m
+	scan-build make all
