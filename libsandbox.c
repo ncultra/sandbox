@@ -2,10 +2,9 @@
 #include "atomic.h"
 #include "sandbox.h"
 
-#define str1(s) #s
+/* #define str1(s) #s
 #define str(s) str1(s)
-
-
+*/
 extern uintptr_t _start, _end;
 
 /************************************************************

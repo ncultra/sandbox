@@ -992,7 +992,7 @@ sandbox_list_patches (int fd)
    */
   return listen_buf;
 
-rrout:
+errout:
   free (listen_buf);
   return NULL;
 }
