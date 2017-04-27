@@ -636,20 +636,20 @@ xenlp_undo3 (XEN_GUEST_HANDLE (void *)arg)
 
 
   list_for_each_entry (ap, &lp_patch_head3, l)
-  {
+    {
 
-    if (memcmp (ap->sha1, hash.sha1, sizeof (hash.sha1)) == 0)
-      {
-	if (has_dependent_patches (ap) || ap->numwrites == 0)
-	  return -ENXIO;
-	swap_trampolines (ap->writes, ap->numwrites);
-	list_del (&ap->l);
+      if (memcmp (ap->sha1, hash.sha1, sizeof (hash.sha1)) == 0)
+        {
+          if (has_dependent_patches (ap) || ap->numwrites == 0)
+            return -ENXIO;
+          swap_trampolines (ap->writes, ap->numwrites);
+          list_del (&ap->l);
 
-	xfree (ap->writes);
-	xfree (ap->deps);
-	xfree (ap);
-	return 0;
-      }
-  }
+          xfree (ap->writes);
+          xfree (ap->deps);
+          xfree (ap);
+          return 0;
+        }
+    }
   return -ENOENT;
 }

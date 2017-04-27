@@ -55,7 +55,6 @@ size_of.c
 submodule.patch
 user/gdbin.txt
 user/util.v
-sandbox_dynamic.c
 # test executable
 s_dynamic
 # ghost in the filesystem
