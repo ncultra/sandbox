@@ -1,6 +1,21 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <sys/mman.h>
-#include "sandbox.h"
+#include <sys/queue.h>
+#include <limits.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <signal.h>
+#include <sched.h>
+#include <memory.h>
+#include <errno.h>
+#include <getopt.h>
+#include <assert.h>
+#include <stddef.h>
+#include <unistd.h>
+#include <ctype.h>
 
 /* every patch is located in a memory-mapped (anonymous) file 
  * every map has an address and a size
@@ -12,34 +27,57 @@ struct patch_map
 {
   void * addr;
   uint64_t size;
-  struct list_head l;
+  LIST_ENTRY(patch_map) l;
 };
 
-/* keep each map on  linked list */
-LIST_HEAD (maps);
+struct applied_patch3
+{
+  void *blob;
+  unsigned char sha1[20];	/* binary encoded */
+  uint32_t numwrites;
+  struct xenlp_patch_write *writes;
+  uint32_t numdeps;
+  struct xenlp_hash *deps;
+  char tags[100];
+  LIST_ENTRY(applied_patch3) l;
+};
 
+struct applied_patch3 *
+allocate_applied_patch(void *blob)
+{
+  struct applied_patch3 *ap;
+  ap = calloc(1, sizeof(struct applied_patch3));
+  if (ap == NULL)
+    goto out;
+  ap->blob = blob;
+ out:
+  return ap;
+}
 
-/* list_add (&patch->l, &lp_patch_head3);
- * && ap != list_first_entry (&lp_patch_head3,
- * list_for_each_entry (ap, &lp_patch_head3, l)
- */
+int
+free_applied_patch(struct applied_patch3 *ap)
+{
+  /* blob is a patch map, don't free here */
+  free(ap);
+  return 0;
+}
+
 struct patch_map *
 allocate_patch_map(unsigned int size)
 {
   struct patch_map *pm = malloc(sizeof(struct patch_map));
   if (pm == NULL) 
     {
-      return pm;
+      return NULL;
     }
   pm->size = size;
   pm->addr = mmap (NULL, size,
                    PROT_READ | PROT_WRITE | PROT_EXEC,
                    MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
   
-  if (pm->adr == MAP_FAILED)
+  if (pm->addr == MAP_FAILED)
     goto err_out;
-  list_add (&pm->l, &maps);
-  return pm->addr;
+  return pm;
   
  err_out:
   free(pm);
@@ -47,101 +85,146 @@ allocate_patch_map(unsigned int size)
 }
 
 int
-free_patch_map(void *address)
+free_patch_map(struct patch_map *pm) __attribute__ ((used));
+
+int
+free_patch_map(struct patch_map *pm)
 {
-  struct patch_map *pmap;
-  int ccode = SANDBOX_OK;
-  
-  list_for_each_entry (pmap, &maps, l) 
-    {
-      if (pmap-addr == address)
-        {
-          list_del(&pmap->l);
-          ccode = munmap(pmap->addr, pmap->size);
-          free(pmap);d
-          return ccode;
-        }
-    }
+  int ccode = munmap(pm->addr, pm->size);
+  free(pm);
   return ccode;
 }
 
+#if 0
 struct applied_patch3 *
-get_patch_from_map(void *blob)
+get_patch_from_map(struct patch_map *pm) __attribute__ ((used));
+
+struct applied_patch3 *
+get_patch_from_map(struct patch_map *pm)
 {
   struct applied_patch3 * ap = NULL;
   list_for_each_entry(ap, &lp_patch_head3, l)
     {
-      if (ap->blob == blob) 
+      if (ap->blob == pm->addr) 
         {
           return ap;
         }
     }
-  return ap;
+  return NULL;
 }
-
-struct applied_patch3 *
-get_patch_from_map(void *addr)
-{
-  struct applied_patch3 * ap = NULL;
-  list_for_each_entry(ap, &lp_patch_head3, l)
-    {
-      if (ap->blob == blob) 
-        {
-          return ap;
-        }
-    }
-  return ap;
-}
-
 
 struct patch_map *
-get_map_from_patch(void *blob)
+get_map_from_patch(struct applied_patch3 *ap) __attribute__ ((used));
+
+struct patch_map *
+get_map_from_patch(struct applied_patch3 *ap)
 {
   struct patch_map * pm = NULL;
   list_for_each_entry(pm, &maps, l)
     {
-      if (pm->addr == blob) 
+      if (pm->addr == ap->blob) 
         {
           return pm;
         }
     }
-  return pm;
+  return NULL;
 }
 
+#endif 
 
 
+/* keep each map on  linked list */
+struct maps_h 
+{
+  struct patch_map *lh_first;
+};
+
+
+struct lp_patch_head3_h
+{
+  struct applied_patch3 *lh_first;
+};  
+    
+  
 typedef unsigned (*asmFunc) (void);
 
 int
 main (int argc, char *argv[])
 {
-  // probably needs to be page aligned...
+  int i;
+  unsigned int codeBytes = 0x1000;
+  struct patch_map *pm;
+  struct  applied_patch3 *ap3;
 
-  unsigned int codeBytes = 4096;
-  void *virtualCodeAddress = 0;
+  struct maps_h maps;
+  struct lp_patch_head3_h lp_patch_head3;
+  
+  LIST_INIT(&maps);
+  LIST_INIT(&lp_patch_head3);
+  
+  
+  for (i = 0; i < 10; i++) 
+    {
 
-  virtualCodeAddress = mmap (NULL,
-                             codeBytes,
-                             PROT_READ | PROT_WRITE | PROT_EXEC,
-                             MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+      pm  = allocate_patch_map(codeBytes);
+      if (pm == NULL)
+        return 0;
 
-  printf ("virtualCodeAddress = %p\n", virtualCodeAddress);
+      LIST_INSERT_HEAD(&maps, pm, l);
+      
+      ap3 = allocate_applied_patch(pm->addr);
+      if (ap3 == NULL) 
+        {
+          LIST_REMOVE(pm, l);
+          free_patch_map(pm);
+          return 0;
+        }
+      LIST_INSERT_HEAD(&lp_patch_head3, ap3, l);
+      
+      
+       printf ("patch %p; blob = %p\n", ap3, ap3->blob);
 
-  // write some code in
-  unsigned char *tempCode = (unsigned char *) (virtualCodeAddress);
-  tempCode[0] = 0xb8;
-  tempCode[1] = 0x00;
-  tempCode[2] = 0x11;
-  tempCode[3] = 0xdd;
-  tempCode[4] = 0xee;
-  // ret code! Very important!
-  tempCode[5] = 0xc3;
+      // write some code in
+      unsigned char *tempCode = (unsigned char *) (ap3->blob);
+      tempCode[0] = 0xb8;
+      tempCode[1] = 0x00;
+      tempCode[2] = 0x11;
+      tempCode[3] = 0xdd;
+      tempCode[4] = 0xee;
+      // ret code! Very important!
+      tempCode[5] = 0xc3;
 
-  asmFunc myFunc = (asmFunc) (virtualCodeAddress);
+      asmFunc myFunc = (asmFunc) (ap3->blob);
+      unsigned out = myFunc ();
+      printf ("out is %x\n", out);
+    }
 
-  unsigned out = myFunc ();
+  LIST_FOREACH(pm, &maps, l) 
+    {
+      printf("map %p\n", pm);
+    }
+  
+  LIST_FOREACH(ap3, &lp_patch_head3, l) 
+    {
+      printf("patch %p; blob %p\n", ap3, ap3->blob);
+    }
 
-  printf ("out is %x\n", out);
+  while (! LIST_EMPTY(&lp_patch_head3)) 
+    {
+      ap3 = LIST_FIRST(&lp_patch_head3);
+      printf("removing applied patch %p\n", ap3);
+      LIST_REMOVE(ap3, l);
+      free_applied_patch(ap3);
+    }
+  
+  while (! LIST_EMPTY(&maps)) 
+    {
+      pm = LIST_FIRST(&maps);
+      printf("removing patch map %p\n", pm);
+      LIST_REMOVE(pm, l);
+      free_patch_map(pm);
+    }
 
-  return 0;
+  
+     return 0;
 }
