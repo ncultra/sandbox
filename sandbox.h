@@ -157,17 +157,17 @@ struct table_patch
 #define MAX_LIST_PATCHES3	16
 
 /* list head for applied patches */
-struct lph 
+struct lph
 {
-    struct applied_patch3 *lh_first;
-    
+  struct applied_patch3 *lh_first;
+
 };
 
-struct patch_map 
+struct patch_map
 {
-  void * addr;
+  void *addr;
   uint64_t size;
-  LIST_ENTRY(patch_map) l;
+    LIST_ENTRY (patch_map) l;
 };
 
 struct applied_patch3
@@ -179,7 +179,7 @@ struct applied_patch3
   uint32_t numdeps;
   struct xenlp_hash *deps;
   char tags[MAX_TAGS_LEN];
-  LIST_ENTRY(applied_patch3) l;
+    LIST_ENTRY (applied_patch3) l;
 };
 
 
@@ -264,10 +264,10 @@ extern uintptr_t patch_sandbox_start, patch_sandbox_end;
 
 extern uintptr_t patch_cursor;
 
-extern struct lph lp_patch_head3 ;
+extern struct lph lp_patch_head3;
 
-struct patch_map * allocate_patch_map(unsigned int size);
-int free_patch_map(struct patch_map *pm);
+struct patch_map *allocate_patch_map (unsigned int size);
+int free_patch_map (struct patch_map *pm);
 
 void dump_sandbox (const void *data, size_t size);
 uintptr_t ALIGN_POINTER (uintptr_t p, uintptr_t offset);
