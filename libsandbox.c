@@ -7,18 +7,6 @@
 */
 extern uintptr_t _start, _end;
 
-/************************************************************
- * The .align instruction has a different syntax on X86_64
- * than it does on PPC64.
- *
- * On X86_64, the operand to .align is an absolute address.
- * On PP64, the operand is an exponent of base 2.
- * .align 8 on X86 is equal to .align 3 on PPC (2^3 = 8.)
- *
- ************************************************************/
-
-uint64_t fill = PLATFORM_ALLOC_SIZE;
-
 /* head of list of applied patches */
 struct lph lp_patch_head3;
 
@@ -33,37 +21,44 @@ ALIGN_POINTER (uintptr_t p, uintptr_t offset)
 }
 
 
-uint8_t sbox_exebuf[SANDBOX_ALLOC_SIZE]
-__attribute__ ((section (".text"), aligned (0x1000))) =
+
+struct patch_map *
+allocate_patch_map(unsigned int size)
 {
-    0};
+  struct patch_map *pm = malloc(sizeof(struct patch_map));
+  if (pm == NULL) 
+    {
+      return NULL;
+    }
+  pm->size = size;
+  pm->addr = mmap (NULL, size,
+                   PROT_READ | PROT_WRITE | PROT_EXEC,
+                   MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+  
+  if (pm->addr == MAP_FAILED)
+    goto err_out;
+  return pm;
+  
+ err_out:
+  free(pm);
+  return MAP_FAILED;
+}
 
-uint8_t *sbox_start = sbox_exebuf;
-uint8_t *sbox_end = &sbox_exebuf[SANDBOX_ALLOC_SIZE];
-uint8_t *sbox_cursor = sbox_exebuf;
+int
+free_patch_map(struct patch_map *pm)
+{
+  int ccode = munmap(pm->addr, pm->size);
+  free(pm);
+  return ccode;
+}
 
-uint8_t *
+
+int
 init_sandbox ()
 {
     LIST_INIT(&lp_patch_head3);
-    if (mprotect (&sbox_exebuf[0], SANDBOX_ALLOC_SIZE,
-                  PROT_READ | PROT_EXEC | PROT_WRITE) == -1)
-    {
-        DMSG ("memprotect failed, %i\n", errno);
-        perror ("err: ");
-        return NULL;
-    }
-    else
-    {
-        memset (sbox_exebuf, 0x90, SANDBOX_ALLOC_SIZE);
-    }
-    return sbox_cursor;
-}
 
-ptrdiff_t
-get_sandbox_free (void)
-{
-    return (ptrdiff_t) (uintptr_t) sbox_end - (uintptr_t) sbox_cursor;
+    return SANDBOX_OK;
 }
 
 FILE *log_fd = NULL;
@@ -144,24 +139,6 @@ LMSG (char *fmt, ...)
 
 }
 
-uint8_t *
-get_sandbox_memory (ptrdiff_t size)
-{
-    uint8_t *sbox_ptr = NULL;
-
-
-    if (get_sandbox_free () < size || size > SANDBOX_ALLOC_SIZE)
-    {
-        return NULL;
-    }
-
-    sbox_ptr = (uint8_t *) ALIGN_POINTER ((uintptr_t) sbox_cursor, 0x10);
-
-    sbox_cursor += size;
-    sbox_cursor = (uint8_t *) ALIGN_POINTER ((uintptr_t) sbox_cursor, 0x10);
-    return sbox_ptr;
-}
-
 
 void
 bin2hex (unsigned char *bin, size_t binlen, char *buf, size_t buflen)
@@ -201,23 +178,6 @@ hex2bin (char *buf, size_t buflen, unsigned char *bin, size_t binlen)
     }
 }
 
-
-void
-swap_trampolines (struct xenlp_patch_write *writes, uint32_t numwrites)
-{
-    int i;
-    for (i = 0; i < numwrites; i++)
-    {
-        struct xenlp_patch_write *pw = &writes[i];
-
-        uint64_t old_data;
-        __atomic_exchange ((uint64_t *) pw->hvabs, (uint64_t *) pw->data,
-                           &old_data, __ATOMIC_RELAXED);
-        memcpy (pw->data, &old_data, sizeof (pw->data));
-    }
-}
-
-
 void
 make_text_writeable (struct xenlp_patch_write *writes, uint32_t numwrites)
 {
@@ -234,6 +194,22 @@ make_text_writeable (struct xenlp_patch_write *writes, uint32_t numwrites)
         }
     }
 }
+
+void
+swap_trampolines (struct xenlp_patch_write *writes, uint32_t numwrites)
+{
+    int i;
+    for (i = 0; i < numwrites; i++)
+    {
+        struct xenlp_patch_write *pw = &writes[i];
+
+        uint64_t old_data;
+        __atomic_exchange ((uint64_t *) pw->hvabs, (uint64_t *) pw->data,
+                           &old_data, __ATOMIC_RELAXED);
+        memcpy (pw->data, &old_data, sizeof (pw->data));
+    }
+}
+
 
 void
 dump_sandbox (const void *data, size_t size)
@@ -299,7 +275,7 @@ dump_sandbox (const void *data, size_t size)
 
 int
 read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
-                  struct xenlp_apply3 *apply, void **blob_p,
+                  struct xenlp_apply3 *apply, struct patch_map **pm,
                   struct xenlp_patch_write **writes_p)
 {
     size_t i;
@@ -344,18 +320,16 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
     /* Blobs are optional */
     if (apply->bloblen)
     {
-        if (!blob_p || !writes_p || !apply || !arg)
+        if (!pm || !writes_p || !apply || !arg)
         {
             DMSG ("error invalid parameters in read_patch_data2\n");
             return SANDBOX_ERR_INVALID;
         }
 
+        *pm = allocate_patch_map(apply->bloblen);
+        /* (*pm)->addr is now the landing point */
 
-        *blob_p = get_sandbox_memory (apply->bloblen);;
-
-        /* *blob_p is now the landing point */
-
-        if (!(*blob_p))
+        if ( ! *pm)
         {
             DMSG ("error allocating %d bytes memory in read_patch_data2\n",
                   apply->bloblen);
@@ -363,14 +337,14 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
         }
 
         DMSG ("read_patch_data2: blob: %p arg: %p len: %d\n",
-              *blob_p, arg, apply->bloblen);
+              (*pm)->addr, arg, (*pm)->size);
 
 
-        /* Copy blob to hypervisor  - destination is static memory in .text */
-        memcpy (*blob_p, arg, apply->bloblen);
+        /* Copy blob to .txt using the map */
+        memcpy ((*pm)->addr, arg, (*pm)->size);
 
         /* Skip over blob */
-        arg = (unsigned char *) arg + apply->bloblen;
+        arg = (unsigned char *) arg + (*pm)->size;
 
 
         DMSG ("adjusting refabs, before: %lx\n", apply->refabs);
@@ -381,7 +355,7 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
     }
 
 
-    relocrel = (uintptr_t) (*blob_p) - apply->refabs;
+    relocrel = (uintptr_t) ((*pm)->addr) - apply->refabs;
     DMSG ("relocrel: %lx (%ld)\n", relocrel, relocrel);
 
     /* Read relocs */
@@ -403,13 +377,13 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
         for (i = 0; i < apply->numrelocs; i++)
         {
             off = relocs[i];
-            if (off > apply->bloblen - sizeof (int32_t))
+            if (off > (*pm)->size - sizeof (int32_t))
             {
                 printk ("invalid off value %d\n", off);
                 return -EINVAL;
             }
 
-            uint32_t *blob_value = (*blob_p + off);
+            uint32_t *blob_value = ((*pm)->addr + off);
 
 /* blob -> HV .text  - adjust absolute offsets to this process mem */
             DMSG
@@ -439,7 +413,7 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
        pw->data contains the jmp instruction to apply
        pw->dataoff needs the offset within pw->data where to place the jmp distance
 
-       relocrel at this point is the distance of the blob to the
+       relocrel at this point is the distance of the mapped memory  to the
        reference (_start)
     */
     for (i = 0; i < apply->numwrites; i++)
@@ -458,7 +432,7 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
             continue;
 
 
-        /* HV .text -> blob */
+        /* HV .text -> map */
         switch (pw->reloctype)
         {
         case XENLP_RELOC_UINT64:
@@ -507,7 +481,7 @@ int
 xenlp_apply3 (void *arg)
 {
     struct xenlp_apply3 apply;
-    void *blob = NULL;
+    struct patch_map *pm = NULL;
     struct xenlp_patch_write *writes;
     struct applied_patch3 *patch = NULL;
     char sha1[SHA_DIGEST_LENGTH * 2 + 1];
@@ -541,7 +515,7 @@ xenlp_apply3 (void *arg)
     /* FIXME: Memory allocated for patch can leak in case of error */
 
     res =
-        read_patch_data2 (arg, (struct xenlp_apply3 *) &apply, &blob, &writes);
+        read_patch_data2 (arg, (struct xenlp_apply3 *) &apply, &pm, &writes);
 
     if (res < 0)
     {
@@ -587,12 +561,11 @@ xenlp_apply3 (void *arg)
     swap_trampolines (writes, apply.numwrites);
 
     /* Record applied patch */
-    patch->blob = blob;
+    patch->map = pm;
     memcpy (patch->sha1, apply.sha1, sizeof (patch->sha1));
     patch->numwrites = apply.numwrites;
     patch->writes = writes;
 
-    //list_add (&patch->l, &lp_patch_head3);
     LIST_INSERT_HEAD(&lp_patch_head3, patch, l); 
     bin2hex (apply.sha1, sizeof (apply.sha1), sha1, sizeof (sha1));
     printk ("successfully applied patch %s\n", sha1);
@@ -642,6 +615,7 @@ xenlp_undo3 (XEN_GUEST_HANDLE (void *)arg)
           LIST_REMOVE(ap, l);
           xfree (ap->writes);
           xfree (ap->deps);
+          free_patch_map(ap->map);
           xfree (ap);
           return 0;
         }

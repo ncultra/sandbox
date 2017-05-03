@@ -95,44 +95,6 @@ free_patch_map(struct patch_map *pm)
   return ccode;
 }
 
-#if 0
-struct applied_patch3 *
-get_patch_from_map(struct patch_map *pm) __attribute__ ((used));
-
-struct applied_patch3 *
-get_patch_from_map(struct patch_map *pm)
-{
-  struct applied_patch3 * ap = NULL;
-  list_for_each_entry(ap, &lp_patch_head3, l)
-    {
-      if (ap->blob == pm->addr) 
-        {
-          return ap;
-        }
-    }
-  return NULL;
-}
-
-struct patch_map *
-get_map_from_patch(struct applied_patch3 *ap) __attribute__ ((used));
-
-struct patch_map *
-get_map_from_patch(struct applied_patch3 *ap)
-{
-  struct patch_map * pm = NULL;
-  list_for_each_entry(pm, &maps, l)
-    {
-      if (pm->addr == ap->blob) 
-        {
-          return pm;
-        }
-    }
-  return NULL;
-}
-
-#endif 
-
-
 /* keep each map on  linked list */
 struct maps_h 
 {

@@ -163,9 +163,16 @@ struct lph
     
 };
 
+struct patch_map 
+{
+  void * addr;
+  uint64_t size;
+  LIST_ENTRY(patch_map) l;
+};
+
 struct applied_patch3
 {
-  void *blob;
+  struct patch_map *map;
   unsigned char sha1[20];	/* binary encoded */
   uint32_t numwrites;
   struct xenlp_patch_write *writes;
@@ -259,9 +266,9 @@ extern uintptr_t patch_cursor;
 
 extern struct lph lp_patch_head3 ;
 
-struct patch *alloc_patch (char *name, uint64_t size);
-void free_patch (struct patch *p);
-int apply_patch (struct patch *new_patch);
+struct patch_map * allocate_patch_map(unsigned int size);
+int free_patch_map(struct patch_map *pm);
+
 void dump_sandbox (const void *data, size_t size);
 uintptr_t ALIGN_POINTER (uintptr_t p, uintptr_t offset);
 
@@ -400,7 +407,7 @@ struct listen
 int set_debug (int db);
 void DMSG (char *fmt, ...);
 void LMSG (char *fmt, ...);
-uint8_t *init_sandbox (void);
+int init_sandbox (void);
 pthread_t *run_listener (struct listen *l);
 void *listen_thread (void *arg);
 int listen_sandbox_sock (struct listen *);
