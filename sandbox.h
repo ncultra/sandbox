@@ -38,26 +38,19 @@
 
 
 #define __max(a,b)                              \
-     ({ __typeof__ (a) _a = (a);                \
-          __typeof__ (b) _b = (b);              \
-          _a > _b ? _a : _b; })
+    ({ __typeof__ (a) _a = (a);                 \
+        __typeof__ (b) _b = (b);                \
+        _a > _b ? _a : _b; })
 
 #define __min(a,b)                              \
-     ({ __typeof__ (a) _a = (a);                \
-          __typeof__ (b) _b = (b);              \
-          _a < _b ? _a : _b; })
-
-/* TODO: refactor to use </usr/include/sys/queue.h> */
-#define container_of(ptr, type, member) ({                              \
-               const typeof( ((type *)0)->member ) *__mptr = (ptr);     \
-               (type *)( (char *)__mptr - offsetof(type,member) );})
+    ({ __typeof__ (a) _a = (a);                 \
+        __typeof__ (b) _b = (b);                \
+        _a < _b ? _a : _b; })
 
 #define htoi(x) (isdigit(x) ? x-'0' : toupper(x)-'A'+10)
 
 /* compatibility */
 
-#define xmalloc(_type) ((_type *)aligned_alloc(__alignof__(_type), sizeof(_type)))
-#define xfree(a) if(a) free(a)
 #define printk DMSG
 
 static inline uintptr_t
@@ -68,25 +61,19 @@ ___align (uintptr_t p, uintptr_t align)
   return p;
 }
 
-static inline void *
-aligned_zalloc (int align, int size)
-{
-  align = __min (0x1000, align);
-  return (void *) ___align ((uintptr_t)
-			    calloc (size + (align - 1), sizeof (char)),
-			    align);
-}
+/*
+  int posix_memalign(void **memptr, size_t alignment, size_t size);
 
-#define xzalloc(_type) ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type)))
-
-
-/* Allocate space for array of typed objects. */
-#define xmalloc_array(_type, _num)                                      \
-     ((_type *)aligned_alloc(__alignof__(_type), sizeof(_type) * _num))
-
-
-#define xzalloc_array(_type, _num)                                      \
-     ((_type *)aligned_zalloc(__alignof__(_type), sizeof(_type) * _num))
+  static inline void *calloc_array(_type, _count) 
+  {
+  void *p;
+  if ( ! posix_memalign(&p, __alignof__((_type)), sizeof((_type)) * _count) )
+  {
+  return p;
+  }
+  return NULL;
+  }
+*/
 
 #undef XEN_GUEST_HANDLE
 #define XEN_GUEST_HANDLE(a) a
@@ -172,7 +159,7 @@ struct patch_map
 
 struct applied_patch3
 {
-  struct patch_map *map;
+  struct patch_map map;
   unsigned char sha1[20];	/* binary encoded */
   uint32_t numwrites;
   struct xenlp_patch_write *writes;
@@ -265,9 +252,6 @@ extern uintptr_t patch_sandbox_start, patch_sandbox_end;
 extern uintptr_t patch_cursor;
 
 extern struct lph lp_patch_head3;
-
-struct patch_map *allocate_patch_map (unsigned int size);
-int free_patch_map (struct patch_map *pm);
 
 void dump_sandbox (const void *data, size_t size);
 uintptr_t ALIGN_POINTER (uintptr_t p, uintptr_t offset);

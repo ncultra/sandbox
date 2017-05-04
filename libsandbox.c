@@ -22,33 +22,31 @@ ALIGN_POINTER (uintptr_t p, uintptr_t offset)
 
 
 
-struct patch_map *
-allocate_patch_map (unsigned int size)
+
+int
+map_patch_map (struct patch_map *pm)
 {
-  struct patch_map *pm = malloc (sizeof (struct patch_map));
   if (pm == NULL)
-    {
-      return NULL;
-    }
-  pm->size = size;
-  pm->addr = mmap (NULL, size,
+    return SANDBOX_ERR_INVALID;
+
+  pm->addr = mmap (NULL, pm->size,
 		   PROT_READ | PROT_WRITE | PROT_EXEC,
 		   MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-
   if (pm->addr == MAP_FAILED)
-    goto err_out;
-  return pm;
+    return SANDBOX_ERR_NOMEM;
 
-err_out:
-  free (pm);
-  return MAP_FAILED;
+  return SANDBOX_OK;
 }
 
 int
-free_patch_map (struct patch_map *pm)
+unmap_patch_map (struct patch_map *pm)
 {
-  int ccode = munmap (pm->addr, pm->size);
-  free (pm);
+  int ccode = SANDBOX_OK;
+  if (pm->addr != NULL)
+    ccode = munmap (pm->addr, pm->size);
+  else
+    pm->addr = NULL;
+  pm->size = 0;
   return ccode;
 }
 
@@ -275,48 +273,49 @@ dump_sandbox (const void *data, size_t size)
 
 int
 read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
-		  struct xenlp_apply3 *apply, struct patch_map **pm,
+		  struct xenlp_apply3 *apply, struct patch_map *pm,
 		  struct xenlp_patch_write **writes_p)
 {
   size_t i;
   uintptr_t relocrel = 0;
   uintptr_t runtime_constant = 0;
+  int ccode;
 
-/****
-     Everything about the patch at this time is relative to the the _start symbol.
-     "_start is just one symbol we could use, blah blah blah."
-     however t _start symbol has been relocated when this program was executed.
-     Further, we are placing the new patched code somewhere in the sandbox memory,
-     which we didn't know until now.
+  /****
+       Everything about the patch at this time is relative to the the _start symbol.
+       "_start is just one symbol we could use, blah blah blah."
+       however t _start symbol has been relocated when this program was executed.
+       Further, we are placing the new patched code somewhere in the sandbox memory,
+       which we didn't know until now.
 
-     Here are some variables we will be using to make this 2nd-stage relocation work:
+       Here are some variables we will be using to make this 2nd-stage relocation work:
 
-     refabs: a reference point for all other address offsets. We use _start in the
-     elf file and in the patch file. We need to get the current
-     (relocated) address of _start in order to continue with relocations.
-
-
-     uint64_t hvabs;      Absolute address in HV of the function to be patched
+       refabs: a reference point for all other address offsets. We use _start in the
+       elf file and in the patch file. We need to get the current
+       (relocated) address of _start in order to continue with relocations.
 
 
-     hvabs: the absolute, relocated position of the code to be patched. We don't
-     know the absolute address until run time. So in the patch file,
-     is relative to refabs before relocation. at run time, we can
-     convert this to the relocated absolute address of the code to patch.
+       uint64_t hvabs;      Absolute address in HV of the function to be patched
 
-     relocrel: the newly patched code relative to refabs after relocation.
-     blob (new) - _start (relocated) =	 (1) in the scratch pad
 
-     relocrel is also necessary to normalize distances in the
-     new code.
+       hvabs: the absolute, relocated position of the code to be patched. We don't
+       know the absolute address until run time. So in the patch file,
+       is relative to refabs before relocation. at run time, we can
+       convert this to the relocated absolute address of the code to patch.
 
-     runtime_constant: the difference in refabs before and after relocation.
-     used as a sanity check, may be removed at a later time.
+       relocrel: the newly patched code relative to refabs after relocation.
+       blob (new) - _start (relocated) =	 (1) in the scratch pad
 
-     relocrel  blob_p - refabs: distance from _start (refabs) to the new code
-     (landing in the sandbox) at runtime (abs).
+       relocrel is also necessary to normalize distances in the
+       new code.
 
-***/
+       runtime_constant: the difference in refabs before and after relocation.
+       used as a sanity check, may be removed at a later time.
+
+       relocrel  blob_p - refabs: distance from _start (refabs) to the new code
+       (landing in the sandbox) at runtime (abs).
+
+  ***/
   /* Blobs are optional */
   if (apply->bloblen)
     {
@@ -326,49 +325,46 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
 	  return SANDBOX_ERR_INVALID;
 	}
 
-      *pm = allocate_patch_map (apply->bloblen);
-      /* (*pm)->addr is now the landing point */
+      pm->size = apply->bloblen;
+      ccode = map_patch_map (pm);
 
-      if (!*pm)
+      if (ccode != SANDBOX_OK)
 	{
 	  DMSG ("error allocating %d bytes memory in read_patch_data2\n",
 		apply->bloblen);
-	  return SANDBOX_ERR_NOMEM;
+	  return ccode;
 	}
 
       DMSG ("read_patch_data2: blob: %p arg: %p len: %d\n",
-	    (*pm)->addr, arg, (*pm)->size);
+	    pm->addr, arg, pm->size);
 
 
       /* Copy blob to .txt using the map */
-      memcpy ((*pm)->addr, arg, (*pm)->size);
+      memcpy (pm->addr, arg, pm->size);
 
       /* Skip over blob */
-      arg = (unsigned char *) arg + (*pm)->size;
+      arg = (unsigned char *) arg + pm->size;
 
 
       DMSG ("adjusting refabs, before: %lx\n", apply->refabs);
       runtime_constant = (uintptr_t) & _start - (uintptr_t) apply->refabs;
       apply->refabs += runtime_constant;
       DMSG ("refabs adjusted: %lx\n", apply->refabs);
-
     }
 
-
-  relocrel = (uintptr_t) ((*pm)->addr) - apply->refabs;
+  relocrel = (uintptr_t) (pm->addr - apply->refabs);
   DMSG ("relocrel: %lx (%ld)\n", relocrel, relocrel);
 
   /* Read relocs */
   if (apply->numrelocs)
     {
-      uint32_t *relocs;
-
-      relocs = xzalloc_array (uint32_t, apply->numrelocs);
+      uint32_t *relocs = calloc (apply->numrelocs, sizeof (*relocs));
       if (!relocs)
 	{
 	  DMSG ("error allocating %d bytes in read_patch_data2\n",
 		apply->numrelocs * sizeof (uint32_t));
-	  return SANDBOX_ERR_NOMEM;
+	  ccode = SANDBOX_ERR_NOMEM;
+	  goto errout;
 	}
 
       memcpy (relocs, arg, apply->numrelocs * sizeof (relocs[0]));
@@ -377,31 +373,38 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
       for (i = 0; i < apply->numrelocs; i++)
 	{
 	  off = relocs[i];
-	  if (off > (*pm)->size - sizeof (int32_t))
+	  if (off > pm->size - sizeof (int32_t))
 	    {
 	      printk ("invalid off value %d\n", off);
-	      return -EINVAL;
+	      free (relocs);
+	      ccode = -EINVAL;
+	      goto errout;
 	    }
 
-	  uint32_t *blob_value = ((*pm)->addr + off);
+	  uint32_t *blob_value = (pm->addr + off);
 
-/* blob -> HV .text  - adjust absolute offsets to this process mem */
+	  /* blob -> HV .text  - adjust absolute offsets to this process mem */
 	  DMSG
 	    ("Normalizing 32-bit offset from blob to _start to the blob\n");
 	  DMSG ("value before write: %lx\n", *blob_value);
 	  *blob_value -= (uint32_t) relocrel;
 	  DMSG ("value after write: %lx\n", *blob_value);
 	}
-      xfree (relocs);
+
+      free (relocs);
     }
 
   /* Read writes */
-  *writes_p = xzalloc_array (struct xenlp_patch_write, apply->numwrites);
+  posix_memalign ((void **) &(*writes_p),
+		  __alignof__ (struct xenlp_patch_write),
+		  sizeof (struct xenlp_patch_write) * apply->numwrites);
+
   if (!(*writes_p))
     {
       DMSG ("error allocating %d bytes in read_patch_data2\n",
 	    apply->numwrites * sizeof (struct xenlp_patch_write));
-      return SANDBOX_ERR_NOMEM;
+      ccode = SANDBOX_ERR_NOMEM;
+      goto errout;
     }
   memcpy (*writes_p, arg,
 	  apply->numwrites * sizeof (struct xenlp_patch_write));
@@ -425,7 +428,9 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
 
       if (pw->hvabs < (uintptr_t) & _start || pw->hvabs >= (uintptr_t) & _end)
 	{
-	  printk ("invalid hvabs value %lx\n", pw->hvabs);
+	  DMSG ("invalid hvabs value %lx\n", pw->hvabs);
+	  ccode = SANDBOX_ERR_INVALID;
+	  goto errout;
 	}
 
       if (off < 0)
@@ -439,8 +444,10 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
 
 	  if (off > sizeof (pw->data) - sizeof (uint64_t))
 	    {
-	      printk ("invalid dataoff value %d\n", off);
-	      return -EINVAL;
+	      DMSG ("invalid dataoff value %d\n", off);
+	      ccode = SANDBOX_ERR_INVALID;
+	      goto errout;
+
 	    }
 	  /* update the jmp distance within the patch write */
 	  /* relocrel should be the distance between pw->hvabs and blob */
@@ -457,8 +464,9 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
 	case XENLP_RELOC_INT32:
 	  if (off > sizeof (pw->data) - sizeof (int32_t))
 	    {
-	      printk ("invalid dataoff value %d\n", off);
-	      return -EINVAL;
+	      DMSG ("invalid dataoff value %d\n", off);
+	      ccode = SANDBOX_ERR_INVALID;
+	      goto errout;
 	    }
 	  DMSG ("jmp distance within 32-bit patch buf before write: %lx\n",
 		*((int32_t *) (pw->data + off)));
@@ -470,77 +478,80 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
 	  break;
 	default:
 
-	  printk ("unknown reloctype value %u\n", pw->reloctype);
-	  return -EINVAL;
+	  DMSG ("unknown reloctype value %u\n", pw->reloctype);
+	  ccode = SANDBOX_ERR_INVALID;
+	  goto errout;
 	}
     }
+
   return SANDBOX_OK;
+errout:
+  unmap_patch_map (pm);
+  free (*writes_p);
+  *writes_p = NULL;
+  return ccode;
 }
 
 int
 xenlp_apply3 (void *arg)
 {
   struct xenlp_apply3 apply;
-  struct patch_map *pm = NULL;
-  struct xenlp_patch_write *writes;
+  struct xenlp_patch_write *writes = NULL;
   struct applied_patch3 *patch = NULL;
   char sha1[SHA_DIGEST_LENGTH * 2 + 1];
-  int res;
-
+  int ccode = SANDBOX_ERR;
+  struct patch_map pm = { NULL, 0 };
 
   memcpy (&apply, arg, sizeof (struct xenlp_apply3));
 
   /* Skip over struct xenlp_apply3 */
   arg = (unsigned char *) arg + sizeof (struct xenlp_apply3);
   /* Do some initial sanity checking */
-  if (apply.bloblen > SANDBOX_ALLOC_SIZE)
-    {
-      printk ("live patch size %u is too large\n", apply.bloblen);
-      return SANDBOX_ERR_INVALID;
-    }
-
   if (apply.numwrites == 0)
     {
       DMSG ("need at least one patch\n");
-      return SANDBOX_ERR_INVALID;
+      ccode = SANDBOX_ERR_INVALID;
+      goto errout;
     }
 
-  patch = xzalloc (struct applied_patch3);
+  patch = calloc (1, sizeof (struct applied_patch3));
   if (!patch)
     {
       DMSG ("unable to allocate %d bytes in xenlp_apply3\n",
 	    sizeof (struct xenlp_apply3));
-      return SANDBOX_ERR_NOMEM;
+      ccode = SANDBOX_ERR_NOMEM;
+      goto errout;
     }
-  /* FIXME: Memory allocated for patch can leak in case of error */
 
-  res = read_patch_data2 (arg, (struct xenlp_apply3 *) &apply, &pm, &writes);
-
-  if (res < 0)
+  ccode = read_patch_data2 (arg, &apply, &pm, &writes);
+  if (ccode != SANDBOX_OK)
     {
-      DMSG ("fault %d reading patch data\n", res);
-      return res;
+      DMSG ("fault %d reading patch data\n", ccode);
+      goto errout;
     }
-
   /* Read dependencies */
   patch->numdeps = apply.numdeps;
   DMSG ("numdeps: %d\n", apply.numdeps);
   if (apply.numdeps > 0)
     {
-      patch->deps = xzalloc_array (struct xenlp_hash, apply.numdeps);
+      posix_memalign ((void **) &(patch->deps),
+		      __alignof__ (*(patch->deps)),
+		      sizeof (*(patch->deps)) * apply.numdeps);
+
       if (!patch->deps)
 	{
 	  DMSG ("error allocating memory for patch dependencies\n");
-	  return SANDBOX_ERR_NOMEM;
+	  ccode = SANDBOX_ERR_NOMEM;
+	  goto errout;
 	}
 
       if (memcpy
 	  (patch->deps, arg, apply.numdeps * sizeof (struct xenlp_hash)))
 	{
 	  DMSG ("fault copying memory in xenlp_apply3\n");
-	  return SANDBOX_ERR_INVALID;
+	  ccode = SANDBOX_ERR_INVALID;
+	  goto errout;
 	}
-
       arg =
 	(unsigned char *) arg + (apply.numdeps * sizeof (struct xenlp_hash));
     }
@@ -559,7 +570,7 @@ xenlp_apply3 (void *arg)
   /* Nothing should be possible to fail now, so do all of the writes */
   swap_trampolines (writes, apply.numwrites);
 
-  /* Record applied patch */
+  /* copy the patch map */
   patch->map = pm;
   memcpy (patch->sha1, apply.sha1, sizeof (patch->sha1));
   patch->numwrites = apply.numwrites;
@@ -569,7 +580,18 @@ xenlp_apply3 (void *arg)
   bin2hex (apply.sha1, sizeof (apply.sha1), sha1, sizeof (sha1));
   printk ("successfully applied patch %s\n", sha1);
 
-  return 0;
+  return SANDBOX_OK;
+errout:
+  unmap_patch_map (&pm);
+  if (patch != NULL)
+    {
+      free (patch->writes);
+      free (patch->deps);
+      free (patch);
+    }
+
+  return ccode;
+
 }
 
 int
@@ -593,7 +615,7 @@ has_dependent_patches (struct applied_patch3 *patch)
   return 0;
 }
 
-/* TODO: we can now free the blob memory by calling munmap() */
+
 int
 xenlp_undo3 (XEN_GUEST_HANDLE (void *)arg)
 {
@@ -604,17 +626,16 @@ xenlp_undo3 (XEN_GUEST_HANDLE (void *)arg)
 
   LIST_FOREACH (ap, &lp_patch_head3, l)
   {
-
     if (memcmp (ap->sha1, hash.sha1, sizeof (hash.sha1)) == 0)
       {
 	if (has_dependent_patches (ap) || ap->numwrites == 0)
 	  return -ENXIO;
 	swap_trampolines (ap->writes, ap->numwrites);
 	LIST_REMOVE (ap, l);
-	xfree (ap->writes);
-	xfree (ap->deps);
-	free_patch_map (ap->map);
-	xfree (ap);
+	free (ap->writes);
+	free (ap->deps);
+	unmap_patch_map (&ap->map);
+	free (ap);
 	return 0;
       }
   }
