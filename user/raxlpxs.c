@@ -20,217 +20,37 @@
 #include "../sandbox.h"
 #include "portability.h"
 
-/* stuff from private xen headers */
-
-#ifndef sandbox_port
-#ifdef HYPERCALL_BUFFER_AS_ARG
-#define DECLARE_NAMED_HYPERCALL_BOUNCE(_name, _ubuf, _sz, _dir) \
-    xc_hypercall_buffer_t XC__HYPERCALL_BUFFER_NAME(_name) = {	\
-	.hbuf = NULL,						\
-	.param_shadow = NULL,					\
-	.sz = _sz, .dir = _dir, .ubuf = _ubuf,			\
-    }
-
-
-#define DECLARE_HYPERCALL_BOUNCE(_ubuf, _sz, _dir) DECLARE_NAMED_HYPERCALL_BOUNCE(_ubuf, _ubuf, _sz, _dir)
-
-
-#define XC_HYPERCALL_BUFFER_BOUNCE_NONE	0
-#define XC_HYPERCALL_BUFFER_BOUNCE_IN	1
-#define XC_HYPERCALL_BUFFER_BOUNCE_OUT	2
-#define XC_HYPERCALL_BUFFER_BOUNCE_BOTH	3
-
-
-int xc__hypercall_bounce_pre (xc_interface * xch,
-			      xc_hypercall_buffer_t * bounce);
-void xc__hypercall_bounce_post (xc_interface * xch,
-				xc_hypercall_buffer_t * bounce);
-
-#define xc_hypercall_bounce_pre(_xch, _name) xc__hypercall_bounce_pre(_xch, HYPERCALL_BUFFER(_name))
-#define xc_hypercall_bounce_post(_xch, _name) xc__hypercall_bounce_post(_xch, HYPERCALL_BUFFER(_name))
-#else
-#define HYPERCALL_BUFFER_AS_ARG(d)	((unsigned long)d)
-#define xc_hypercall_bounce_pre(_xch, _name)
-#define xc_hypercall_bounce_post(_xch, _name)
-#endif
-
-#endif /* #ifndef  sandbox_port */
-
-
-typedef struct privcmd_hypercall
-{
-  uint64_t op;
-  uint64_t arg[5];
-} privcmd_hypercall_t;
-
-#define DECLARE_HYPERCALL privcmd_hypercall_t hypercall
-
-#ifdef XENCTRL_HAS_XC_INTERFACE
-typedef xc_interface *xc_interface_t;
-#else
 typedef int xc_interface_t;
-#endif
 static int json = 0;
-
-
-#ifndef sandbox_port
-int do_xen_hypercall (xc_interface_t xch, privcmd_hypercall_t * hypercall);
-
-
-/* if this is a portable build for the sandbox, this function
- * is defined in portability.o
- */
-
-int
-open_xc (xc_interface_t * xch)
-{
-#ifdef XENCTRL_HAS_XC_INTERFACE
-  *xch = xc_interface_open (NULL, NULL, 0);
-#else
-  *xch = xc_interface_open ();
-#endif
-  if (!*xch)
-    {
-      printf ("xc_interface_open failed\n");
-      return -1;
-    }
-
-  return 0;
-}
-#endif /*! sandbox_port */
-
-#ifndef sandbox_port
-
-int
-_do_lp_buf_op_both (xc_interface_t xch, void *buf, size_t buflen, uint64_t op)
-{
-#ifdef DECLARE_HYPERCALL_BOUNCE
-  DECLARE_HYPERCALL_BOUNCE (buf, buflen, XC_HYPERCALL_BUFFER_BOUNCE_BOTH);
-  if (xc_hypercall_bounce_pre (xch, buf))
-    {
-      perror ("xc_hypercall_bounce_pre");
-      return -ENOMEM;
-    }
-
-  void *dest = HYPERCALL_BUFFER (buf);
-
-  DECLARE_HYPERCALL_BUFFER_ARGUMENT (dest);
-#else
-  void *dest = buf;
-#endif
-
-  DECLARE_HYPERCALL;
-
-  hypercall.op = __HYPERVISOR_arch_2;	/* do_live_patch */
-  hypercall.arg[0] = op;
-  hypercall.arg[1] = HYPERCALL_BUFFER_AS_ARG (dest);
-
-  int rc = do_xen_hypercall (xch, &hypercall);
-  xc_hypercall_bounce_post (xch, buf);
-  return rc;
-}
-
-#endif
 
 int
 do_lp_list3 (xc_interface_t xch, struct xenlp_list3 *list)
 {
-#ifndef sandbox_port
-  return _do_lp_buf_op_both (xch, list, sizeof (*list), XENLP_list3);
-#else
-  return __do_lp_list3 (xch, list);;
-#endif /* ! sandbox_port */
+  return __do_lp_list3 (xch, list);
 }
 
 
 int
 do_lp_caps (xc_interface_t xch, struct xenlp_caps *caps)
 {
-#ifndef sandbox_port
-  return _do_lp_buf_op_both (xch, caps, sizeof (*caps), XENLP_caps);
-#else
   return __do_lp_caps (xch, caps);
-#endif /* ! sandbox_port */
 }
 
-
-#ifndef sandbox_port
-int
-_do_lp_buf_op (xc_interface_t xch, void *buf, size_t buflen, uint64_t op)
-{
-#ifdef DECLARE_HYPERCALL_BOUNCE
-  DECLARE_HYPERCALL_BOUNCE (buf, buflen, XC_HYPERCALL_BUFFER_BOUNCE_IN);
-  if (xc_hypercall_bounce_pre (xch, buf))
-    {
-      perror ("xc_hypercall_bounce_pre");
-      return -ENOMEM;
-    }
-
-  void *dest = HYPERCALL_BUFFER (buf);
-
-  DECLARE_HYPERCALL_BUFFER_ARGUMENT (dest);
-#else
-  void *dest = buf;
-#endif
-
-  DECLARE_HYPERCALL;
-
-  hypercall.op = __HYPERVISOR_arch_2;	/* do_live_patch */
-  hypercall.arg[0] = op;
-  hypercall.arg[1] = HYPERCALL_BUFFER_AS_ARG (dest);
-
-  return do_xen_hypercall (xch, &hypercall);
-}
-
-#endif /* ! sandbox_port */
 
 int
 do_lp_apply3 (xc_interface_t xch, void *buf, size_t buflen)
 {
-#ifndef sandbox_port
-  return _do_lp_buf_op (xch, buf, buflen, XENLP_apply3);
-#else
   return __do_lp_apply3 (xch, buf, buflen);
-#endif /* ! sandbox_port */
-
 }
 
 
 int
 do_lp_undo3 (xc_interface_t xch, void *buf, size_t buflen)
 {
-#ifndef sandbox_port
-  return _do_lp_buf_op (xch, buf, buflen, XENLP_undo3);
-#else
   return __do_lp_undo3 (xch, buf, buflen);
-#endif /* ! sandbox_port */
-
 }
 
-#ifndef sandbox_port
-int
-usage (char *argv0)
-{
-  char *p = strrchr (argv0, '/');
-  if (p)
-    argv0 = p + 1;		/* Don't want to start at the / */
 
-  fprintf (stderr, "usage: %s <command> [<args>]\n", argv0);
-  fprintf (stderr, "\n");
-  fprintf (stderr, "Available commands:\n");
-  fprintf (stderr, "	 list\t\tList all applied patches\n");
-  fprintf (stderr, "	 apply <filename>\tApply patch\n");
-  fprintf (stderr, "	 info <filename>\tDisplay information about patch\n");
-  fprintf (stderr, "	 undo <sha1>\tUn-apply a patch\n");
-  fprintf (stderr, "	 listj\t\tList all applied patches (json format)\n");
-  fprintf (stderr,
-	   "	 infoj <filename>\tDisplay information about patch "
-	   "(json format)\n");
-
-  return 1;
-}
-
-#else
 void
 usage (void)
 {
@@ -238,8 +58,6 @@ usage (void)
 --remove <patch> --socket <sockname>  --debug --help\n");
   exit (0);
 }
-
-#endif
 
 
 int
@@ -453,30 +271,14 @@ _cmd_apply3 (xc_interface_t xch, struct patch3 *patch)
   return 0;
 }
 
-#ifndef sandbox_port
-int
-cmd_apply (int argc, char *argv[])
-#else
+
 int
 cmd_apply (int sockfd, char *path)
-#endif
 {
 
   char filepath[PATH_MAX];
-#ifndef sandbox_port
-  /*size_t i; apparently unused in original file */
-  if (argc < 3)
-    return usage (argv[0]);
-
-  xc_interface_t xch;
-  if (open_xc (&xch) < 0)
-    return -1;
-
-  const char *path = argv[2];
-
-#else
   int xch = sockfd;
-#endif
+
   /* basename() can modify its argument, so make a copy */
   strncpy (filepath, path, sizeof (filepath) - 1);
   filepath[sizeof (filepath) - 1] = 0;
@@ -497,34 +299,7 @@ cmd_apply (int sockfd, char *path)
     return -1;
   close (fd);
 
-#ifndef sandbox_port
-  /* make the xen/sandbox version check conditional */
-  /* Make sure this patch applies to this version of Xen */
-  char rxenversion[255];
-  char rxencompiledate[255];
 
-  if (get_xen_version (rxenversion, sizeof (rxenversion)) < 0)
-    return -1;
-  if (get_xen_compile_date (rxencompiledate, sizeof (rxencompiledate)) < 0)
-    return -1;
-
-  printf ("Running Xen Information:\n");
-  printf ("  Hypervisor Version: %s\n", rxenversion);
-  printf ("  Hypervisor Compile Date: %s\n", rxencompiledate);
-
-  printf ("\n");
-  printf ("Patch (v%d) Applies To:\n", patch.version);
-  printf ("  Hypervisor Version: %s\n", patch.xenversion);
-  printf ("  Hypervisor Compile Date: %s\n", patch.xencompiledate);
-  printf ("\n");
-
-  if (strcmp (rxenversion, patch.xenversion) != 0 ||
-      strcmp (rxencompiledate, patch.xencompiledate) != 0)
-    {
-      fprintf (stderr, "error: patch does not match hypervisor build\n");
-      return -1;
-    }
-#else
 /* check for QEMU version and sandbox build info */
   LMSG ("Getting QEMU/sandbox info\n");
 
@@ -555,7 +330,6 @@ cmd_apply (int sockfd, char *path)
       LMSG ("error: patch does not match QEMU build\n");
       return SANDBOX_ERR_BAD_VER;
     }
-#endif /* sandbox_port */
 
   /* Perform some sanity checks */
   if (patch.crowbarabs != 0)
@@ -586,14 +360,8 @@ cmd_apply (int sockfd, char *path)
     }
   else
     {
-#ifdef sandbox_port
       DMSG ("error: using v2 livepatch ABI\n");
       return -1;
-#else
-      fprintf (stderr, "warn: using v2 livepatch ABI\n");
-      if (_cmd_apply2 (xch, &patch) < 0)
-	return -1;
-#endif
     }
 
   char sha1str[SHA_DIGEST_LENGTH * 2 + 1];
@@ -1130,221 +898,6 @@ _get_string_func_wrapper (Elf32_Shdr * text, Elf_Data * textdata,
 }
 
 
-int
-info_xen_gz (int origfd, const char *filename)
-{
-  /* dup the fd so we can call gzclose() since it closes the fd */
-  int fd = dup (origfd);
-  if (fd < 0)
-    {
-      fprintf (stderr, "error: dup(%d): %m\n", origfd);
-      return -1;
-    }
-
-  gzFile file = gzdopen (fd, "r");
-  if (!file)
-    {
-      fprintf (stderr, "error: gzdopen(%s): ", filename);
-      goto err;
-    }
-
-  /* libelf works on either file descriptors (which we cannot use since
-   * it's gzip compressed on disk) or a memory region. Thankfully xen.gz
-   * is less than 2MB uncompressed, so loading it all into memory is
-   * feasible for us. */
-  size_t bytesalloced = 0, bytesread = 0;
-  unsigned char *buf = NULL;
-  while (1)
-    {
-      while (bytesread >= bytesalloced)
-	{
-	  if (!bytesalloced)
-	    bytesalloced = 2 * 1024 * 1024;
-	  else
-	    bytesalloced *= 2;
-	  buf = _realloc (buf, bytesalloced);
-	}
-
-      int ret = gzread (file, buf + bytesread,
-			bytesalloced - bytesread);
-      if (ret < 0)
-	{
-	  fprintf (stderr, "error: gzread(%s, %Zu): ",
-		   filename, bytesalloced - bytesread);
-	  goto err;
-	}
-      if (ret == 0)
-	break;
-
-      bytesread += ret;
-    }
-
-  Elf *elf = elf_memory ((char *) buf, bytesread);
-
-  if (elf_kind (elf) != ELF_K_ELF)
-    {
-      fprintf (stderr, "%s: not an ELF file\n", filename);
-      goto err2;
-    }
-
-  Elf32_Ehdr *ehdr = elf32_getehdr (elf);
-  if (!ehdr)
-    {
-      fprintf (stderr, "%s: elf32_getehdr failed: ", filename);
-      goto err;
-    }
-
-  Elf_Scn *strtab_scn = elf_getscn (elf, ehdr->e_shstrndx);
-  if (!strtab_scn)
-    {
-      fprintf (stderr, "%s: unable to load .shstrtab section\n", filename);
-      goto err2;
-    }
-  Elf_Data *strtab_data = elf_rawdata (strtab_scn, NULL);
-  if (!strtab_data)
-    {
-      fprintf (stderr, "%s: unable to load .shstrtab data\n", filename);
-      goto err2;
-    }
-
-  Elf32_Shdr *text = NULL;
-  Elf_Data *textdata;
-
-  int i;
-  for (i = 0; i < ehdr->e_shnum; i++)
-    {
-      Elf_Scn *scn = elf_getscn (elf, i);
-      Elf32_Shdr *shdr = elf32_getshdr (scn);
-      char *name = strtab_data->d_buf + shdr->sh_name;
-      if (strcmp (name, ".text") == 0)
-	{
-	  text = shdr;
-	  textdata = elf_rawdata (scn, NULL);
-	}
-    }
-
-  if (!text)
-    {
-      fprintf (stderr, "%s: could not find .text section\n", filename);
-      goto err2;
-    }
-
-  struct symbols symbols;
-
-  if (extract_symbol_locations (textdata, text->sh_addr, &symbols) < 0)
-    {
-      fprintf (stderr,
-	       "%s: could not find symbols_offsets "
-	       "or symbols_addresses\n", filename);
-      goto err2;
-    }
-
-  if (locate_symbols_token_table (textdata, &symbols) < 0)
-    {
-      fprintf (stderr, "%s: could not find symbols_token_table\n", filename);
-      goto err2;
-    }
-
-  extract_symbols_token_table (textdata, &symbols);
-
-  if (locate_symbols_names (textdata, &symbols) < 0)
-    {
-      fprintf (stderr, "%s: could not find symbols_names\n", filename);
-      goto err2;
-    }
-
-  extract_symbols_names (textdata, &symbols);
-
-  /* Now that we have a symbol table, start pulling out the data we want */
-
-  uint32_t major_ver = _get_int_func_wrapper (text, textdata, &symbols,
-					      "xen_major_version");
-  uint32_t minor_ver = _get_int_func_wrapper (text, textdata, &symbols,
-					      "xen_minor_version");
-  char *extra_ver = _get_string_func_wrapper (text, textdata, &symbols,
-					      "xen_extra_version");
-  printf ("version: %d.%d%s\n", major_ver, minor_ver, extra_ver);
-
-  char *compile_date = _get_string_func_wrapper (text, textdata, &symbols,
-						 "xen_compile_date");
-  printf ("compile_date: %s\n", compile_date);
-
-  char *changeset = _get_string_func_wrapper (text, textdata, &symbols,
-					      "xen_changeset");
-  printf ("changeset: %s\n", changeset);
-
-  /* Calculate SHA1 hash of uncompressed data */
-  SHA_CTX sha1;
-  SHA1_Init (&sha1);
-  SHA1_Update (&sha1, buf, bytesread);
-  unsigned char hash[SHA_DIGEST_LENGTH];
-  SHA1_Final (hash, &sha1);
-
-  char hex[SHA_DIGEST_LENGTH * 2 + 1];
-  bin2hex (hash, sizeof (hash), hex, sizeof (hex));
-  printf ("sha1 hash: %s\n", hex);
-
-  gzclose (file);
-  return 0;
-
-  /* C is weird, can't declare variables after label, so do it before */
-  int errnum;
-  const char *err;
-err:
-  err = gzerror (file, &errnum);
-  if (errnum == Z_ERRNO)
-    fprintf (stderr, "%m\n");
-  else
-    fprintf (stderr, "%s\n", err);
-
-err2:
-  gzclose (file);
-  return -1;
-}
-
-#ifndef sandbox_port
-int
-cmd_info (int argc, char *argv[])
-{
-  if (argc < 3)
-    return usage (argv[0]);
-
-  const char *path = argv[2];
-  char filepath[PATH_MAX];
-
-  /* basename() can modify its argument, so make a copy */
-  strncpy (filepath, path, sizeof (filepath) - 1);
-  filepath[sizeof (filepath) - 1] = 0;
-  const char *filename = basename (filepath);
-
-  /* Figure out if this is a patch file or xen.gz file */
-  int fd = open (path, O_RDONLY);
-  if (fd < 0)
-    {
-      fprintf (stderr, "error: open(%s): %m\n", path);
-      return -1;
-    }
-
-  unsigned char signature[XSPATCH_COOKIE_LEN];
-  if (_read (fd, path, signature, sizeof (signature)) < 0)
-    return -1;
-
-  lseek (fd, 0, SEEK_SET);
-
-  int ret = -1;
-  if (memcmp (signature, XSPATCH_COOKIE, sizeof (signature)) == 0 ||
-      memcmp (signature, XSPATCH_COOKIE3, sizeof (signature)) == 0)
-    ret = info_patch_file (fd, filename);
-  else if (signature[0] == 0x1f && signature[1] == 0x8b)
-    ret = info_xen_gz (fd, filename);
-  else
-    fprintf (stderr, "%s: unknown file\n", filename);
-
-  close (fd);
-
-  return ret;
-}
-#endif
 
 int
 _cmd_undo3 (xc_interface_t xch, struct xenlp_hash *hash,
@@ -1393,28 +946,17 @@ _cmd_undo3 (xc_interface_t xch, struct xenlp_hash *hash,
   return 0;
 }
 
-#ifndef sandbox_port
-int
-cmd_undo (int argc, char *argv[])
-#else
+
 /* sha1 will be a string in the sandbox case */
 int
 cmd_undo (int sockfd, unsigned char *sha1)
-#endif
 {
 
   int ccode = 0;
   unsigned char *sha1hex = NULL;
 
-#ifndef sandbox_port
-  unsigned char sha1[SHA_DIGEST_LENGTH];
-  if (argc < 3)
-    return usage (argv[0]);
-  const unsigned char *sha1hex = argv[2];
-#else
   /* this needs to be a copy */
   sha1hex = (unsigned char *) strdup ((char *) sha1);
-#endif
   if (string2sha1 (sha1hex, sha1) < 0)
     {
       ccode = -1;
@@ -1444,62 +986,15 @@ cmd_undo (int sockfd, unsigned char *sha1)
       ccode = -1;
       goto out;
     }
-#ifndef sandbox_port
-  printf ("\nSuccessfully un-applied patch %s\n", argv[2]);
-#else
   LMSG ("\n successfully un-applied patch %s\n", sha1hex);
 
-#endif
 out:
   if (sha1hex != NULL)
     free (sha1hex);
   return ccode;
 }
 
-#ifndef sandbox_port
-int
-main (int argc, char *argv[])
-{
-  char *cmd;
-  int ret;
 
-  if (argc < 2)
-    return usage (argv[0]);
-
-  cmd = argv[1];
-  if (strcmp (cmd, "listj") == 0)
-    {
-      json = 1;
-      cmd = "list";
-    }
-  else if (strcmp (cmd, "infoj") == 0)
-    {
-      json = 1;
-      cmd = "info";
-    }
-
-  char *argv0 = argv[0];
-  char *p = strrchr (argv0, '/');
-  if (p)
-    argv0 = p + 1;		/* Don't want to start at the / */
-  if (!json)
-    printf ("%s version 1.4 (built " __DATE__ " " __TIME__ ")\n\n", argv0);
-
-  if (strcmp (cmd, "apply") == 0)
-    ret = cmd_apply (argc, argv);
-  else if (strcmp (cmd, "list") == 0)
-    ret = cmd_list (argc, argv);
-  else if (strcmp (cmd, "info") == 0)
-    ret = cmd_info (argc, argv);
-  else if (strcmp (cmd, "undo") == 0)
-    ret = cmd_undo (argc, argv);
-  else
-    return usage (argv[0]);
-
-  return ret == 0 ? 0 : 1;
-}
-
-#else
 /***********************************************
  * with QEMU we need a more flexible way to pass args,
  * we have at least a socket as an additional arg.
@@ -1751,5 +1246,3 @@ main (int argc, char **argv)
   return SANDBOX_OK;
 
 }
-
-#endif /* ! sandbox_port */

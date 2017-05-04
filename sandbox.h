@@ -61,20 +61,6 @@ ___align (uintptr_t p, uintptr_t align)
   return p;
 }
 
-/*
-  int posix_memalign(void **memptr, size_t alignment, size_t size);
-
-  static inline void *calloc_array(_type, _count) 
-  {
-  void *p;
-  if ( ! posix_memalign(&p, __alignof__((_type)), sizeof((_type)) * _count) )
-  {
-  return p;
-  }
-  return NULL;
-  }
-*/
-
 #undef XEN_GUEST_HANDLE
 #define XEN_GUEST_HANDLE(a) a
 
