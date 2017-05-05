@@ -43,13 +43,17 @@ do_lp_apply3 (xc_interface_t xch, void *buf, size_t buflen)
   return __do_lp_apply3 (xch, buf, buflen);
 }
 
+int
+do_lp_apply4 (xc_interface_t xch, void *buf, size_t buflen)
+{
+  return __do_lp_apply4 (xch, buf, buflen);
+}
 
 int
 do_lp_undo3 (xc_interface_t xch, void *buf, size_t buflen)
 {
   return __do_lp_undo3 (xch, buf, buflen);
 }
-
 
 void
 usage (void)
@@ -111,7 +115,7 @@ find_patch3 (xc_interface_t xch, unsigned char *sha1, size_t sha1_size,
 #define ADR(d, s)	do { memcpy(ptr, d, s); ptr += s; } while (0)
 #define AD(d)		ADR(&d, sizeof(d))
 #define ADA(d, n)	ADR(d, sizeof(d[0]) * n)
-
+#if 0
 size_t
 fill_patch_buf3 (unsigned char *buf, struct patch3 * patch,
 		 uint32_t numwrites, struct xenlp_patch_write * writes)
@@ -161,7 +165,136 @@ fill_patch_buf3 (unsigned char *buf, struct patch3 * patch,
     ADR (patch->tags, apply.taglen);
   return (ptr - buf);
 }
+#endif
 
+size_t
+fill_patch_buf3 (unsigned char *buf, struct patch * patch,
+		 uint32_t numwrites, struct xenlp_patch_write * writes)
+{
+  size_t i;
+  unsigned char *ptr = buf;
+  struct xenlp_apply3 apply = {
+  bloblen:patch->bloblen,
+
+  numrelocs:patch->numrelocs,
+  numwrites:numwrites,
+
+  refabs:patch->refabs,
+  numdeps:patch->numdeps,
+  taglen:strnlen (patch->tags, MAX_TAGS_LEN - 1)
+  };
+
+  size_t buflen = sizeof (apply) + patch->bloblen +
+    (patch->numrelocs * sizeof (patch->relocs[0])) +
+    (numwrites * sizeof (writes[0])) +
+    (patch->numdeps * sizeof (patch->deps[0])) + apply.taglen;
+
+  if (buf == NULL)
+    return buflen;
+
+  memcpy (apply.sha1, patch->sha1, sizeof (apply.sha1));
+
+  AD (apply);			/* struct xenlp_apply3 */
+  if (patch->bloblen > 0)
+    ADR (patch->blob, patch->bloblen);	/* blob */
+  if (patch->numrelocs > 0)
+    ADA (patch->relocs, patch->numrelocs);	/* relocs */
+  if (numwrites > 0)
+    ADA (writes, numwrites);	/* writes */
+  if (apply.numdeps > 0)
+    {
+      struct xenlp_hash *deps = _zalloc (sizeof (struct xenlp_hash) *
+					 apply.numdeps);
+      for (i = 0; i < apply.numdeps; i++)
+	memcpy (deps[i].sha1, patch->deps[i].sha1,
+		sizeof (patch->deps[i].sha1));
+      ADA (deps, apply.numdeps);	/* deps */
+      free (deps);
+    }
+  if (apply.taglen > 0)
+    ADR (patch->tags, apply.taglen);
+  return (ptr - buf);
+}
+
+size_t
+fill_patch_buf4 (unsigned char *buf, struct patch * patch,
+		 uint32_t numwrites, struct xenlp_patch_write * writes)
+{
+  size_t i;
+  unsigned char *ptr = buf;
+  struct xenlp_apply4 apply = {
+  bloblen:patch->bloblen,
+
+  numrelocs:patch->numrelocs,
+  numwrites:numwrites,
+
+  numexctblents:patch->numexctblents,
+  numpreexctblents:patch->numpreexctblents,
+
+  refabs:patch->refabs,
+  numdeps:patch->numdeps,
+  taglen:strnlen (patch->tags, MAX_TAGS_LEN - 1),
+  };
+
+  size_t buflen = sizeof (apply) + patch->bloblen +
+    (patch->numrelocs * sizeof (patch->relocs[0])) +
+    (numwrites * sizeof (writes[0])) +
+    (patch->numexctblents * sizeof (struct xenlp_exctbl_entry)) +
+    (patch->numpreexctblents * sizeof (struct xenlp_exctbl_entry)) +
+    (patch->numdeps * sizeof (patch->deps[0])) + apply.taglen;
+
+  if (buf == NULL)
+    return buflen;
+
+  memcpy (apply.sha1, patch->sha1, sizeof (apply.sha1));
+
+  AD (apply);			/* struct xenlp_apply4 */
+  if (patch->bloblen > 0)
+    ADR (patch->blob, patch->bloblen);	/* blob */
+  if (patch->numrelocs > 0)
+    ADA (patch->relocs, patch->numrelocs);	/* relocs */
+  if (numwrites > 0)
+    ADA (writes, numwrites);	/* writes */
+  if (apply.numexctblents > 0)
+    {
+      struct xenlp_exctbl_entry *exctblents;
+      exctblents = _zalloc (sizeof (struct xenlp_exctbl_entry) *
+			    apply.numexctblents);
+      for (i = 0; i < apply.numexctblents; i++)
+	{
+	  exctblents[i].addrrel = patch->exctblents[i].addrrel;
+	  exctblents[i].contrel = patch->exctblents[i].contrel;
+	}
+      ADA (exctblents, apply.numexctblents);
+      free (exctblents);
+    }
+  if (apply.numpreexctblents > 0)
+    {
+      struct xenlp_exctbl_entry *exctblents;
+      exctblents = _zalloc (sizeof (struct xenlp_exctbl_entry) *
+			    apply.numpreexctblents);
+      for (i = 0; i < apply.numpreexctblents; i++)
+	{
+	  exctblents[i].addrrel = patch->preexctblents[i].addrrel;
+	  exctblents[i].contrel = patch->preexctblents[i].contrel;
+	}
+      ADA (exctblents, apply.numpreexctblents);
+      free (exctblents);
+    }
+  if (apply.numdeps > 0)
+    {
+      struct xenlp_hash *deps = _zalloc (sizeof (struct xenlp_hash) *
+					 apply.numdeps);
+      for (i = 0; i < apply.numdeps; i++)
+	memcpy (deps[i].sha1, patch->deps[i].sha1,
+		sizeof (patch->deps[i].sha1));
+      ADA (deps, apply.numdeps);	/* deps */
+      free (deps);
+    }
+  if (apply.taglen > 0)
+    ADR (patch->tags, apply.taglen);
+  return (ptr - buf);
+}
 
 void
 patch_writes (struct patch *patch, struct xenlp_patch_write *writes)
@@ -190,6 +323,8 @@ patch_writes (struct patch *patch, struct xenlp_patch_write *writes)
     }
 }
 
+
+#if 0
 int
 _cmd_apply3 (xc_interface_t xch, struct patch3 *patch)
 {
@@ -271,6 +406,178 @@ _cmd_apply3 (xc_interface_t xch, struct patch3 *patch)
   return 0;
 }
 
+#endif
+
+
+int
+_cmd_apply3 (xc_interface_t xch, struct patch *patch)
+{
+  size_t i;
+  struct xenlp_patch_info3 *info = NULL;
+
+  if (patch->numexctblents || patch->numpreexctblents)
+    {
+      fprintf (stderr, "error: patch uses exception tables, but apply3 "
+	       "does not support\n");
+      return -1;
+    }
+
+  /* Do a list first and make sure patch isn't already applied yet */
+  if (find_patch3 (xch, patch->sha1, sizeof (patch->sha1), &info) < 0)
+    {
+      fprintf (stderr, "error: could not search for patches\n");
+      return -1;
+    }
+  if (info)
+    {
+      printf ("Patch already applied, skipping\n");
+      return 0;
+    }
+  /* Search for dependent patches, calculate relative address for each */
+  for (i = 0; i < patch->numdeps; i++)
+    {
+      struct xenlp_patch_info3 *dep_patch = NULL;
+      if (find_patch3 (xch, patch->deps[i].sha1, sizeof (patch->deps[i].sha1),
+		       &dep_patch) < 0)
+	{
+	  fprintf (stderr, "error: could not search for patches\n");
+	  return -1;
+	}
+      if (dep_patch == NULL)
+	{
+	  char sha1str[SHA_DIGEST_LENGTH * 2 + 1];
+	  bin2hex (patch->deps[i].sha1, sizeof (patch->deps[i].sha1),
+		   sha1str, sizeof (sha1str));
+	  fprintf (stderr, "error: dependency was not found in memory: "
+		   "patch %s\n", sha1str);
+	  return -1;
+	}
+      /* Update the relative address */
+      patch->deps[i].reladdr =
+	(uint32_t) (dep_patch->hvaddr - patch->deps[i].refabs);
+    }
+
+  for (i = 0; i < patch->numrelocs3; i++)
+    {
+      struct reloc3 *rel3 = &patch->relocs3[i];
+      if (rel3->index >= patch->numdeps)
+	{
+	  fprintf (stderr, "error: invalid second level relocation "
+		   "at %d: %d\n", rel3->index, rel3->offset);
+	  return -1;
+	}
+      /* Patch blob-related relocation here, we already know the
+       * relative address */
+      *((int32_t *) (patch->blob + rel3->offset)) +=
+	patch->deps[rel3->index].reladdr;
+      printf ("Patching dependent relocation to +%x @ %x\n",
+	      patch->deps[rel3->index].reladdr, rel3->offset);
+      patch->relocs[patch->numrelocs + i] = rel3->offset;
+    }
+  patch->numrelocs += patch->numrelocs3;
+
+  /* Convert into a series of writes for the live patch functionality */
+  uint32_t numwrites = patch->numfuncs;
+  struct xenlp_patch_write writes[numwrites];
+  memset (writes, 0, sizeof (writes));
+  patch_writes (patch, writes);
+
+  size_t buflen = fill_patch_buf3 (NULL, patch, numwrites, writes);
+  unsigned char *buf = _zalloc (buflen);
+  buflen = fill_patch_buf3 (buf, patch, numwrites, writes);
+
+  int ret = do_lp_apply3 (xch, buf, buflen);
+  if (ret < 0)
+    {
+      fprintf (stderr, "failed to patch hypervisor: %m\n");
+      return -1;
+    }
+  return 0;
+}
+
+
+int
+_cmd_apply4 (xc_interface_t xch, struct patch *patch)
+{
+  size_t i;
+  struct xenlp_patch_info3 *info = NULL;
+
+  /* Do a list first and make sure patch isn't already applied yet */
+  if (find_patch3 (xch, patch->sha1, sizeof (patch->sha1), &info) < 0)
+    {
+      fprintf (stderr, "error: could not search for patches\n");
+      return -1;
+    }
+  if (info)
+    {
+      printf ("Patch already applied, skipping\n");
+      return 0;
+    }
+  /* Search for dependent patches, calculate relative address for each */
+  for (i = 0; i < patch->numdeps; i++)
+    {
+      struct xenlp_patch_info3 *dep_patch = NULL;
+      if (find_patch3 (xch, patch->deps[i].sha1, sizeof (patch->deps[i].sha1),
+		       &dep_patch) < 0)
+	{
+	  fprintf (stderr, "error: could not search for patches\n");
+	  return -1;
+	}
+      if (dep_patch == NULL)
+	{
+	  char sha1str[SHA_DIGEST_LENGTH * 2 + 1];
+	  bin2hex (patch->deps[i].sha1, sizeof (patch->deps[i].sha1),
+		   sha1str, sizeof (sha1str));
+	  fprintf (stderr, "error: dependency was not found in memory: "
+		   "patch %s\n", sha1str);
+	  return -1;
+	}
+      /* Update the relative address */
+      patch->deps[i].reladdr =
+	(uint32_t) (dep_patch->hvaddr - patch->deps[i].refabs);
+    }
+
+  for (i = 0; i < patch->numrelocs3; i++)
+    {
+      struct reloc3 *rel3 = &patch->relocs3[i];
+      if (rel3->index >= patch->numdeps)
+	{
+	  fprintf (stderr, "error: invalid second level relocation "
+		   "at %d: %d\n", rel3->index, rel3->offset);
+	  return -1;
+	}
+      /* Patch blob-related relocation here, we already know the
+       * relative address */
+      *((int32_t *) (patch->blob + rel3->offset)) +=
+	patch->deps[rel3->index].reladdr;
+      printf ("Patching dependent relocation to +%x @ %x\n",
+	      patch->deps[rel3->index].reladdr, rel3->offset);
+      patch->relocs[patch->numrelocs + i] = rel3->offset;
+    }
+  patch->numrelocs += patch->numrelocs3;
+
+  /* Convert into a series of writes for the live patch functionality */
+  uint32_t numwrites = patch->numfuncs;
+  struct xenlp_patch_write writes[numwrites];
+  memset (writes, 0, sizeof (writes));
+  patch_writes (patch, writes);
+
+  size_t buflen = fill_patch_buf4 (NULL, patch, numwrites, writes);
+  unsigned char *buf = _zalloc (buflen);
+  buflen = fill_patch_buf4 (buf, patch, numwrites, writes);
+
+  int ret = do_lp_apply4 (xch, buf, buflen);
+  if (ret < 0)
+    {
+      fprintf (stderr, "failed to patch hypervisor: %m\n");
+      return -1;
+    }
+  return 0;
+}
+
+
+
+
 
 int
 cmd_apply (int sockfd, char *path)
@@ -291,11 +598,11 @@ cmd_apply (int sockfd, char *path)
       return -1;
     }
 
-  struct patch3 patch;
+  struct patch patch;
 /* TODO: should be able to load the patch using a full path,
  * not just the basename
  */
-  if (load_patch_file3 (fd, filename, &patch) < 0)
+  if (load_patch_file (fd, filename, &patch) < 0)
     return -1;
   close (fd);
 
@@ -497,9 +804,9 @@ cmd_list (int argc, char *argv[])
 int
 info_patch_file (int fd, const char *filename)
 {
-  struct patch3 patch;
+  struct patch patch;
   /* size_t i; is apparently unused in the upstream file */
-  if (load_patch_file3 (fd, filename, &patch) < 0)
+  if (load_patch_file (fd, filename, &patch) < 0)
     return -1;
   close (fd);
 
@@ -957,7 +1264,7 @@ cmd_undo (int sockfd, unsigned char *sha1)
 
   /* this needs to be a copy */
   sha1hex = (unsigned char *) strdup ((char *) sha1);
-  if (string2sha1 (sha1hex, sha1) < 0)
+  if (string2sha1 ((char *) sha1hex, sha1) < 0)
     {
       ccode = -1;
       goto out;
@@ -1194,7 +1501,7 @@ main (int argc, char **argv)
       unsigned char sha1[SHA_DIGEST_LENGTH + 2] = { 0 };
       DMSG ("WHAT THE BUTT\n");
 
-      string2sha1 (patch_hash, sha1);
+      string2sha1 ((char *) patch_hash, sha1);
 
       ccode = find_patch (sockfd, sha1, SHA_DIGEST_LENGTH, &patch_buf);
       if (ccode == 1)

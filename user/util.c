@@ -95,7 +95,7 @@ get_xen_compile_date (char *buf, size_t bufsize)
 }
 
 int
-string2sha1 (const unsigned char *string, unsigned char *sha1)
+string2sha1 (const char *string, unsigned char *sha1)
 {
   int i, ccode;
   /* Make sure first 40 chars of string are composed of only hex digits */

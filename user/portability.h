@@ -37,6 +37,7 @@ int __do_lp_list3 (xc_interface_t xch, struct xenlp_list3 *list);
 int __do_lp_caps (xc_interface_t xch, struct xenlp_caps *caps);
 int __do_lp_apply (xc_interface_t xch, void *buf, size_t buflen);
 int __do_lp_apply3 (xc_interface_t xch, void *buf, size_t buflen);
+int __do_lp_apply4 (xc_interface_t xch, void *buf, size_t buflen);
 int __do_lp_undo3 (xc_interface_t xch, void *buf, size_t buflen);
 
 int __attribute__ ((deprecated)) _do_lp_buf_op_both (xc_interface_t xch,

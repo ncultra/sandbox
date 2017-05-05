@@ -9,11 +9,11 @@
 #include "patch_file.h"
 #include "util.h"
 
-/* TODO: change buflen to type int. size_t is best used for offsetof(), etc. */
+
 int
 _read (int fd, const char *filename, void *buf, size_t buflen)
 {
-  int ret = read (fd, buf, buflen);
+  ssize_t ret = read (fd, buf, buflen);
   if (ret < 0)
     {
       fprintf (stderr, "%s: %m\n", filename);
@@ -21,8 +21,8 @@ _read (int fd, const char *filename, void *buf, size_t buflen)
     }
   if (ret < buflen)
     {
-      fprintf (stderr, "%s: expected %d bytes, read %d\n", filename,
-	       (int) buflen, ret);
+      fprintf (stderr, "%s: expected %d bytes, read %d\n",
+	       filename, (int) buflen, (int) ret);
       return -1;
     }
 
@@ -77,7 +77,6 @@ static int
 extract_sha1_from_filename (unsigned char *sha1, size_t sha1len,
 			    const char *filename)
 {
-  /*  size_t i; unused upstream */
 
   /* Make sure suffix is .raxlpxs */
   if (strstr (filename, ".raxlpxs") == NULL)
@@ -94,7 +93,7 @@ extract_sha1_from_filename (unsigned char *sha1, size_t sha1len,
       return -1;
     }
 
-  return string2sha1 ((unsigned char *) filename, sha1);
+  return string2sha1 (filename, sha1);
 }
 
 
@@ -104,13 +103,17 @@ get_patch_version (int fd, const char *filename)
   char signature[XSPATCH_COOKIE_LEN];
   off_t cur = lseek (fd, 0, SEEK_CUR);
   lseek (fd, 0, SEEK_SET);
+
   if (_read (fd, filename, signature, sizeof (signature)) < 0)
     return -1;
+
   lseek (fd, cur, SEEK_SET);
-  if (memcmp (signature, XSPATCH_COOKIE, sizeof (signature)) == 0)
-    return 2;
-  else if (memcmp (signature, XSPATCH_COOKIE3, sizeof (signature)) == 0)
+
+  if (memcmp (signature, XSPATCH_COOKIE3, sizeof (signature)) == 0)
     return 3;
+  else if (memcmp (signature, XSPATCH_COOKIE4, sizeof (signature)) == 0)
+    return 4;
+
   return -1;
 }
 
@@ -119,11 +122,13 @@ static off_t
 calc_file_size (int fd, const char *filename)
 {
   struct stat st;
+
   if (fstat (fd, &st) < 0)
     {
       fprintf (stderr, "%s: stat(): %m\n", filename);
       return -1;
     }
+
   return st.st_size;
 }
 
@@ -133,18 +138,23 @@ calc_block_sha1 (int fd, const char *filename, off_t start,
 		 off_t end, unsigned char *hash)
 {
   off_t file_size = calc_file_size (fd, filename);
+
   if (start < 0 || end < 0 || end < start || end > file_size)
     {
       fprintf (stderr, "%s: invalid start/end for sha1 calculation\n",
 	       filename);
       return -1;
     }
+
   off_t cur = lseek (fd, 0, SEEK_CUR);
   lseek (fd, start, SEEK_SET);
+
   SHA_CTX sha1;
   SHA1_Init (&sha1);
+
   size_t bytesread = 0;
   off_t size = end - start;
+
   while (bytesread < size)
     {
       unsigned char buf[4096];
@@ -158,6 +168,7 @@ calc_block_sha1 (int fd, const char *filename, off_t start,
       SHA1_Update (&sha1, buf, readsize);
       bytesread += readsize;
     }
+
   SHA1_Final (hash, &sha1);
   lseek (fd, cur, SEEK_SET);
   return 0;
@@ -178,6 +189,7 @@ read_refxen_data (int fd, const char *filename, struct patch *patch)
   /* Read Xen version and compile date */
   if (_read (fd, filename, patch->xenversion, sizeof (patch->xenversion)) < 0)
     return -1;
+
   if (_read (fd, filename, patch->xencompiledate,
 	     sizeof (patch->xencompiledate)) < 0)
     return -1;
@@ -230,7 +242,7 @@ read_check_data (int fd, const char *filename, struct patch *patch)
     {
       struct check *check = &patch->checks[i];
 
-      if (_readu64 (fd, filename, (uint64_t *) & check->hvabs) < 0)
+      if (_readu64 (fd, filename, &check->hvabs) < 0)
 	return -1;
       if (_readu16 (fd, filename, &check->datalen) < 0)
 	return -1;
@@ -293,7 +305,7 @@ read_table_data (int fd, const char *filename, struct patch *patch)
       if (_read (fd, filename, table->tablename, tablenamelen) < 0)
 	return -1;
 
-      if (_readu64 (fd, filename, (uint64_t *) & table->hvabs) < 0)
+      if (_readu64 (fd, filename, &table->hvabs) < 0)
 	return -1;
       if (_readu16 (fd, filename, &table->datalen) < 0)
 	return -1;
@@ -306,8 +318,8 @@ read_table_data (int fd, const char *filename, struct patch *patch)
 }
 
 
-int
-load_patch_file (int fd, const char *filename, struct patch *patch)
+static int
+_load_patch_file2 (int fd, const char *filename, struct patch *patch)
 {
   int version = get_patch_version (fd, filename);
   if (version != XSPATCH_VER2)
@@ -377,21 +389,25 @@ extract_sha1_from_patch (unsigned char *sha1, size_t sha1len,
       fprintf (stderr, "error: patch file %s is too short\n", filename);
       return -1;
     }
+
   lseek (fd, -(SHA_DIGEST_LENGTH), SEEK_END);
+
   if (_read (fd, filename, sha1, sha1len) < 0)
     return -1;
+
   lseek (fd, cur, SEEK_SET);
   return 0;
 }
 
 
 static int
-read_tag_data (int fd, const char *filename, struct patch3 *patch)
+read_tag_data (int fd, const char *filename, struct patch *patch)
 {
   uint16_t size;
   if (_readu16 (fd, filename, &size) < 0)
     return -1;
-  patch->tags[0] = 0;
+
+  patch->tags = _zalloc (size + 1);
   if (_read (fd, filename, patch->tags, size) < 0)
     return -1;
   return 0;
@@ -399,11 +415,12 @@ read_tag_data (int fd, const char *filename, struct patch3 *patch)
 
 
 static int
-read_deps_data (int fd, const char *filename, struct patch3 *patch)
+read_deps_data (int fd, const char *filename, struct patch *patch)
 {
   size_t i;
   if (_readu16 (fd, filename, &patch->numdeps) < 0)
     return -1;
+
   patch->deps = _zalloc (sizeof (struct dependency) * patch->numdeps);
   for (i = 0; i < patch->numdeps; i++)
     {
@@ -419,11 +436,12 @@ read_deps_data (int fd, const char *filename, struct patch3 *patch)
 
 
 static int
-read_reloc_data3 (int fd, const char *filename, struct patch3 *patch)
+read_reloc_data3 (int fd, const char *filename, struct patch *patch)
 {
   size_t i;
   if (_readu16 (fd, filename, &patch->numrelocs3) < 0)
     return -1;
+
   patch->relocs3 = _zalloc (sizeof (struct reloc3) * patch->numrelocs3);
   for (i = 0; i < patch->numrelocs3; i++)
     {
@@ -433,8 +451,10 @@ read_reloc_data3 (int fd, const char *filename, struct patch3 *patch)
       if (_readu32 (fd, filename, &reloc->offset) < 0)
 	return -1;
     }
+
   if (_readu16 (fd, filename, &patch->numrelocs) < 0)
     return -1;
+
   uint16_t rel_count = patch->numrelocs + patch->numrelocs3;
   patch->relocs = _zalloc (rel_count * sizeof (uint32_t));
   for (i = 0; i < patch->numrelocs; i++)
@@ -447,7 +467,7 @@ read_reloc_data3 (int fd, const char *filename, struct patch3 *patch)
 
 
 static int
-read_symbols_data (int fd, const char *filename, struct patch3 *patch)
+read_symbols_data (int fd, const char *filename, struct patch *patch)
 {
   size_t i;
   if (_readu16 (fd, filename, &patch->numsymbols) < 0)
@@ -459,14 +479,18 @@ read_symbols_data (int fd, const char *filename, struct patch3 *patch)
       uint16_t size;
       if (_readu16 (fd, filename, &size) < 0)
 	return -1;
+
       sym->name = _zalloc (size + 1);
       if (_read (fd, filename, sym->name, size) < 0)
 	return 0;
+
       if (_readu16 (fd, filename, &size) < 0)
 	return -1;
+
       sym->section = _zalloc (size + 1);
       if (_read (fd, filename, sym->section, size) < 0)
 	return 0;
+
       if (_readu32 (fd, filename, &sym->sec_off) < 0)
 	return -1;
       if (_readu32 (fd, filename, &sym->sym_off) < 0)
@@ -477,7 +501,48 @@ read_symbols_data (int fd, const char *filename, struct patch3 *patch)
 
 
 static int
-_load_patch_file3 (int fd, const char *filename, struct patch3 *patch)
+read_ex_table_entries (int fd, const char *filename, struct patch *patch)
+{
+  size_t i;
+
+  if (_readu16 (fd, filename, &patch->numexctblents) < 0)
+    return -1;
+
+  patch->exctblents = _zalloc (sizeof (struct exctbl_entry) *
+			       patch->numexctblents);
+
+  for (i = 0; i < patch->numexctblents; i++)
+    {
+      struct exctbl_entry *ete = &patch->exctblents[i];
+
+      if (_readu32 (fd, filename, &ete->addrrel) < 0)
+	return -1;
+      if (_readu32 (fd, filename, &ete->contrel) < 0)
+	return -1;
+    }
+
+  if (_readu16 (fd, filename, &patch->numpreexctblents) < 0)
+    return -1;
+
+  patch->preexctblents = _zalloc (sizeof (struct exctbl_entry) *
+				  patch->numpreexctblents);
+
+  for (i = 0; i < patch->numpreexctblents; i++)
+    {
+      struct exctbl_entry *ete = &patch->preexctblents[i];
+
+      if (_readu32 (fd, filename, &ete->addrrel) < 0)
+	return -1;
+      if (_readu32 (fd, filename, &ete->contrel) < 0)
+	return -1;
+    }
+
+  return 0;
+}
+
+
+static int
+_load_patch_file3 (int fd, const char *filename, struct patch *patch)
 {
   if (extract_sha1_from_patch (patch->sha1, sizeof (patch->sha1),
 			       fd, filename) < 0)
@@ -504,7 +569,7 @@ _load_patch_file3 (int fd, const char *filename, struct patch3 *patch)
   if (read_tag_data (fd, filename, patch) < 0)
     return -1;
 
-  if (read_refxen_data (fd, filename, &patch->v2) < 0)
+  if (read_refxen_data (fd, filename, patch) < 0)
     return -1;
 
   if (read_deps_data (fd, filename, patch) < 0)
@@ -518,22 +583,85 @@ _load_patch_file3 (int fd, const char *filename, struct patch3 *patch)
   if (_readu64 (fd, filename, &patch->refabs) < 0)
     return -1;
 
-  if (read_blob_data (fd, filename, &patch->v2) < 0)
+  if (read_blob_data (fd, filename, patch) < 0)
     return -1;
 
   if (read_reloc_data3 (fd, filename, patch) < 0)
     return -1;
 
-  if (read_check_data (fd, filename, &patch->v2) < 0)
+  if (read_check_data (fd, filename, patch) < 0)
     return -1;
 
   if (read_symbols_data (fd, filename, patch) < 0)
     return -1;
 
-  if (read_func_data (fd, filename, &patch->v2) < 0)
+  if (read_func_data (fd, filename, patch) < 0)
     return -1;
 
-  if (read_table_data (fd, filename, &patch->v2) < 0)
+  if (read_table_data (fd, filename, patch) < 0)
+    return -1;
+
+  return 0;
+}
+
+
+static int
+_load_patch_file4 (int fd, const char *filename, struct patch *patch)
+{
+  if (extract_sha1_from_patch (patch->sha1, sizeof (patch->sha1),
+			       fd, filename) < 0)
+    return -1;
+
+  /* Calculate SHA1 hash and verify it matches filename */
+  unsigned char hash[SHA_DIGEST_LENGTH];
+  off_t file_size = calc_file_size (fd, filename);
+  if (calc_block_sha1 (fd, filename, 0,
+		       file_size - (SHA_DIGEST_LENGTH), hash) < 0)
+    return -1;
+
+  if (memcmp (patch->sha1, hash, sizeof (patch->sha1)) != 0)
+    {
+      char hex[SHA_DIGEST_LENGTH * 2 + 1];
+      fprintf (stderr, "%s: hash mismatch\n", filename);
+      bin2hex (hash, sizeof (hash), hex, sizeof (hex));
+      fprintf (stderr, "  calculated %s\n", hex);
+      return -1;
+    }
+
+  lseek (fd, XSPATCH_COOKIE_LEN, SEEK_SET);
+
+  if (read_tag_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_refxen_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_deps_data (fd, filename, patch) < 0)
+    return -1;
+
+  /* Virtual address used for first-stage relocation */
+  if (_readu64 (fd, filename, &patch->refabs) < 0)
+    return -1;
+
+  if (read_blob_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_reloc_data3 (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_check_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_symbols_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_func_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_table_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_ex_table_entries (fd, filename, patch) < 0)
     return -1;
 
   return 0;
@@ -541,19 +669,33 @@ _load_patch_file3 (int fd, const char *filename, struct patch3 *patch)
 
 
 int
-load_patch_file3 (int fd, const char *filename, struct patch3 *patch)
+load_patch_file (int fd, const char *filename, struct patch *patch)
 {
   patch->version = get_patch_version (fd, filename);
-  switch (patch->version)
+
+  if (patch->version < 3)
     {
-    case XSPATCH_VER2:
       patch->numdeps = 0;
       patch->numrelocs3 = 0;
       patch->numsymbols = 0;
-      patch->tags[0] = 0;
-      return load_patch_file (fd, filename, &patch->v2);
+      patch->tags = "";
+    }
+  if (patch->version < 4)
+    {
+      patch->numexctblents = 0;
+      patch->numpreexctblents = 0;
+    }
+  if (patch->version >= 4)
+    patch->crowbarabs = 0;
+
+  switch (patch->version)
+    {
+    case XSPATCH_VER2:
+      return _load_patch_file2 (fd, filename, patch);
     case XSPATCH_VER3:
       return _load_patch_file3 (fd, filename, patch);
+    case XSPATCH_VER4:
+      return _load_patch_file4 (fd, filename, patch);
     default:
       fprintf (stderr, "%s: invalid signature\n", filename);
       return -1;
@@ -562,7 +704,7 @@ load_patch_file3 (int fd, const char *filename, struct patch3 *patch)
 
 
 void
-print_patch_file_info (struct patch3 *patch)
+print_patch_file_info (struct patch *patch)
 {
   size_t i;
   char hex[SHA_DIGEST_LENGTH * 2 + 1];
@@ -579,7 +721,8 @@ print_patch_file_info (struct patch3 *patch)
     {
       struct dependency *dep = &patch->deps[i];
       bin2hex (dep->sha1, SHA_DIGEST_LENGTH, hex, sizeof (hex));
-      printf ("  patch: %s @ %llx\n", hex, (long long unsigned) dep->refabs);
+      printf ("  patch: %s @ %llx\n", hex,
+	      (long long unsigned int) dep->refabs);
     }
   printf ("\n");
 
@@ -591,7 +734,7 @@ print_patch_file_info (struct patch3 *patch)
       struct function_patch *func = &patch->funcs[i];
 
       printf ("Patch function %s @ %llx\n", func->funcname,
-	      (long long unsigned) func->oldabs);
+	      (long long unsigned int) func->oldabs);
     }
 
   for (i = 0; i < patch->numtables; i++)
@@ -599,7 +742,7 @@ print_patch_file_info (struct patch3 *patch)
       struct table_patch *table = &patch->tables[i];
 
       printf ("Patch table %s @ %llx\n", table->tablename,
-	      (long long unsigned) table->hvabs);
+	      (long long unsigned int) table->hvabs);
     }
 
   if (patch->numsymbols > 0)
@@ -607,14 +750,14 @@ print_patch_file_info (struct patch3 *patch)
   for (i = 0; i < patch->numsymbols; i++)
     {
       struct symbol *sym = &patch->symbols[i];
+
       printf ("  %s @ %x\n", sym->name, sym->sec_off + sym->sym_off);
     }
 }
 
-// TODO print build sha1 
 
 void
-print_json_patch_info (struct patch3 *patch)
+print_json_patch_info (struct patch *patch)
 {
   size_t i;
   char hex[SHA_DIGEST_LENGTH * 2 + 1];
@@ -631,7 +774,7 @@ print_json_patch_info (struct patch3 *patch)
       struct dependency *dep = &patch->deps[i];
       bin2hex (dep->sha1, SHA_DIGEST_LENGTH, hex, sizeof (hex));
       printf ("    {\"sha1\": \"%s\", \"refabs\": \"0x%llx\"}",
-	      hex, (long long unsigned) dep->refabs);
+	      hex, (long long unsigned int) dep->refabs);
       printf ("%s\n", ((i == patch->numdeps - 1) ? "" : ","));
     }
   printf ("  ],\n");
@@ -641,7 +784,7 @@ print_json_patch_info (struct patch3 *patch)
     {
       struct function_patch *func = &patch->funcs[i];
       printf ("    {\"name\": \"%s\", \"addr\": \"0x%llx\"}",
-	      func->funcname, (long long unsigned) func->oldabs);
+	      func->funcname, (long long unsigned int) func->oldabs);
       printf ("%s\n", ((i == patch->numfuncs - 1) ? "" : ","));
     }
   printf ("  ],\n");
@@ -650,7 +793,7 @@ print_json_patch_info (struct patch3 *patch)
     {
       struct table_patch *table = &patch->tables[i];
       printf ("    {\"name\": \"%s\", \"addr\": \"0x%llx\"}",
-	      table->tablename, (long long unsigned) table->hvabs);
+	      table->tablename, (long long unsigned int) table->hvabs);
       printf ("%s\n", ((i == patch->numtables - 1) ? "" : ","));
     }
   printf ("  ],\n");

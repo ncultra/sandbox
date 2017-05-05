@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SOCK=""
-PROGRAM="raxlpxs"
+PROGRAM="./raxlpxs"
 PATCH_FILE=""
 PATCH_SHA1=""
 COMMAND=""
@@ -18,7 +18,7 @@ get_newest_patch_file() {
 
 usage() {
     echo "$PROGRAM -c <apply | remove | info | find | list>"
-    echo "	  [-p patch file]"
+    echo "	  [-f patch file]"
     echo "	  [-s patch sha1]"
     echo "	  [-h print this help message]"
     exit 1

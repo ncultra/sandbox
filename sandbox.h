@@ -32,7 +32,7 @@
 #include <libgen.h>
 #include </usr/include/openssl/sha.h>
 #include "platform.h"
-
+#include "live_patch.h"
 #ifndef __SANDBOX_H
 #define __SANDBOX_H 1
 
@@ -155,77 +155,11 @@ struct applied_patch3
     LIST_ENTRY (applied_patch3) l;
 };
 
-
-/* NOTE: defined externally in patch_file.h
- * must guarantee commonality with original struct definition
- */
-struct xenlp_hash
-{
-  unsigned char sha1[20];
-
-  char __pad0[4];
-};
-
-struct xenlp_patch_write
-{
-  uintptr_t hvabs;		/* Absolute address in HV to apply patch */
-
-  unsigned char data[8];	/* 8-bytes of data to write at location */
-
-  uint8_t reloctype;		/* XENLP_RELOC_ABS, XENLP_RELOC_REL */
-  uint8_t dataoff;		/* Offset into data to apply relocation */
-
-  char __pad[6];
-};
-
-struct xenlp_patch_info3
-{
-  uint64_t hvaddr;		/* virtual address in hypervisor memory */
-  unsigned char sha1[20];	/* binary encoded */
-  char __pad[4];
-  char tags[MAX_TAGS_LEN];
-  struct xenlp_hash deps[MAX_LIST_DEPS];
-};
-
-struct xenlp_list3
-{
-  uint16_t skippatches;		/* input, number of patches to skip */
-  uint16_t numpatches;		/* output, number of patches returned */
-  char __pad[4];
-  struct xenlp_patch_info3 patches[MAX_LIST_PATCHES3];	/* output */
-};
-
 typedef struct xenlp_patch_info3 list_response;
 
 #ifndef MAX_LIST_PATCHES
 #define MAX_LIST_PATCHES 128
 #endif
-/* layout in memory:
- *
- * struct xenlp_apply
- * blob (bloblen)
- * relocs (numrelocs * uint32_t)
- * writes (numwrites * struct xenlp_patch_write)
- * deps (numdeps * struct xenlp_dep)
- * tags (taglen) */
-struct xenlp_apply3
-{
-  unsigned char sha1[20];	/* SHA1 of patch file (binary) */
-  char __pad0[4];
-  uint32_t bloblen;		/* Length of blob */
-  uint32_t numrelocs;		/* Number of relocations */
-  uint32_t numwrites;		/* Number of writes */
-  char __pad1[4];
-  uintptr_t refabs;		/* Reference address for relocations */
-  uint32_t numdeps;		/* Number of dependendencies */
-  uint32_t taglen;		/* length of tags string */
-};
-
-
-struct xenlp_caps
-{
-  uint64_t flags;
-};
 
 #ifndef INFO_STRING_LEN
 #define INFO_STRING_LEN 255

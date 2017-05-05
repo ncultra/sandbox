@@ -295,6 +295,13 @@ __do_lp_apply3 (xc_interface_t xch, void *buf, size_t buflen)
   return ccode;
 }
 
+int
+__do_lp_apply4 (xc_interface_t xch, void *buf, size_t buflen)
+{
+  return SANDBOX_ERR;
+}
+
+
 /*
   client: -> __do_lp_undo3
   ------send_rr_buf
