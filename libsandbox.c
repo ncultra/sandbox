@@ -261,18 +261,10 @@ dump_sandbox (const void *data, size_t size)
 
 
 
-/*******************************************
- * COMPATIBILITY code from xen-livepatch
- *
- ******************************************/
-
-/* arg points to the apply buffer just past the xenlp_apply struct */
-/* apply points to the xenlp_apply struct (also beginning of the original buffer */
-/* blob_p and writes_p both point to stack variables in the caller's stack */
-/* blob_p is a pointer to a pointer to void */
+/* Note: this is ported from xen-livepatch. */
 
 int
-read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
+read_patch_data (XEN_GUEST_HANDLE (void) * arg,
 		  struct xenlp_apply3 *apply, struct patch_map *pm,
 		  struct xenlp_patch_write **writes_p)
 {
@@ -321,7 +313,7 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
     {
       if (!pm || !writes_p || !apply || !arg)
 	{
-	  DMSG ("error invalid parameters in read_patch_data2\n");
+	  DMSG ("error invalid parameters in read_patch_data\n");
 	  return SANDBOX_ERR_INVALID;
 	}
 
@@ -330,7 +322,7 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
 
       if (ccode != SANDBOX_OK)
 	{
-	  DMSG ("error allocating %d bytes memory in read_patch_data2\n",
+	  DMSG ("error allocating %d bytes memory in read_patch_data\n",
 		apply->bloblen);
 	  return ccode;
 	}
@@ -361,7 +353,7 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
       uint32_t *relocs = calloc (apply->numrelocs, sizeof (*relocs));
       if (!relocs)
 	{
-	  DMSG ("error allocating %d bytes in read_patch_data2\n",
+	  DMSG ("error allocating %d bytes in read_patch_data\n",
 		apply->numrelocs * sizeof (uint32_t));
 	  ccode = SANDBOX_ERR_NOMEM;
 	  goto errout;
@@ -401,7 +393,7 @@ read_patch_data2 (XEN_GUEST_HANDLE (void) * arg,
 
   if (!(*writes_p))
     {
-      DMSG ("error allocating %d bytes in read_patch_data2\n",
+      DMSG ("error allocating %d bytes in read_patch_data\n",
 	    apply->numwrites * sizeof (struct xenlp_patch_write));
       ccode = SANDBOX_ERR_NOMEM;
       goto errout;
@@ -523,7 +515,7 @@ xenlp_apply3 (void *arg)
       goto errout;
     }
 
-  ccode = read_patch_data2 (arg, &apply, &pm, &writes);
+  ccode = read_patch_data (arg, &apply, &pm, &writes);
   if (ccode != SANDBOX_OK)
     {
       DMSG ("fault %d reading patch data\n", ccode);
