@@ -479,44 +479,44 @@ send_rr_buf (int fd, uint16_t id, ...)
   uint32_t len = SANDBOX_MSG_HDRLEN;
   uint8_t sand[] = SANDBOX_MSG_MAGIC;
   uint16_t pver = SANDBOX_MSG_VERSION;
-  struct sandbox_buf bufs[SANDBOX_LAST_ARG + 1];
+  struct sandbox_buf bufs[SANDBOX_MAX_ARG];
   va_list va;
   uint32_t nullsize = 0;
   int index = 0, lastbuf = 0;
   DMSG ("send_rr_buf fd %d id %d\n", fd, id);
   va_start (va, id);
   do
-    {
+  {
       bufs[index].size = va_arg (va, int);
       if (bufs[index].size == SANDBOX_LAST_ARG)
-	{
-	  lastbuf = index;
-	  bufs[index].buf = (uint8_t *) & nullsize;
-	  break;
-	}
+      {
+          lastbuf = index;
+          bufs[index].buf = (uint8_t *) & nullsize;
+          break;
+      }
       bufs[index].buf = va_arg (va, uint8_t *);
       if (bufs[index].buf == 0)
-	break;
+          break;
       if (index > 0)
-	{
-	  /*
-	   * the first length field is included in the header, don't
-	   * count it but do count 1...n 
-	   */
-	  len += sizeof (uint32_t);
-	}
+      {
+          /*
+           * the first length field is included in the header, don't
+           * count it but do count 1...n 
+           */
+          len += sizeof (uint32_t);
+      }
       len += bufs[index].size;
 
       index++;
-    }
-  while (index < 255);
+  }
+  while (index < SANDBOX_MAX_ARG);
   va_end (va);
   if (index >= 255)
-    {
+  {
       lastbuf = 255;
       bufs[lastbuf].size = SANDBOX_LAST_ARG;
       bufs[lastbuf].buf = (uint8_t *) & nullsize;
-    }
+  }
   DMSG ("last va arg index: %d, size %d\n", lastbuf, bufs[lastbuf].size);
 
   /*
