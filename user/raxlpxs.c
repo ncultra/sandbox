@@ -629,10 +629,10 @@ cmd_apply (int sockfd, char *path)
   LMSG ("  QEMU  Compile Date: %s\n", patch.xencompiledate);
   LMSG ("\n");
 
-
-  if (strncmp (qemu_version, patch.xenversion, INFO_STRING_LEN) != 0
+/* extract_patch limits the info strings to 32 bytes each */
+  if (strncmp (qemu_version, patch.xenversion, INFO_EXTRACT_LEN) != 0
       || strncmp (qemu_compile_date, patch.xencompiledate,
-		  INFO_STRING_LEN) != 0)
+		  INFO_EXTRACT_LEN) != 0)
     {
       LMSG ("error: patch does not match QEMU build\n");
       return SANDBOX_ERR_BAD_VER;

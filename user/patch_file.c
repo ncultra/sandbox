@@ -576,8 +576,11 @@ _load_patch_file3 (int fd, const char *filename, struct patch *patch)
     return -1;
 
   /* Only used for crowbar, ignored in this utility */
-  if (_readu64 (fd, filename, &patch->crowbarabs) < 0)
-    return -1;
+  /* extract_patch will incorrectly skip the crowbarabs */
+  /* field when writing V3 patch */
+
+  /* if (_readu64 (fd, filename, &patch->crowbarabs) < 0) */
+  /*   return -1; */
 
   /* Virtual address used for first-stage relocation */
   if (_readu64 (fd, filename, &patch->refabs) < 0)

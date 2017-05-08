@@ -81,12 +81,9 @@ struct sandbox_header
   uint8_t *_cursor;
 };
 
-#ifdef sandbox_port
 #define INFO_STRING_LEN 255
-#define MAX_LIST_PATCHES 1024	/* size of a list returned by __find_patch */
-
-#endif
-
+#define MAX_LIST_PATCHES 255	/* size of a list returned by __find_patch */
+#define INFO_EXTRACT_LEN 32
 
 #ifndef XEN_LIVEPATCH_PATCH_FILE_H_H
 /* NOTE: defined externally in patch_file.h
