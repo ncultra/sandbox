@@ -24,7 +24,6 @@ usage() {
     exit 1
 }
 
-
 while getopts "f:p:u:c:s:h" OPT; do
     case $OPT in
 	p) PROGRAM=$OPTARG
