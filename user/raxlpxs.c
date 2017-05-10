@@ -1011,13 +1011,13 @@ main (int argc, char **argv)
     }
 
   if (list_flag > 0)
-    {
+  {
 
       if ((ccode = _cmd_list3 (sockfd)) < 0)
-	{
-	  LMSG ("error listing applied patches\n");
-	}
-    }
+      {
+          LMSG ("error listing applied patches\n");
+      }
+  }
 
 
   if (find_flag > 0)
@@ -1030,42 +1030,42 @@ main (int argc, char **argv)
 
       ccode = find_patch (sockfd, sha1, SHA_DIGEST_LENGTH, &patch_buf);
       if (ccode == 1)
-	{
-	  DMSG ("found patch: %s\n", patch_hash);
-	  /* TODO: print all patch info int txt, json */
-	}
+        {
+          DMSG ("found patch: %s\n", patch_hash);
+          /* TODO: print all patch info int txt, json */
+        }
       else if (ccode == 0)
-	{
-	  DMSG ("Not found: %s\n", patch_hash);
-	}
+        {
+          DMSG ("Not found: %s\n", patch_hash);
+        }
       else if (patch_buf < 0)
-	{
-	  DMSG ("error in find_patch: %d\n", ccode);
-	}
+        {
+          DMSG ("error in find_patch: %d\n", ccode);
+        }
       if (patch_buf != NULL)
-	{
-	  free (patch_buf);
-	}
+        {
+          free (patch_buf);
+        }
     }
   if (apply_flag > 0)
     {
       if ((ccode = cmd_apply (sockfd, filepath)) < 0)
-	{
-	  DMSG ("error applying patch %d\n", ccode);
-	}
+        {
+          DMSG ("error applying patch %d\n", ccode);
+        }
       else
-	{
-	  LMSG ("Patch %s successfully applied\n", filepath);
-	}
+        {
+          LMSG ("Patch %s successfully applied\n", filepath);
+        }
     }
   if (remove_flag > 0)
     {
       /* getopt should have copied the sha1 hex string to patch_hash */
       /* cmd_undo */
       if ((ccode = cmd_undo (sockfd, patch_hash)) < 0)
-	{
-	  LMSG ("Error reversing patch %s\n", patch_hash);
-	}
+        {
+          LMSG ("Error reversing patch %s\n", patch_hash);
+        }
 
     }
   if (sockfd > 0)

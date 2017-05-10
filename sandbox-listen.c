@@ -1,5 +1,5 @@
 /*****************************************************************
- * Copyright 2015, 2016 Rackspace, Inc.
+ * Copyright 2015, 2017 Rackspace, Inc.
  *
  * listen on a unix domain socket for incoming patches
  ****************************************************************/
@@ -486,37 +486,37 @@ send_rr_buf (int fd, uint16_t id, ...)
   DMSG ("send_rr_buf fd %d id %d\n", fd, id);
   va_start (va, id);
   do
-  {
+    {
       bufs[index].size = va_arg (va, int);
       if (bufs[index].size == SANDBOX_LAST_ARG)
-      {
-          lastbuf = index;
-          bufs[index].buf = (uint8_t *) & nullsize;
-          break;
-      }
+	{
+	  lastbuf = index;
+	  bufs[index].buf = (uint8_t *) & nullsize;
+	  break;
+	}
       bufs[index].buf = va_arg (va, uint8_t *);
       if (bufs[index].buf == 0)
-          break;
+	break;
       if (index > 0)
-      {
-          /*
-           * the first length field is included in the header, don't
-           * count it but do count 1...n 
-           */
-          len += sizeof (uint32_t);
-      }
+	{
+	  /*
+	   * the first length field is included in the header, don't
+	   * count it but do count 1...n 
+	   */
+	  len += sizeof (uint32_t);
+	}
       len += bufs[index].size;
 
       index++;
-  }
+    }
   while (index < SANDBOX_MAX_ARG);
   va_end (va);
   if (index >= 255)
-  {
+    {
       lastbuf = 255;
       bufs[lastbuf].size = SANDBOX_LAST_ARG;
       bufs[lastbuf].buf = (uint8_t *) & nullsize;
-  }
+    }
   DMSG ("last va arg index: %d, size %d\n", lastbuf, bufs[lastbuf].size);
 
   /*

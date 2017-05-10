@@ -265,8 +265,8 @@ dump_sandbox (const void *data, size_t size)
 
 int
 read_patch_data (XEN_GUEST_HANDLE (void) * arg,
-		  struct xenlp_apply3 *apply, struct patch_map *pm,
-		  struct xenlp_patch_write **writes_p)
+		 struct xenlp_apply3 *apply, struct patch_map *pm,
+		 struct xenlp_patch_write **writes_p)
 {
   size_t i;
   uintptr_t relocrel = 0;

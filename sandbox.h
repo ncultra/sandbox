@@ -3,7 +3,7 @@
  * Patches are placed in the "sandbox," which is a area in the
  * .text segment
  *
- * Copyright 2015-16 Rackspace, Inc.
+ * Copyright 2015-17 Rackspace, Inc.
  ***************************************************************/
 #define _GNU_SOURCE
 #include <limits.h>
@@ -210,7 +210,7 @@ uintptr_t get_sandbox_end (void);
 #define SANDBOX_MSG_LAST SANDBOX_MSG_UNDO_REP
 
 #define SANDBOX_LAST_ARG -1	/* to terminate var args in buffer */
-#define SANDBOX_MAX_ARG 0xff /* maximum number of argumets to send a message */
+#define SANDBOX_MAX_ARG 0xff	/* maximum number of argumets to send a message */
 #define SANDBOX_OK 0
 #define SANDBOX_ERR -1
 #define SANDBOX_ERR_BAD_HDR -2
