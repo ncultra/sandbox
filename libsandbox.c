@@ -8,7 +8,7 @@
 extern uintptr_t _start, _end;
 
 /* head of list of applied patches */
-struct lph lp_patch_head3;
+struct lph lp_patch_head;
 
 uintptr_t
 ALIGN_POINTER (uintptr_t p, uintptr_t offset)
@@ -54,7 +54,7 @@ unmap_patch_map (struct patch_map *pm)
 int
 init_sandbox ()
 {
-  LIST_INIT (&lp_patch_head3);
+  LIST_INIT (&lp_patch_head);
 
   return SANDBOX_OK;
 }
@@ -265,7 +265,7 @@ dump_sandbox (const void *data, size_t size)
 
 int
 read_patch_data (XEN_GUEST_HANDLE (void) * arg,
-		 struct xenlp_apply3 *apply, struct patch_map *pm,
+		 struct xenlp_apply4 *apply, struct patch_map *pm,
 		 struct xenlp_patch_write **writes_p)
 {
   size_t i;
@@ -327,7 +327,7 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
 	  return ccode;
 	}
 
-      DMSG ("read_patch_data2: blob: %p arg: %p len: %d\n",
+      DMSG ("read_patch_data: blob: %p arg: %p len: %d\n",
 	    pm->addr, arg, pm->size);
 
 
@@ -337,6 +337,8 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
       /* Skip over blob */
       arg = (unsigned char *) arg + pm->size;
 
+      /* Calculate offset of relocations */
+      relocrel = (uint64_t) (pm->addr) - apply->refabs;
 
       DMSG ("adjusting refabs, before: %lx\n", apply->refabs);
       runtime_constant = (uintptr_t) & _start - (uintptr_t) apply->refabs;
@@ -485,42 +487,55 @@ errout:
 }
 
 int
-xenlp_apply3 (void *arg)
+xenlp_apply4 (void *arg)
 {
-  struct xenlp_apply3 apply;
+  struct xenlp_apply4 apply;
   struct xenlp_patch_write *writes = NULL;
-  struct applied_patch3 *patch = NULL;
+  struct applied_patch *patch = NULL;
   char sha1[SHA_DIGEST_LENGTH * 2 + 1];
   int ccode = SANDBOX_ERR;
   struct patch_map pm = { NULL, 0 };
 
-  memcpy (&apply, arg, sizeof (struct xenlp_apply3));
+  memcpy (&apply, arg, sizeof (struct xenlp_apply4));
 
-  /* Skip over struct xenlp_apply3 */
-  arg = (unsigned char *) arg + sizeof (struct xenlp_apply3);
+  if (apply.bloblen > MAX_PATCH_SIZE)
+    {
+      DMSG ("live patch size %u is too large\n", apply.bloblen);
+      return SANDBOX_ERR_INVALID;
+    }
+  /* Skip over struct xenlp_apply4 */
+  arg = (unsigned char *) arg + sizeof (struct xenlp_apply4);
   /* Do some initial sanity checking */
   if (apply.numwrites == 0)
     {
       DMSG ("need at least one patch\n");
-      ccode = SANDBOX_ERR_INVALID;
-      goto errout;
+      return SANDBOX_ERR_INVALID;
+    }
+  /* we don't expect any exception tables for user space. 
+   * need to have an exception table size of zero, and skip
+   */
+  if (apply.numexctblents != 0 || apply.numpreexctblents != 0)
+    {
+      return SANDBOX_ERR_INVALID;
     }
 
-  patch = calloc (1, sizeof (struct applied_patch3));
+
+  patch = calloc (1, sizeof (struct applied_patch));
   if (!patch)
     {
-      DMSG ("unable to allocate %d bytes in xenlp_apply3\n",
-	    sizeof (struct xenlp_apply3));
-      ccode = SANDBOX_ERR_NOMEM;
-      goto errout;
+      DMSG ("unable to allocate %d bytes in xenlp_apply4\n",
+	    sizeof (struct applied_patch));
+      return SANDBOX_ERR_NOMEM;
     }
 
   ccode = read_patch_data (arg, &apply, &pm, &writes);
+
   if (ccode != SANDBOX_OK)
     {
       DMSG ("fault %d reading patch data\n", ccode);
       goto errout;
     }
+
   /* Read dependencies */
   patch->numdeps = apply.numdeps;
   DMSG ("numdeps: %d\n", apply.numdeps);
@@ -560,6 +575,8 @@ xenlp_apply3 (void *arg)
 
   make_text_writeable (writes, apply.numwrites);
   /* Nothing should be possible to fail now, so do all of the writes */
+
+/* note - no exception table entries to write */
   swap_trampolines (writes, apply.numwrites);
 
   /* copy the patch map */
@@ -568,7 +585,7 @@ xenlp_apply3 (void *arg)
   patch->numwrites = apply.numwrites;
   patch->writes = writes;
 
-  LIST_INSERT_HEAD (&lp_patch_head3, patch, l);
+  LIST_INSERT_HEAD (&lp_patch_head, patch, l);
   bin2hex (apply.sha1, sizeof (apply.sha1), sha1, sizeof (sha1));
   printk ("successfully applied patch %s\n", sha1);
 
@@ -587,13 +604,13 @@ errout:
 }
 
 int
-has_dependent_patches (struct applied_patch3 *patch)
+has_dependent_patches (struct applied_patch *patch)
 {
   /* Starting from current patch, looking down the linked list
    * Find if any later patches depend on this one */
-  struct applied_patch3 *ap = LIST_NEXT (patch, l);
+  struct applied_patch *ap = LIST_NEXT (patch, l);
 
-  while (ap && ap != LIST_FIRST (&lp_patch_head3))
+  while (ap && ap != LIST_FIRST (&lp_patch_head))
     {
       size_t i;
       for (i = 0; i < ap->numdeps; i++)
@@ -609,14 +626,14 @@ has_dependent_patches (struct applied_patch3 *patch)
 
 
 int
-xenlp_undo3 (XEN_GUEST_HANDLE (void *)arg)
+xenlp_undo4 (XEN_GUEST_HANDLE (void *)arg)
 {
   struct xenlp_hash hash;
-  struct applied_patch3 *ap;
+  struct applied_patch *ap;
 
   memcpy (&hash, arg, sizeof (struct xenlp_hash));
 
-  LIST_FOREACH (ap, &lp_patch_head3, l)
+  LIST_FOREACH (ap, &lp_patch_head, l)
   {
     if (memcmp (ap->sha1, hash.sha1, sizeof (hash.sha1)) == 0)
       {

@@ -679,14 +679,14 @@ dispatch_list (int fd, int len, void **bufp)
    * struct list_response[]; 
    */
   list_response *r;
-  struct applied_patch3 *ap;
+  struct applied_patch *ap;
   uint8_t *rbuf = NULL;
 
   uint32_t count = 0, current = 0, rsize = 0;
 
-  if (!LIST_EMPTY (&lp_patch_head3))
+  if (!LIST_EMPTY (&lp_patch_head))
     {
-      LIST_FOREACH (ap, &lp_patch_head3, l)
+      LIST_FOREACH (ap, &lp_patch_head, l)
       {
 	count++;
       }
@@ -703,7 +703,7 @@ dispatch_list (int fd, int len, void **bufp)
       *(uint32_t *) rbuf = count;
       r = (list_response *) (rbuf + sizeof (uint32_t));
 
-      LIST_FOREACH (ap, &lp_patch_head3, l)
+      LIST_FOREACH (ap, &lp_patch_head, l)
       {
 	dump_sandbox (&ap->sha1, SHA_DIGEST_LENGTH);
 	memcpy (&r[current].sha1, ap->sha1, SHA_DIGEST_LENGTH);

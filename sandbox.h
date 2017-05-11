@@ -129,8 +129,7 @@ struct table_patch
 /* list head for applied patches */
 struct lph
 {
-  struct applied_patch3 *lh_first;
-
+  struct applied_patch *lh_first;
 };
 
 struct patch_map
@@ -140,16 +139,16 @@ struct patch_map
     LIST_ENTRY (patch_map) l;
 };
 
-struct applied_patch3
+struct applied_patch
 {
-  struct patch_map map;
-  unsigned char sha1[20];	/* binary encoded */
-  uint32_t numwrites;
-  struct xenlp_patch_write *writes;
-  uint32_t numdeps;
-  struct xenlp_hash *deps;
-  char tags[MAX_TAGS_LEN];
-    LIST_ENTRY (applied_patch3) l;
+    struct patch_map map;
+    unsigned char sha1[20];	/* binary encoded */
+    uint32_t numwrites;
+    struct xenlp_patch_write *writes;
+    uint32_t numdeps;
+    struct xenlp_hash *deps;
+    char tags[MAX_TAGS_LEN];
+    LIST_ENTRY (applied_patch) l;
 };
 
 typedef struct xenlp_patch_info3 list_response;
@@ -168,7 +167,7 @@ extern uintptr_t patch_sandbox_start, patch_sandbox_end;
 
 extern uintptr_t patch_cursor;
 
-extern struct lph lp_patch_head3;
+extern struct lph lp_patch_head;
 
 void dump_sandbox (const void *data, size_t size);
 uintptr_t ALIGN_POINTER (uintptr_t p, uintptr_t offset);

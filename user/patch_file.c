@@ -13,7 +13,7 @@
 int
 _read (int fd, const char *filename, void *buf, size_t buflen)
 {
-  int  ret = read (fd, buf, buflen);
+  int ret = read (fd, buf, buflen);
   if (ret < 0)
     {
       fprintf (stderr, "%s: %m\n", filename);
@@ -22,7 +22,7 @@ _read (int fd, const char *filename, void *buf, size_t buflen)
   if (ret < buflen)
     {
       fprintf (stderr, "%s: expected %d bytes, read %d\n",
-               filename, (int)buflen, ret);
+	       filename, (int) buflen, ret);
       return -1;
     }
 
@@ -810,7 +810,7 @@ print_patch_file_info (struct patch *patch)
       struct dependency *dep = &patch->deps[i];
       bin2hex (dep->sha1, SHA_DIGEST_LENGTH, hex, sizeof (hex));
       printf ("  patch: %s @ %llx\n", hex,
-              (long long unsigned int)dep->refabs);
+	      (long long unsigned int) dep->refabs);
     }
   printf ("\n");
 
@@ -832,7 +832,7 @@ print_patch_file_info (struct patch *patch)
       struct function_patch *func = &patch->funcs[i];
 
       printf ("Patch function %s @ %llx\n", func->funcname,
-              (long long unsigned int)func->oldabs);
+	      (long long unsigned int) func->oldabs);
     }
 
   for (i = 0; i < patch->numtables; i++)
@@ -840,7 +840,7 @@ print_patch_file_info (struct patch *patch)
       struct table_patch *table = &patch->tables[i];
 
       printf ("Patch table %s @ %llx\n", table->tablename,
-              (long long unsigned int)table->hvabs);
+	      (long long unsigned int) table->hvabs);
     }
 
   if (patch->numsymbols > 0)
@@ -876,7 +876,7 @@ print_json_patch_info (struct patch *patch)
       struct dependency *dep = &patch->deps[i];
       bin2hex (dep->sha1, SHA_DIGEST_LENGTH, hex, sizeof (hex));
       printf ("    {\"sha1\": \"%s\", \"refabs\": \"0x%llx\"}",
-              hex, (long long unsigned int)dep->refabs);
+	      hex, (long long unsigned int) dep->refabs);
       printf ("%s\n", ((i == patch->numdeps - 1) ? "" : ","));
     }
   printf ("  ],\n");
@@ -895,7 +895,7 @@ print_json_patch_info (struct patch *patch)
     {
       struct function_patch *func = &patch->funcs[i];
       printf ("    {\"name\": \"%s\", \"addr\": \"0x%llx\"}",
-              func->funcname, (long long unsigned int)func->oldabs);
+	      func->funcname, (long long unsigned int) func->oldabs);
       printf ("%s\n", ((i == patch->numfuncs - 1) ? "" : ","));
     }
   printf ("  ],\n");
@@ -904,7 +904,7 @@ print_json_patch_info (struct patch *patch)
     {
       struct table_patch *table = &patch->tables[i];
       printf ("    {\"name\": \"%s\", \"addr\": \"0x%llx\"}",
-              table->tablename, (long long unsigned int)table->hvabs);
+	      table->tablename, (long long unsigned int) table->hvabs);
       printf ("%s\n", ((i == patch->numtables - 1) ? "" : ","));
     }
   printf ("  ],\n");
