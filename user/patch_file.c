@@ -13,7 +13,7 @@
 int
 _read (int fd, const char *filename, void *buf, size_t buflen)
 {
-  ssize_t ret = read (fd, buf, buflen);
+  int  ret = read (fd, buf, buflen);
   if (ret < 0)
     {
       fprintf (stderr, "%s: %m\n", filename);
@@ -22,7 +22,7 @@ _read (int fd, const char *filename, void *buf, size_t buflen)
   if (ret < buflen)
     {
       fprintf (stderr, "%s: expected %d bytes, read %d\n",
-	       filename, (int) buflen, (int) ret);
+               filename, (int)buflen, ret);
       return -1;
     }
 
@@ -77,7 +77,6 @@ static int
 extract_sha1_from_filename (unsigned char *sha1, size_t sha1len,
 			    const char *filename)
 {
-
   /* Make sure suffix is .raxlpxs */
   if (strstr (filename, ".raxlpxs") == NULL)
     {
@@ -97,10 +96,10 @@ extract_sha1_from_filename (unsigned char *sha1, size_t sha1len,
 }
 
 
-static int
+int
 get_patch_version (int fd, const char *filename)
 {
-  char signature[XSPATCH_COOKIE_LEN];
+  unsigned char signature[XSPATCH_COOKIE_LEN];
   off_t cur = lseek (fd, 0, SEEK_CUR);
   lseek (fd, 0, SEEK_SET);
 
@@ -109,10 +108,14 @@ get_patch_version (int fd, const char *filename)
 
   lseek (fd, cur, SEEK_SET);
 
-  if (memcmp (signature, XSPATCH_COOKIE3, sizeof (signature)) == 0)
+  if (memcmp (signature, XSPATCH_COOKIE2, sizeof (signature)) == 0)
+    return 2;
+  else if (memcmp (signature, XSPATCH_COOKIE3, sizeof (signature)) == 0)
     return 3;
   else if (memcmp (signature, XSPATCH_COOKIE4, sizeof (signature)) == 0)
     return 4;
+  else if (memcmp (signature, XSPATCH_COOKIE5, sizeof (signature)) == 0)
+    return 5;
 
   return -1;
 }
@@ -434,6 +437,22 @@ read_deps_data (int fd, const char *filename, struct patch *patch)
   return 0;
 }
 
+static int
+read_conflicts_data (int fd, const char *filename, struct patch *patch)
+{
+  size_t i;
+  if (_readu16 (fd, filename, &patch->numconflicts) < 0)
+    return -1;
+
+  patch->conflicts = _zalloc (sizeof (struct conflict) * patch->numconflicts);
+  for (i = 0; i < patch->numconflicts; i++)
+    {
+      struct conflict *cfl = &patch->conflicts[i];
+      if (_read (fd, filename, &cfl->sha1, sizeof (cfl->sha1)) < 0)
+	return -1;
+    }
+  return 0;
+}
 
 static int
 read_reloc_data3 (int fd, const char *filename, struct patch *patch)
@@ -576,11 +595,8 @@ _load_patch_file3 (int fd, const char *filename, struct patch *patch)
     return -1;
 
   /* Only used for crowbar, ignored in this utility */
-  /* extract_patch will incorrectly skip the crowbarabs */
-  /* field when writing V3 patch */
-
-  /* if (_readu64 (fd, filename, &patch->crowbarabs) < 0) */
-  /*   return -1; */
+  if (_readu64 (fd, filename, &patch->crowbarabs) < 0)
+    return -1;
 
   /* Virtual address used for first-stage relocation */
   if (_readu64 (fd, filename, &patch->refabs) < 0)
@@ -670,6 +686,71 @@ _load_patch_file4 (int fd, const char *filename, struct patch *patch)
   return 0;
 }
 
+static int
+_load_patch_file5 (int fd, const char *filename, struct patch *patch)
+{
+  if (extract_sha1_from_patch (patch->sha1, sizeof (patch->sha1),
+			       fd, filename) < 0)
+    return -1;
+
+  /* Calculate SHA1 hash and verify it matches filename */
+  unsigned char hash[SHA_DIGEST_LENGTH];
+  off_t file_size = calc_file_size (fd, filename);
+  if (calc_block_sha1 (fd, filename, 0,
+		       file_size - (SHA_DIGEST_LENGTH), hash) < 0)
+    return -1;
+
+  if (memcmp (patch->sha1, hash, sizeof (patch->sha1)) != 0)
+    {
+      char hex[SHA_DIGEST_LENGTH * 2 + 1];
+      fprintf (stderr, "%s: hash mismatch\n", filename);
+      bin2hex (hash, sizeof (hash), hex, sizeof (hex));
+      fprintf (stderr, "  calculated %s\n", hex);
+      return -1;
+    }
+
+  lseek (fd, XSPATCH_COOKIE_LEN, SEEK_SET);
+
+  if (read_tag_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_refxen_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_deps_data (fd, filename, patch) < 0)
+    return -1;
+
+  /* Virtual address used for first-stage relocation */
+  if (_readu64 (fd, filename, &patch->refabs) < 0)
+    return -1;
+
+  if (read_blob_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_reloc_data3 (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_check_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_symbols_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_func_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_table_data (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_ex_table_entries (fd, filename, patch) < 0)
+    return -1;
+
+  if (read_conflicts_data (fd, filename, patch) < 0)
+    return -1;
+
+  return 0;
+}
+
 
 int
 load_patch_file (int fd, const char *filename, struct patch *patch)
@@ -690,6 +771,8 @@ load_patch_file (int fd, const char *filename, struct patch *patch)
     }
   if (patch->version >= 4)
     patch->crowbarabs = 0;
+  if (patch->version < 5)
+    patch->numconflicts = 0;
 
   switch (patch->version)
     {
@@ -699,6 +782,8 @@ load_patch_file (int fd, const char *filename, struct patch *patch)
       return _load_patch_file3 (fd, filename, patch);
     case XSPATCH_VER4:
       return _load_patch_file4 (fd, filename, patch);
+    case XSPATCH_VER5:
+      return _load_patch_file5 (fd, filename, patch);
     default:
       fprintf (stderr, "%s: invalid signature\n", filename);
       return -1;
@@ -725,7 +810,17 @@ print_patch_file_info (struct patch *patch)
       struct dependency *dep = &patch->deps[i];
       bin2hex (dep->sha1, SHA_DIGEST_LENGTH, hex, sizeof (hex));
       printf ("  patch: %s @ %llx\n", hex,
-	      (long long unsigned int) dep->refabs);
+              (long long unsigned int)dep->refabs);
+    }
+  printf ("\n");
+
+  if (patch->numconflicts > 0)
+    printf ("Conflicts:\n");
+  for (i = 0; i < patch->numconflicts; i++)
+    {
+      struct conflict *cfl = &patch->conflicts[i];
+      bin2hex (cfl->sha1, SHA_DIGEST_LENGTH, hex, sizeof (hex));
+      printf ("  patch: %s\n", hex);
     }
   printf ("\n");
 
@@ -737,7 +832,7 @@ print_patch_file_info (struct patch *patch)
       struct function_patch *func = &patch->funcs[i];
 
       printf ("Patch function %s @ %llx\n", func->funcname,
-	      (long long unsigned int) func->oldabs);
+              (long long unsigned int)func->oldabs);
     }
 
   for (i = 0; i < patch->numtables; i++)
@@ -745,7 +840,7 @@ print_patch_file_info (struct patch *patch)
       struct table_patch *table = &patch->tables[i];
 
       printf ("Patch table %s @ %llx\n", table->tablename,
-	      (long long unsigned int) table->hvabs);
+              (long long unsigned int)table->hvabs);
     }
 
   if (patch->numsymbols > 0)
@@ -756,6 +851,10 @@ print_patch_file_info (struct patch *patch)
 
       printf ("  %s @ %x\n", sym->name, sym->sec_off + sym->sym_off);
     }
+  if (patch->numexctblents > 0)
+    printf ("Exception table patch: true\n");
+  if (patch->numpreexctblents > 0)
+    printf ("Pre-exception table patch: true\n");
 }
 
 
@@ -777,8 +876,17 @@ print_json_patch_info (struct patch *patch)
       struct dependency *dep = &patch->deps[i];
       bin2hex (dep->sha1, SHA_DIGEST_LENGTH, hex, sizeof (hex));
       printf ("    {\"sha1\": \"%s\", \"refabs\": \"0x%llx\"}",
-	      hex, (long long unsigned int) dep->refabs);
+              hex, (long long unsigned int)dep->refabs);
       printf ("%s\n", ((i == patch->numdeps - 1) ? "" : ","));
+    }
+  printf ("  ],\n");
+  printf ("  \"conflicts\": [\n");
+  for (i = 0; i < patch->numconflicts; i++)
+    {
+      struct conflict *cfl = &patch->conflicts[i];
+      bin2hex (cfl->sha1, SHA_DIGEST_LENGTH, hex, sizeof (hex));
+      printf ("    {\"sha1\": \"%s\"}", hex);
+      printf ("%s\n", ((i == patch->numconflicts - 1) ? "" : ","));
     }
   printf ("  ],\n");
   printf ("  \"crowbar\": %s,\n", ((patch->crowbarabs) ? "true" : "false"));
@@ -787,7 +895,7 @@ print_json_patch_info (struct patch *patch)
     {
       struct function_patch *func = &patch->funcs[i];
       printf ("    {\"name\": \"%s\", \"addr\": \"0x%llx\"}",
-	      func->funcname, (long long unsigned int) func->oldabs);
+              func->funcname, (long long unsigned int)func->oldabs);
       printf ("%s\n", ((i == patch->numfuncs - 1) ? "" : ","));
     }
   printf ("  ],\n");
@@ -796,7 +904,7 @@ print_json_patch_info (struct patch *patch)
     {
       struct table_patch *table = &patch->tables[i];
       printf ("    {\"name\": \"%s\", \"addr\": \"0x%llx\"}",
-	      table->tablename, (long long unsigned int) table->hvabs);
+              table->tablename, (long long unsigned int)table->hvabs);
       printf ("%s\n", ((i == patch->numtables - 1) ? "" : ","));
     }
   printf ("  ],\n");
@@ -808,6 +916,10 @@ print_json_patch_info (struct patch *patch)
 	      sym->name, sym->sec_off + sym->sym_off);
       printf ("%s\n", ((i == patch->numsymbols - 1) ? "" : ","));
     }
-  printf ("  ]\n");
+  printf ("  ],\n");
+  printf ("  \"ex_table\": %s,\n",
+	  (patch->numexctblents > 0) ? "true" : "false");
+  printf ("  \"pre_ex_table\": %s\n",
+	  (patch->numpreexctblents > 0) ? "true" : "false");
   printf ("}\n");
 }

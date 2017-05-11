@@ -7,6 +7,7 @@
 #define XSPATCH_VER2    2
 #define XSPATCH_VER3    3
 #define XSPATCH_VER4    4
+#define XSPATCH_VER5    5
 #define _XSPATCH_COOKIE "XSPATCH"
 
 #define XSPATCH_COOKIE_LEN  8
@@ -14,6 +15,7 @@
 #define XSPATCH_COOKIE2	_XSPATCH_COOKIE STR(XSPATCH_VER2)
 #define XSPATCH_COOKIE3	_XSPATCH_COOKIE STR(XSPATCH_VER3)
 #define XSPATCH_COOKIE4	_XSPATCH_COOKIE STR(XSPATCH_VER4)
+#define XSPATCH_COOKIE5	_XSPATCH_COOKIE STR(XSPATCH_VER5)
 
 
 struct check
@@ -69,6 +71,11 @@ struct exctbl_entry
   uint32_t contrel;
 };
 
+struct conflict
+{
+  unsigned char sha1[SHA_DIGEST_LENGTH];
+};
+
 struct patch
 {
   int version;
@@ -114,6 +121,10 @@ struct patch
 
   uint16_t numpreexctblents;
   struct exctbl_entry *preexctblents;
+
+  /* v5 fields */
+  uint16_t numconflicts;
+  struct conflict *conflicts;
 };
 
 int _read (int fd, const char *filename, void *buf, size_t buflen);
@@ -121,6 +132,7 @@ int _readu64 (int fd, const char *filename, uint64_t * value);
 int _readu32 (int fd, const char *filename, uint32_t * value);
 int _readu16 (int fd, const char *filename, uint16_t * value);
 
+int get_patch_version (int fd, const char *filename);
 int load_patch_file (int fd, const char *filename, struct patch *patch);
 
 void print_patch_file_info (struct patch *patch);
