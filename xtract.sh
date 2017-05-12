@@ -138,6 +138,7 @@ export RUN_FILE=${config[BUILD_ROOT]}${config[RUN_FILE]}
 export ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}
 export RUN_DIR=${config[RUN_DIR]}
 export OPT_DIR=${config[OPT_DIR]}
+export QCONF=${config[BUILD_ROOT]}${config[QCONF]}
 
 echo "BUILD_ROOT=${config[BUILD_ROOT]}"
 echo "BACK_FILE=${config[BUILD_ROOT]}${config[BACK_FILE]}"
@@ -149,7 +150,7 @@ echo "RUN_FILE=${config[BUILD_ROOT]}${config[RUN_FILE]}"
 echo "ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}"
 echo "RUN_DIR=${config[RUN_DIR]}"
 echo "OPT_DIR=${config[OPT_DIR]}"
-
+echo "QCONF=${config[BUILD_ROOT]}${config[QCONF]}"
 
 build_ref_file
 
