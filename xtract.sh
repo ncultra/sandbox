@@ -28,7 +28,7 @@ build_ref_file() {
     pushd $BUILD_ROOT &>/dev/null
     # build the new run file
     rm $PATCHED_OBJ &>/dev/null	   # force a rebuild of the relevant source
-    qconf.sh --x86 --patch  --make
+    ~/bin/qconf.sh --x86 --patch  --make
     pushd $BUILD_ROOT/sandbox/user
     make raxlpxs
     popd &>/dev/null
@@ -115,6 +115,7 @@ config=( # set default values in config array
     [ISO_FILE]=""    #the bootable image to run in qemu
     [OPT_DIR]="/var/opt/sandbox"
     [RUN_DIR]="/var/run/sandbox"
+    [QCONF]=""
 )
 
 
@@ -151,6 +152,7 @@ echo "OPT_DIR=${config[OPT_DIR]}"
 
 
 build_ref_file
+
 $EXTRACT_PATCH --qemu --function hmp_info_version $PATCHED_OBJ $REF_FILE
 mv_patch_files # creates /var/opt/sandbox if necessary, moves patch files
 

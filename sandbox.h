@@ -141,13 +141,13 @@ struct patch_map
 
 struct applied_patch
 {
-    struct patch_map map;
-    unsigned char sha1[20];	/* binary encoded */
-    uint32_t numwrites;
-    struct xenlp_patch_write *writes;
-    uint32_t numdeps;
-    struct xenlp_hash *deps;
-    char tags[MAX_TAGS_LEN];
+  struct patch_map map;
+  unsigned char sha1[20];	/* binary encoded */
+  uint32_t numwrites;
+  struct xenlp_patch_write *writes;
+  uint32_t numdeps;
+  struct xenlp_hash *deps;
+  char tags[MAX_TAGS_LEN];
     LIST_ENTRY (applied_patch) l;
 };
 
@@ -321,7 +321,7 @@ int read_sandbox_message_header (int fd, uint16_t * version,
 int send_rr_buf (int fd, uint16_t id, ...);
 void bin2hex (unsigned char *bin, size_t binlen, char *buf, size_t buflen);
 int write_sandbox_message_header (int fd, uint16_t version, uint16_t id);
-int xenlp_undo3 (XEN_GUEST_HANDLE (void *)arg);
+int xenlp_undo4 (XEN_GUEST_HANDLE (void *)arg);
 
 /* **** test functions **** */
 char *get_sandbox_build_info (int fd);
@@ -341,6 +341,6 @@ int dispatch_undo_rep (int fd, int len, void **bufp);
 void hex2bin (char *buf, size_t buflen, unsigned char *bin, size_t binlen);
 int do_lp_apply (int fd, void *buf, size_t buflen);
 int xenlp_apply (void *arg);
-int xenlp_apply3 (void *arg);
+int xenlp_apply4 (void *arg);
 
 #endif /* __SANDBOX_H */

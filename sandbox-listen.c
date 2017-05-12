@@ -636,7 +636,7 @@ dispatch_apply (int fd, int len, void **bufp)
       /*
        * ccode = xenlp_apply(patch_buf); 
        */
-      ccode = xenlp_apply3 (patch_buf);
+      ccode = xenlp_apply4 (patch_buf);
 
     }
   else
@@ -896,7 +896,7 @@ dispatch_undo_req (int fd, int len, void **bufp)
   memset (sha1_txt_buf, 0x00, sizeof (sha1_txt_buf));
   bin2hex (sha1, sizeof (sha1), sha1_txt_buf, sizeof (sha1_txt_buf) - 1);
   DMSG ("Undoing patch %s\n", sha1_txt_buf);
-  ccode = xenlp_undo3 (sha1);
+  ccode = xenlp_undo4 (sha1);
 
 exit:
   return (send_rr_buf (fd, SANDBOX_MSG_UNDO_REP, sizeof (uint32_t),
