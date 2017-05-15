@@ -339,15 +339,15 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
 
       /* Calculate offset of relocations */
       relocrel = (uint64_t) (pm->addr) - apply->refabs;
-
+      DMSG ("relocrel: %lx (%ld)\n", relocrel, relocrel);
       DMSG ("adjusting refabs, before: %lx\n", apply->refabs);
       runtime_constant = (uintptr_t) & _start - (uintptr_t) apply->refabs;
       apply->refabs += runtime_constant;
       DMSG ("refabs adjusted: %lx\n", apply->refabs);
     }
 
-  relocrel = (uintptr_t) (pm->addr - apply->refabs);
-  DMSG ("relocrel: %lx (%ld)\n", relocrel, relocrel);
+//  relocrel = (uintptr_t) (pm->addr - apply->refabs);
+
 
   /* Read relocs */
   if (apply->numrelocs)
@@ -389,11 +389,11 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
     }
 
   /* Read writes */
-  posix_memalign ((void **) &(*writes_p),
+  ccode = posix_memalign ((void **) writes_p,
 		  __alignof__ (struct xenlp_patch_write),
 		  sizeof (struct xenlp_patch_write) * apply->numwrites);
 
-  if (!(*writes_p))
+  if (ccode != 0)
     {
       DMSG ("error allocating %d bytes in read_patch_data\n",
 	    apply->numwrites * sizeof (struct xenlp_patch_write));
@@ -493,7 +493,7 @@ xenlp_apply4 (void *arg)
   struct xenlp_patch_write *writes = NULL;
   struct applied_patch *patch = NULL;
   char sha1[SHA_DIGEST_LENGTH * 2 + 1];
-  int ccode = SANDBOX_ERR;
+  int ccode = SANDBOX_OK;
   struct patch_map pm = { NULL, 0 };
 
   memcpy (&apply, arg, sizeof (struct xenlp_apply4));
@@ -540,38 +540,42 @@ xenlp_apply4 (void *arg)
   patch->numdeps = apply.numdeps;
   DMSG ("numdeps: %d\n", apply.numdeps);
   if (apply.numdeps > 0)
-    {
-      posix_memalign ((void **) &(patch->deps),
-		      __alignof__ (*(patch->deps)),
-		      sizeof (*(patch->deps)) * apply.numdeps);
+  {
+      int ccode = posix_memalign ((void **) &(patch->deps),
+                                  __alignof__ (*(patch->deps)),
+                                  sizeof (*(patch->deps)) * apply.numdeps);
 
-      if (!patch->deps)
-	{
-	  DMSG ("error allocating memory for patch dependencies\n");
-	  ccode = SANDBOX_ERR_NOMEM;
-	  goto errout;
-	}
+      DMSG("posix_memalign returned %d\n", ccode);
+        
+      if (ccode != SANDBOX_OK || !patch->deps)
+      {
+          DMSG ("error allocating memory for patch dependencies\n");
+          ccode = SANDBOX_ERR_NOMEM;
+          if (ccode) /* this read is just to satisfy scan-build*/
+              goto errout;
+      }
 
       if (memcpy
-	  (patch->deps, arg, apply.numdeps * sizeof (struct xenlp_hash)))
-	{
-	  DMSG ("fault copying memory in xenlp_apply3\n");
-	  ccode = SANDBOX_ERR_INVALID;
-	  goto errout;
-	}
+          (patch->deps, arg, apply.numdeps * sizeof (struct xenlp_hash)))
+      {
+          DMSG ("fault copying memory in xenlp_apply3\n");
+          ccode = SANDBOX_ERR_INVALID;
+          if (ccode) /* this read is just to satisfy scan-build*/
+              goto errout;
+      }
       arg =
-	(unsigned char *) arg + (apply.numdeps * sizeof (struct xenlp_hash));
-    }
+          (unsigned char *) arg + (apply.numdeps * sizeof (struct xenlp_hash));
+  }
 
   /* Read tags */
   patch->tags[0] = 0;
   DMSG ("taglen: %d\n", apply.taglen);
   if (apply.taglen > 0 && apply.taglen <= MAX_TAGS_LEN)
-    {
+  {
       memcpy (patch->tags, arg, apply.taglen);
       patch->tags[apply.taglen] = '\0';
       DMSG ("tags: %s\n", patch->tags);
-    }
+  }
 
   make_text_writeable (writes, apply.numwrites);
   /* Nothing should be possible to fail now, so do all of the writes */
@@ -589,18 +593,16 @@ xenlp_apply4 (void *arg)
   bin2hex (apply.sha1, sizeof (apply.sha1), sha1, sizeof (sha1));
   printk ("successfully applied patch %s\n", sha1);
 
-  return SANDBOX_OK;
-errout:
-  unmap_patch_map (&pm);
-  if (patch != NULL)
-    {
-      free (patch->writes);
-      free (patch->deps);
-      free (patch);
-    }
-
   return ccode;
-
+errout:
+      unmap_patch_map (&pm);
+      if (patch != NULL)
+      {
+          free (patch->writes);
+          free (patch->deps);
+          free (patch);
+      }
+  return ccode;
 }
 
 int
