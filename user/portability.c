@@ -278,30 +278,30 @@ __do_lp_apply (xc_interface_t xch, void *buf, size_t buflen)
 int
 __do_lp_apply3 (xc_interface_t xch, void *buf, size_t buflen)
 {
-  /* fill buffer, write it to the socket  */
-  int ccode = SANDBOX_ERR;
-  void *buf2 = NULL;
-  uint16_t version = 1, id = SANDBOX_MSG_APPLYRSP;
-  uint32_t len = 0;
-
-  if (send_rr_buf ((int) xch,
-		   SANDBOX_MSG_APPLY,
-		   buflen, buf, SANDBOX_LAST_ARG) == SANDBOX_OK)
-    {
-      ccode =
-	read_sandbox_message_header ((int) xch, &version, &id, &len, &buf2);
-      if (buf2 != NULL)
-	free (buf2);
-    }
-  return ccode;
+    return __do_lp_apply4(xch, buf, buflen);
+    
 }
 
 int
 __do_lp_apply4 (xc_interface_t xch, void *buf, size_t buflen)
 {
-  return SANDBOX_ERR;
-}
+    /* fill buffer, write it to the socket  */
+    int ccode = SANDBOX_ERR;
+    void *buf2 = NULL;
+    uint16_t version = 1, id = SANDBOX_MSG_APPLYRSP;
+    uint32_t len = 0;
 
+    if (send_rr_buf ((int) xch,
+                     SANDBOX_MSG_APPLY,
+                     buflen, buf, SANDBOX_LAST_ARG) == SANDBOX_OK)
+    {
+        ccode =
+            read_sandbox_message_header ((int) xch, &version, &id, &len, &buf2);
+        if (buf2 != NULL)
+            free (buf2);
+    }
+    return ccode;
+}
 
 /*
   client: -> __do_lp_undo3
