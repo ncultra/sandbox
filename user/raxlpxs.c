@@ -574,16 +574,21 @@ cmd_apply (int sockfd, char *path)
 
   struct xenlp_caps caps = {.flags = 0 };
   do_lp_caps (xch, &caps);
-  if (caps.flags & XENLP_CAPS_V3)
-    {
+  if (caps.flags & XENLP_CAPS_APPLY4) {
+
+      if (_cmd_apply4(xch, &patch) < 0)
+          return -1;
+  }
+  
+  if (caps.flags & XENLP_CAPS_V3) {
       if (_cmd_apply3 (xch, &patch) < 0)
-	return -1;
-    }
+          return -1;
+  }
   else
-    {
+  {
       DMSG ("error: using v2 livepatch ABI\n");
       return -1;
-    }
+  }
 
   char sha1str[SHA_DIGEST_LENGTH * 2 + 1];
   bin2hex (patch.sha1, sizeof (patch.sha1), sha1str, sizeof (sha1str));
