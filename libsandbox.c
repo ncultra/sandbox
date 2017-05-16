@@ -390,8 +390,9 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
 
   /* Read writes */
   ccode = posix_memalign ((void **) writes_p,
-		  __alignof__ (struct xenlp_patch_write),
-		  sizeof (struct xenlp_patch_write) * apply->numwrites);
+			  __alignof__ (struct xenlp_patch_write),
+			  sizeof (struct xenlp_patch_write) *
+			  apply->numwrites);
 
   if (ccode != 0)
     {
@@ -540,42 +541,42 @@ xenlp_apply4 (void *arg)
   patch->numdeps = apply.numdeps;
   DMSG ("numdeps: %d\n", apply.numdeps);
   if (apply.numdeps > 0)
-  {
+    {
       int ccode = posix_memalign ((void **) &(patch->deps),
-                                  __alignof__ (*(patch->deps)),
-                                  sizeof (*(patch->deps)) * apply.numdeps);
+				  __alignof__ (*(patch->deps)),
+				  sizeof (*(patch->deps)) * apply.numdeps);
 
-      DMSG("posix_memalign returned %d\n", ccode);
-        
+      DMSG ("posix_memalign returned %d\n", ccode);
+
       if (ccode != SANDBOX_OK || !patch->deps)
-      {
-          DMSG ("error allocating memory for patch dependencies\n");
-          ccode = SANDBOX_ERR_NOMEM;
-          if (ccode) /* this read is just to satisfy scan-build*/
-              goto errout;
-      }
+	{
+	  DMSG ("error allocating memory for patch dependencies\n");
+	  ccode = SANDBOX_ERR_NOMEM;
+	  if (ccode)		/* this read is just to satisfy scan-build */
+	    goto errout;
+	}
 
       if (memcpy
-          (patch->deps, arg, apply.numdeps * sizeof (struct xenlp_hash)))
-      {
-          DMSG ("fault copying memory in xenlp_apply3\n");
-          ccode = SANDBOX_ERR_INVALID;
-          if (ccode) /* this read is just to satisfy scan-build*/
-              goto errout;
-      }
+	  (patch->deps, arg, apply.numdeps * sizeof (struct xenlp_hash)))
+	{
+	  DMSG ("fault copying memory in xenlp_apply3\n");
+	  ccode = SANDBOX_ERR_INVALID;
+	  if (ccode)		/* this read is just to satisfy scan-build */
+	    goto errout;
+	}
       arg =
-          (unsigned char *) arg + (apply.numdeps * sizeof (struct xenlp_hash));
-  }
+	(unsigned char *) arg + (apply.numdeps * sizeof (struct xenlp_hash));
+    }
 
   /* Read tags */
   patch->tags[0] = 0;
   DMSG ("taglen: %d\n", apply.taglen);
   if (apply.taglen > 0 && apply.taglen <= MAX_TAGS_LEN)
-  {
+    {
       memcpy (patch->tags, arg, apply.taglen);
       patch->tags[apply.taglen] = '\0';
       DMSG ("tags: %s\n", patch->tags);
-  }
+    }
 
   make_text_writeable (writes, apply.numwrites);
   /* Nothing should be possible to fail now, so do all of the writes */
@@ -595,13 +596,13 @@ xenlp_apply4 (void *arg)
 
   return ccode;
 errout:
-      unmap_patch_map (&pm);
-      if (patch != NULL)
-      {
-          free (patch->writes);
-          free (patch->deps);
-          free (patch);
-      }
+  unmap_patch_map (&pm);
+  if (patch != NULL)
+    {
+      free (patch->writes);
+      free (patch->deps);
+      free (patch);
+    }
   return ccode;
 }
 

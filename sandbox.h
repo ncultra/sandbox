@@ -121,7 +121,6 @@ struct table_patch
 #define XENLP_RELOC_UINT64	0	/* function dispatch tables, etc */
 #define XENLP_RELOC_INT32	1	/* jmp instructions, etc */
 
-#define XENLP_CAPS_V3 0x1
 #define MAX_TAGS_LEN	       128
 #define MAX_LIST_DEPS            8
 #define MAX_LIST_PATCHES3	16

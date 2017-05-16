@@ -241,7 +241,8 @@ __do_lp_list3 (xc_interface_t xch, struct xenlp_list3 *list)
 int
 __do_lp_caps (xc_interface_t xch, struct xenlp_caps *caps)
 {
-  caps->flags = XENLP_CAPS_V3;
+  caps->flags |= XENLP_CAPS_V3 | XENLP_CAPS_APPLY4;
+
   return 0;
 }
 

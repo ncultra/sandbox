@@ -523,6 +523,7 @@ send_rr_buf (int fd, uint16_t id, ...)
    * the length of the first bufsize is already calculated in the header 
    * length. Futher bufsizes (1...n) add the the message length 
    */
+  /* TODO: use write_sandbox_header here */
 
   DMSG ("message length estimated to be %d bytes\n", len);
   if (len > SANDBOX_ALLOC_SIZE)
