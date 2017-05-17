@@ -3,9 +3,11 @@
 #include "sandbox.h"
 
 /* #define str1(s) #s
-#define str(s) str1(s)
+   #define str(s) str1(s)
 */
 extern uintptr_t _start, _end;
+uint64_t ultimate_limit;
+
 
 /* head of list of applied patches */
 struct lph lp_patch_head;
@@ -21,19 +23,76 @@ ALIGN_POINTER (uintptr_t p, uintptr_t offset)
 }
 
 
-
+/* int map_patch_map
+ * in/out: struct patch_map pm 
+ * pm->size in/out
+ * pm->addr out only
+ *
+ * return: SANDBOX_OK upon success, SANDBOX_ERR_* otherwise
+ * pm->size is invalid when returning an error
+ */
 
 int
 map_patch_map (struct patch_map *pm)
 {
+  static struct patch_map last;
+  struct patch_map next;
+  uint64_t tmp;
+
+/* ultimate_limit is the highest address we can safely allocate for a 
+ * 32-bit near jump and relocate
+ */
+  if (ultimate_limit == 0)
+    {
+      ultimate_limit = (uint64_t) (&_start + 0xffffffff);
+      ultimate_limit &= ~((uint64_t) 0x1000);
+    }
+
+  if (last.addr == 0L)
+    {
+      tmp = ((uint64_t) & _end + 0x1000) & ~((uint64_t) 0x1000);
+      last.addr = (void *) tmp;
+    }
+
   if (pm == NULL)
     return SANDBOX_ERR_INVALID;
 
-  pm->addr = mmap (NULL, pm->size,
+  /* next mmap should be on a page boundary at least one page
+     higher than the end of the previous map */
+  tmp = (((uint64_t) last.addr + last.size) + 0x1000) & ~((uint64_t) 0x1000);
+  next.addr = (void *) tmp;
+
+  /* used for limit checking */
+  next.size = (pm->size + 0x1000) & ~((uint64_t) 0x1000);
+  DMSG ("next addr determined to be %p; size to be %lx\n",
+	next.addr, next.size);
+
+  tmp = (uint64_t) next.addr;
+  if (tmp + next.size >= ultimate_limit)
+    {
+      /* do not update last.*, preserve the previous 
+       * value so we can use it again */
+      pm->size = 0L;
+      pm->addr = MAP_FAILED;
+      DMSG ("mmap would exceed 32-bit near jump limit %lx\n", ultimate_limit);
+      return SANDBOX_ERR_INVALID;
+    }
+
+
+  pm->addr = mmap (next.addr, next.size,
 		   PROT_READ | PROT_WRITE | PROT_EXEC,
-		   MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+		   MAP_ANONYMOUS | MAP_SHARED, 0, 0);
+
+
   if (pm->addr == MAP_FAILED)
-    return SANDBOX_ERR_NOMEM;
+    {
+      DMSG ("mmap failed addr %p, size %lx\n", next.addr, next.size);
+      return SANDBOX_ERR_NOMEM;
+    }
+
+  last.addr = pm->addr;
+  last.size = pm->size;
+  DMSG ("mmap suceeded, addr %p, size %lx\n", last.addr, last.size);
 
   return SANDBOX_OK;
 }
@@ -273,41 +332,41 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
   uintptr_t runtime_constant = 0;
   int ccode;
 
-  /****
-       Everything about the patch at this time is relative to the the _start symbol.
-       "_start is just one symbol we could use, blah blah blah."
-       however t _start symbol has been relocated when this program was executed.
-       Further, we are placing the new patched code somewhere in the sandbox memory,
-       which we didn't know until now.
+    /****
+         Everything about the patch at this time is relative to the the _start symbol.
+         "_start is just one symbol we could use, blah blah blah."
+         however t _start symbol has been relocated when this program was executed.
+         Further, we are placing the new patched code somewhere in the sandbox memory,
+         which we didn't know until now.
 
-       Here are some variables we will be using to make this 2nd-stage relocation work:
+         Here are some variables we will be using to make this 2nd-stage relocation work:
 
-       refabs: a reference point for all other address offsets. We use _start in the
-       elf file and in the patch file. We need to get the current
-       (relocated) address of _start in order to continue with relocations.
-
-
-       uint64_t hvabs;      Absolute address in HV of the function to be patched
+         refabs: a reference point for all other address offsets. We use _start in the
+         elf file and in the patch file. We need to get the current
+         (relocated) address of _start in order to continue with relocations.
 
 
-       hvabs: the absolute, relocated position of the code to be patched. We don't
-       know the absolute address until run time. So in the patch file,
-       is relative to refabs before relocation. at run time, we can
-       convert this to the relocated absolute address of the code to patch.
+         uint64_t hvabs;      Absolute address in HV of the function to be patched
 
-       relocrel: the newly patched code relative to refabs after relocation.
-       blob (new) - _start (relocated) =	 (1) in the scratch pad
 
-       relocrel is also necessary to normalize distances in the
-       new code.
+         hvabs: the absolute, relocated position of the code to be patched. We don't
+         know the absolute address until run time. So in the patch file,
+         is relative to refabs before relocation. at run time, we can
+         convert this to the relocated absolute address of the code to patch.
 
-       runtime_constant: the difference in refabs before and after relocation.
-       used as a sanity check, may be removed at a later time.
+         relocrel: the newly patched code relative to refabs after relocation.
+         blob (new) - _start (relocated) =	 (1) in the scratch pad
 
-       relocrel  blob_p - refabs: distance from _start (refabs) to the new code
-       (landing in the sandbox) at runtime (abs).
+         relocrel is also necessary to normalize distances in the
+         new code.
 
-  ***/
+         runtime_constant: the difference in refabs before and after relocation.
+         used as a sanity check, may be removed at a later time.
+
+         relocrel  blob_p - refabs: distance from _start (refabs) to the new code
+         (landing in the sandbox) at runtime (abs).
+
+    ***/
   /* Blobs are optional */
   if (apply->bloblen)
     {
@@ -337,6 +396,9 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
       /* Skip over blob */
       arg = (unsigned char *) arg + pm->size;
 
+/* testing info -- mmap address */
+
+      DMSG ("_start %p; _end %p\n", &_start, &_end);
       /* Calculate offset of relocations */
       relocrel = (uint64_t) (pm->addr) - apply->refabs;
       DMSG ("relocrel: %lx (%ld)\n", relocrel, relocrel);
