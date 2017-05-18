@@ -60,6 +60,9 @@ ___align (uintptr_t p, uintptr_t align)
   p &= ~(align - 1);
   return p;
 }
+#define PAGE_SHIFT      12
+#define PAGE_SIZE       (1UL << PAGE_SHIFT)
+#define PAGE_MASK       (~(PAGE_SIZE-1))
 
 #undef XEN_GUEST_HANDLE
 #define XEN_GUEST_HANDLE(a) a

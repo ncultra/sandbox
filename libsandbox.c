@@ -42,14 +42,12 @@ map_patch_map (struct patch_map *pm)
  */
   if (ultimate_limit == 0)
   {
-      ultimate_limit = (uint64_t) (&_start + 0xffffffff);
-      ultimate_limit &= ~((uint64_t) 0x1000);
+      ultimate_limit = (uint64_t) (&_start + 0xffffffff) & PAGE_MASK;
   }
 
   if (last.addr == 0L)
   {
-      last.addr = (void *) (((uint64_t) & _end + 0x1000)
-                            & ~((uint64_t) 0x1000));;
+      last.addr = (void *) (((uint64_t) &_end + 0x1000) & PAGE_MASK);
   }
 
   if (pm == NULL)
@@ -58,11 +56,10 @@ map_patch_map (struct patch_map *pm)
   /* next mmap should be on a page boundary at least one page
      higher than the end of the previous map */
   
-  next.addr = (void *) ((uint64_t) ((last.addr + last.size) + 0x1000)
-                        & ~((uint64_t) 0x1000));
+  next.addr = (void *) ((uint64_t) ((last.addr + last.size) + 0x1000) & PAGE_MASK);
   
   /* used for limit checking */
-  next.size = (pm->size + 0x1000) & ~((uint64_t) 0x1000);
+  next.size = (pm->size + 0x1000) & PAGE_MASK;
   DMSG ("next addr determined to be %p; size to be %lx\n",
         next.addr, next.size);
 
@@ -78,7 +75,7 @@ map_patch_map (struct patch_map *pm)
   
   pm->addr = mmap (next.addr, next.size,
                    PROT_READ | PROT_WRITE | PROT_EXEC,
-                   MAP_ANONYMOUS | MAP_SHARED, 0, 0);
+                   MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED, 0, 0);
 
 
   if (pm->addr == MAP_FAILED)
