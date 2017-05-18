@@ -1,7 +1,9 @@
 #!/bin/bash
 
 SOCK=""
+GDB="gdb" 
 PROGRAM="./raxlpxs"
+
 PATCH_FILE=""
 PATCH_SHA1=""
 COMMAND=""
