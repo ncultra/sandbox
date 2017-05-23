@@ -326,7 +326,7 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
   int32_t relocrel = 0;
   int ccode = SANDBOX_OK;
   uintptr_t runtime_constant = 0;
-  
+
   /* Blobs are optional */
   if (apply->bloblen)
     {
@@ -347,7 +347,7 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
       runtime_constant = (uintptr_t) & _start - (uintptr_t) apply->refabs;
       apply->refabs += runtime_constant;
       /* Calculate offset of relocations */
-      relocrel = (uintptr_t)(pm->addr) - apply->refabs;
+      relocrel = (uintptr_t) (pm->addr) - apply->refabs;
 
     }
 
