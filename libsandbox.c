@@ -344,11 +344,11 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
       memcpy (pm->addr, arg, pm->size);
       /* Skip over blob */
       arg = (unsigned char *) arg + apply->bloblen;
-
-      /* Calculate offset of relocations */
-      relocrel = (uint64_t) (pm->addr) - apply->refabs;
       runtime_constant = (uintptr_t) & _start - (uintptr_t) apply->refabs;
       apply->refabs += runtime_constant;
+      /* Calculate offset of relocations */
+      relocrel = (uintptr_t)(pm->addr) - apply->refabs;
+
     }
 
   /* Read relocs */
