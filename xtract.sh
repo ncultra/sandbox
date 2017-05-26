@@ -47,28 +47,7 @@ build_ref_file() {
 }
 
 
-RUN_QEMU=0
-CONFIG_FILE=""
-
-usage() {
-    echo "$PROGRAM --config=<config file>"
-    echo "	     [--run]"
-    exit 1
-}
-
-PROGRAM=$0
-
-
-check_parms() {
-    if ((${#CONFIG_FILE} != 0 )) ; then
-	echo "${#CONFIG_FILE}"
-	return 0
-    fi
-    usage
-}
-
-
-# currently other tools are assuming the patch directory\
+# currently other tools are assuming the patch directory
 # is /var/opt/sandbox, which is the default value for OPT_DIR 
 # patch files are currently of the pattern *.raxlpx
 
@@ -82,26 +61,65 @@ mv_patch_files() {
     sudo mv ./*.raxlpxs $OPT_DIR/
 }
 
+PROGRAM=$0
+RUN_GDB=0
+RUN_BAREMETAL=0
+RUN_VALGRIND=0
+RUN_DRY=0
+BLD_REF=0
+XTRACT=0
+SHOW=0
+CONFIG_FILE=""
+
+check_parms() {
+# must have at least a config file and a run option
+    if ((${#CONFIG_FILE} != 0 )) ; then
+	echo "config file ok"
+	if (( ${#RUN_GDB} != 0 ||
+		    ${#RUN_BAREMETAL} != 0 ||
+		    ${RUN_VALGRIND} != 0 ||
+		    ${RUN_DRY} != 0)) ; then
+	    return 0
+	fi
+    fi
+    usage
+    exit 1
+}
+
+
+usage() {
+    echo "$PROGRAM --config=<config file>"
+    echo "  [--gdb]  run under gdb"
+    echo "  [--bare] run on baremetal"
+    echo "  [--val]  run under valgrind"
+    echo "  [--dry]  dry run"
+    echo "  [--bld]  build the reference file"
+    echo "  [--xtr]  extract the patch"
+    echo "  [--sho]  show the config options"
+    exit 1
+}
+
+#################### main script ###################
 
 until [ -z "$1" ]; do	 
     case "${1:0:2}" in
 	"--")
-	case "${1:2:3}" in 
-	    "run") RUN_QEMU=1;; 
-	    "con") CONFIG_FILE="${1##--config=}";;
-	    "hel") usage ;;
-	esac ;;
-	*)usage;;
+	    case "${1:2:3}" in 
+		"con") CONFIG_FILE="${1##--config=}";;
+		"gdb") RUN_GDB=1;;
+		"bar") RUN_BAREMETAL=1;;
+		"val") RUN_VALGRIND=1;;
+		"dry") RUN_DRY=1;;
+		"bld") BLD_REF=1;;
+		"xtr") XTRACT=1;;
+		"sho") SHOW=1;;
+		"hel") usage ;;
+	    esac ;;
     esac
-	shift;
+    shift;
 done
 
 check_parms
-
-
-echo "file $CONFIG_FILE"
-echo "$RUN_QEMU"
-
 
 typeset -A config # init array
 config=( # set default values in config array
@@ -116,6 +134,10 @@ config=( # set default values in config array
     [OPT_DIR]="/var/opt/sandbox"
     [RUN_DIR]="/var/run/sandbox"
     [QCONF]=""
+    [RUN_GDB_CMD]=""
+    [RUN_BAREMETAL_CMD]=""
+    [RUN_VALGRIND_CMD]=""
+    [RUN_DRY_CMD]=""
 )
 
 
@@ -136,29 +158,83 @@ export PATCHED_OBJ=${config[BUILD_ROOT]}${config[PATCHED_OBJ]}
 export REF_FILE=${config[BUILD_ROOT]}${config[REF_FILE]}
 export RUN_FILE=${config[BUILD_ROOT]}${config[RUN_FILE]}
 export ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}
-export RUN_DIR=${config[RUN_DIR]}
+export RUN_DIR=${config[BUILD_ROOT]}${config[RUN_DIR]}
 export OPT_DIR=${config[OPT_DIR]}
 export QCONF=${config[BUILD_ROOT]}${config[QCONF]}
+export RUN_GDB_CMD=${config[RUN_GDB_CMD]}
+export RUN_BAREMETAL_CMD=${config[RUN_BAREMETAL_CMD]}
+export RUN_VALGRIND_CMD=${config[RUN_VALGRIND_CMD]}
+export RUN_DRY_CMD=${config[DRY_RUN]}
 
-echo "BUILD_ROOT=${config[BUILD_ROOT]}"
-echo "BACK_FILE=${config[BUILD_ROOT]}${config[BACK_FILE]}"
-echo "BUILD_FILE=${config[BUILD_ROOT]}${config[BUILD_FILE]}"
-echo "EXTRACT_PATCH=${config[BUILD_ROOT]}${config[EXTRACT_PATCH]}"
-echo "PATCHED_OBJ=${config[BUILD_ROOT]}${config[PATCHED_OBJ]}"
-echo "REF_FILE=${config[BUILD_ROOT]}${config[REF_FILE]}"
-echo "RUN_FILE=${config[BUILD_ROOT]}${config[RUN_FILE]}"
-echo "ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}"
-echo "RUN_DIR=${config[RUN_DIR]}"
-echo "OPT_DIR=${config[OPT_DIR]}"
-echo "QCONF=${config[BUILD_ROOT]}${config[QCONF]}"
-
-build_ref_file
-
-$EXTRACT_PATCH --qemu --function hmp_info_version $PATCHED_OBJ $REF_FILE
-mv_patch_files # creates /var/opt/sandbox if necessary, moves patch files
-
-if (( $RUN_QEMU > 0 )); then
-    pushd $BUILD_ROOT/x86_64-softmmu/
-    sudo gdb $REF_FILE	--command gdbin.txt
-    popd
+if (( SHOW > 0 )) ; then 
+    echo "BUILD_ROOT=${config[BUILD_ROOT]}"
+    echo "BACK_FILE=${config[BUILD_ROOT]}${config[BACK_FILE]}"
+    echo "BUILD_FILE=${config[BUILD_ROOT]}${config[BUILD_FILE]}"
+    echo "EXTRACT_PATCH=${config[BUILD_ROOT]}${config[EXTRACT_PATCH]}"
+    echo "PATCHED_OBJ=${config[BUILD_ROOT]}${config[PATCHED_OBJ]}"
+    echo "REF_FILE=${config[BUILD_ROOT]}${config[REF_FILE]}"
+    echo "RUN_FILE=${config[BUILD_ROOT]}${config[RUN_FILE]}"
+    echo "ISO_FILE=${config[BUILD_ROOT]}${config[ISO_FILE]}"
+    echo "RUN_DIR=${config[BUILD_ROOT]}${config[RUN_DIR]}"
+    echo "OPT_DIR=${config[OPT_DIR]}"
+    echo "QCONF=${config[BUILD_ROOT]}${config[QCONF]}"
+    echo "RUN_GDB_CMD=${config[RUN_GDB_CMD]}"
+    echo "RUN_BAREMETAL_CMD=${config[RUN_BAREMETAL_CMD]}"
+    echo "RUN_VALGRIND_CMD=${config[RUN_VALGRIND_CMD]}"
+    echo "RUN_DRY_CMD=${config[RUN_DRY_CMD]}"
 fi
+
+if (( BLD_REF > 0 )) ; then
+    if (( RUN_DRY > 0 )) ; then
+	echo "dry run - build reference file selected"
+    else
+	build_ref_file
+    fi
+fi
+if (( XTRACT > 0 )); then
+    if (( RUN_DRY > 0 )) ; then
+	echo "dry run - extract patch selected"
+    else
+	$EXTRACT_PATCH --qemu --function hmp_info_version $PATCHED_OBJ $REF_FILE
+	mv_patch_files # creates /var/opt/sandbox if necessary, moves patch files
+    fi
+fi
+
+### the order of run commands is:
+### 1. dry
+### 2. valgrind
+### 3. baremetal
+### 4. gdb
+### the first run command that is set will execute, any others
+### will not execute even if they are set
+
+if (( RUN_DRY > 0 )); then
+    pushd "$RUN_DIR" &> /dev/null
+    $RUN_DRY_CMD
+    popd &> /dev/null
+    exit 0
+fi
+
+if (( RUN_VALGRIND > 0 )); then
+    pushd "$RUN_DIR"
+    $RUN_VALGRIND_CMD
+    popd
+    exit 0
+fi
+
+if (( RUN_BAREMETAL > 0 )); then
+    pushd "$RUN_DIR"
+    $RUN_BAREMETAL_CMD
+    popd
+    exit 0
+fi
+
+if (( RUN_GDB > 0 )); then
+    pushd "$RUN_DIR"
+    $RUN_GDB_CMD
+    popd
+    exit 0
+fi
+
+usage
+exit 1
