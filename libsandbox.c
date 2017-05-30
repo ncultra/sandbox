@@ -104,13 +104,14 @@ map_patch_map (struct patch_map *pm)
 
   if (last.addr == 0L)
     {
-        last.addr = (void *) find_sandbox_start("[heap]");;
+      last.addr = (void *) find_sandbox_start ("[heap]");;
     }
 
-  if (pm == NULL || last.addr == NULL) {    
-    return SANDBOX_ERR_INVALID;
-  }
-  
+  if (pm == NULL || last.addr == NULL)
+    {
+      return SANDBOX_ERR_INVALID;
+    }
+
   /* next mmap should be on a page boundary at least one page
      higher than the end of the previous map */
 

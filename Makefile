@@ -10,7 +10,7 @@ endif
 MAJOR_VERSION=0
 MINOR_VERSION=0
 REVISION=1
-LIB_FILES=libsandbox.o  sandbox-listen.o
+LIB_FILES=libsandbox.o  sandbox-listen.o pmparser.o
 CLEAN=rm -f sandbox.out  *.o *.a *.so gitsha.txt platform.h \
 	gitsha.h version.mak sha1.txt gitsha.h
 

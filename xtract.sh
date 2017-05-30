@@ -65,6 +65,7 @@ PROGRAM=$0
 RUN_GDB=0
 RUN_BAREMETAL=0
 RUN_VALGRIND=0
+RUN_NULL=0
 RUN_DRY=0
 BLD_REF=0
 XTRACT=0
@@ -78,7 +79,8 @@ check_parms() {
 	if (( ${#RUN_GDB} != 0 ||
 		    ${#RUN_BAREMETAL} != 0 ||
 		    ${RUN_VALGRIND} != 0 ||
-		    ${RUN_DRY} != 0)) ; then
+		    ${RUN_DRY} != 0 ||
+		    ${RUN_NULL} != 0)) ; then
 	    return 0
 	fi
     fi
@@ -92,8 +94,9 @@ usage() {
     echo "  [--gdb]  run under gdb"
     echo "  [--bare] run on baremetal"
     echo "  [--val]  run under valgrind"
+    echo "  [--null] null target for rebuilds"
     echo "  [--dry]  dry run"
-    echo "  [--bld]  build the reference file"
+    echo "  [--build]  build the reference file"
     echo "  [--xtr]  extract the patch"
     echo "  [--sho]  show the config options"
     exit 1
@@ -109,8 +112,9 @@ until [ -z "$1" ]; do
 		"gdb") RUN_GDB=1;;
 		"bar") RUN_BAREMETAL=1;;
 		"val") RUN_VALGRIND=1;;
+		"nul") RUN_NULL=1;;
 		"dry") RUN_DRY=1;;
-		"bld") BLD_REF=1;;
+		"bui") BLD_REF=1;;
 		"xtr") XTRACT=1;;
 		"sho") SHOW=1;;
 		"hel") usage ;;
@@ -138,6 +142,7 @@ config=( # set default values in config array
     [RUN_BAREMETAL_CMD]=""
     [RUN_VALGRIND_CMD]=""
     [RUN_DRY_CMD]=""
+    [RUN_NULL_CMD]='echo "run null"'
 )
 
 
@@ -164,6 +169,7 @@ export QCONF=${config[BUILD_ROOT]}${config[QCONF]}
 export RUN_GDB_CMD=${config[RUN_GDB_CMD]}
 export RUN_BAREMETAL_CMD=${config[RUN_BAREMETAL_CMD]}
 export RUN_VALGRIND_CMD=${config[RUN_VALGRIND_CMD]}
+export RUN_NULL_CMD=${config[RUN_NULL_CMD]}
 export RUN_DRY_CMD=${config[DRY_RUN]}
 
 if (( SHOW > 0 )) ; then 
@@ -181,6 +187,7 @@ if (( SHOW > 0 )) ; then
     echo "RUN_GDB_CMD=${config[RUN_GDB_CMD]}"
     echo "RUN_BAREMETAL_CMD=${config[RUN_BAREMETAL_CMD]}"
     echo "RUN_VALGRIND_CMD=${config[RUN_VALGRIND_CMD]}"
+    echo "RUN_NULL_CMD=${config[RUN_NULL_CMD]}"
     echo "RUN_DRY_CMD=${config[RUN_DRY_CMD]}"
 fi
 
@@ -211,6 +218,13 @@ fi
 if (( RUN_DRY > 0 )); then
     pushd "$RUN_DIR" &> /dev/null
     $RUN_DRY_CMD
+    popd &> /dev/null
+    exit 0
+fi
+
+if (( RUN_NULL > 0 )); then
+    pushd "$RUN_DIR" &> /dev/null
+    $RUN_NULL_CMD
     popd &> /dev/null
     exit 0
 fi
