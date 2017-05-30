@@ -34,34 +34,39 @@ ALIGN_POINTER (uintptr_t p, uintptr_t offset)
  * heap expansion.
 */
 uintptr_t
-find_sandbox_start(char *backing)
+find_sandbox_start (char *backing)
 {
-    procmaps_struct *iter = NULL;
-    uintptr_t sandbox_start = 0L;
-    procmaps_struct *maps = pmparser_parse(getpid());
+  procmaps_struct *iter = NULL;
+  uintptr_t sandbox_start = 0L;
+  procmaps_struct *maps = pmparser_parse (getpid ());
 
-    if (maps == NULL) {
-        DMSG("unable to parse /proc/maps");
-        return sandbox_start;
+  if (maps == NULL)
+    {
+      DMSG ("unable to parse /proc/maps");
+      return sandbox_start;
     }
 
-    while((iter = pmparser_next()) != NULL) {
-        /* look for heap mapping */
-        if (iter->pathname) {
-            char *pos = strstr(iter->pathname, "[heap]");
-            if (pos != NULL && strlen(pos) > 0) {
-                /* grab the ending address, add a hole, 
-                 * return the result */
-                sandbox_start = (uintptr_t) iter->addr_end + 0x100000;
-                goto out; 
-            }
-        }
+  while ((iter = pmparser_next ()) != NULL)
+    {
+      /* look for heap mapping */
+      if (iter->pathname)
+	{
+	  char *pos = strstr (iter->pathname, "[heap]");
+	  if (pos != NULL && strlen (pos) > 0)
+	    {
+	      /* grab the ending address, add a hole, 
+	       * return the result */
+	      sandbox_start = (uintptr_t) iter->addr_end + 0x100000;
+	      goto out;
+	    }
+	}
     }
 out:
-    if (maps != NULL) {
-        pmparser_free(maps);
+  if (maps != NULL)
+    {
+      pmparser_free (maps);
     }
-    return sandbox_start; 
+  return sandbox_start;
 }
 
 
@@ -99,12 +104,13 @@ map_patch_map (struct patch_map *pm)
 
   if (last.addr == 0L)
     {
-      last.addr = (void *) (((uint64_t) & _end + 0x1000) & PAGE_MASK);
+        last.addr = (void *) find_sandbox_start("[heap]");;
     }
 
-  if (pm == NULL)
+  if (pm == NULL || last.addr == NULL) {    
     return SANDBOX_ERR_INVALID;
-
+  }
+  
   /* next mmap should be on a page boundary at least one page
      higher than the end of the previous map */
 
