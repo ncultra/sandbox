@@ -1,6 +1,7 @@
 #include <sys/mman.h>
 #include "atomic.h"
 #include "sandbox.h"
+#include "pmparser.h"
 
 /* #define str1(s) #s
    #define str(s) str1(s)
@@ -20,6 +21,49 @@ ALIGN_POINTER (uintptr_t p, uintptr_t offset)
   return p;
 }
 
+/* find_sandbox_start(backing) 
+ * requirements for maps containing live patches:
+ * 1) must be less than 2^32 from the function being patched
+ * 2) must not overlap qemu maps, including heap
+ *
+ * on Linux this equates to mapping the sandbox beginning
+ * after the heap.
+ * 
+ * the map_patch_map function will check to ensure a map
+ * is within the correct range, and will leave a hole for
+ * heap expansion.
+*/
+uintptr_t
+find_sandbox_start(char *backing)
+{
+    procmaps_struct *iter = NULL;
+    uintptr_t sandbox_start = 0L;
+    procmaps_struct *maps = pmparser_parse(getpid());
+
+    if (maps == NULL) {
+        DMSG("unable to parse /proc/maps");
+        return sandbox_start;
+    }
+
+    while((iter = pmparser_next()) != NULL) {
+        /* look for heap mapping */
+        if (iter->pathname) {
+            char *pos = strstr(iter->pathname, "[heap]");
+            if (pos != NULL && strlen(pos) > 0) {
+                /* grab the ending address, add a hole, 
+                 * return the result */
+                sandbox_start = (uintptr_t) iter->addr_end + 0x100000;
+                goto out; 
+            }
+        }
+    }
+out:
+    if (maps != NULL) {
+        pmparser_free(maps);
+    }
+    return sandbox_start; 
+}
+
 
 /* int map_patch_map
  * in/out: struct patch_map pm 
@@ -28,7 +72,15 @@ ALIGN_POINTER (uintptr_t p, uintptr_t offset)
  *
  * return: SANDBOX_OK upon success, SANDBOX_ERR_* otherwise
  * pm->size is invalid when returning an error
- */
+ *
+ * map_patch_map will start mapping at the return value
+ * of find_sandbox_start("heap").
+ * 
+ * It will map a range of memory for each live patch,
+ * sequentially, until the next address for a map is
+ * going to start at and address greater than 
+ * _start + (2^32 - 1)
+*/
 
 int
 map_patch_map (struct patch_map *pm)
