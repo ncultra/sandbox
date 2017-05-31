@@ -6,6 +6,7 @@ a.out
 *.o
 *.a
 *.so
+*.bak
 sandbox
 platform.h
 gdb-command
