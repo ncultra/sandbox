@@ -23,18 +23,28 @@ version.mak:
 
 include version.mak
 
+
+# the gitsha target creates  unique information and copies
+# it to buildinfo and sha1 sections. programs linking libsandbox.o
+# have these sections, which provide a unique build id (sha1)
+# and compile information
+#
+# this target is is a dependency of sandbox-listen.o,
+# which forces libsandbox.o to be built, and then copies the
+# important information into elf sections of libsandbox.o
 .PHONY: gitsha
 gitsha: gitsha.txt gitsha.h libsandbox.o
-
-# any target that requires libsandbox will pull in gitsha.txt automatically
-libsandbox.a: sha1.txt gitsha.txt libsandbox.o  sandbox-listen.o pmparser.o
 	$(shell objcopy --add-section .note.rackspace.buildinfo=gitsha.txt \
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 	$(shell objcopy --add-section .note.rackspace.sha1=sha1.txt \
 	--set-section-flags .build=noload,readonly libsandbox.o libsandbox.o)
 
+# any target that requires libsandbox will pull in gitsha.txt automatically
+libsandbox.a: sha1.txt gitsha.txt libsandbox.o  sandbox-listen.o pmparser.o
+
 # add the static elf library to the sandbox
 	ar cr libsandbox.a libsandbox.o  sandbox-listen.o pmparser.o
+
 
 
 libsandbox.o: libsandbox.c platform.h sandbox.h gitsha.h gitsha.txt
