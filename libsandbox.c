@@ -387,7 +387,7 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
   uintptr_t runtime_constant = 0;
 
   /* Blobs are optional */
-  if (apply->bloblen)
+  if (apply->bloblen && apply->bloblen < MAX_PATCH_SIZE)
     {
       pm->size = apply->bloblen;
       ccode = map_patch_map (pm);
