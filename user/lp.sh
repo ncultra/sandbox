@@ -21,7 +21,7 @@ get_newest_patch_file() {
 usage() {
     echo "$0 -c <apply | remove | info | find | list>"
     echo "	  [-f patch file]"
-    echo "	  [-s patch sha1]"
+    echo "	  [-u patch sha1]"
     echo "	  [-h print this help message]"
     exit 1
 }
