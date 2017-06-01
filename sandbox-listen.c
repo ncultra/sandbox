@@ -479,7 +479,7 @@ send_rr_buf (int fd, uint16_t id, ...)
   uint32_t len = SANDBOX_MSG_HDRLEN;
   uint8_t sand[] = SANDBOX_MSG_MAGIC;
   uint16_t pver = SANDBOX_MSG_VERSION;
-  struct sandbox_buf bufs[SANDBOX_MAX_ARG];
+  struct sandbox_buf bufs[SANDBOX_MAX_ARG + 1];
   va_list va;
   uint32_t nullsize = 0;
   int index = 0, lastbuf = 0;
@@ -511,7 +511,7 @@ send_rr_buf (int fd, uint16_t id, ...)
     }
   while (index < SANDBOX_MAX_ARG);
   va_end (va);
-  if (index >= 255)
+  if (index >= SANDBOX_LAST_ARG)
     {
       lastbuf = 255;
       bufs[lastbuf].size = SANDBOX_LAST_ARG;
