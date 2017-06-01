@@ -462,9 +462,6 @@ read_patch_data (XEN_GUEST_HANDLE (void) * arg,
   memcpy (*writes_p, arg,
 	  apply->numwrites * sizeof (struct xenlp_patch_write));
 
-  /* Move over all of the writes */
-  arg = (unsigned char *) arg + (apply->numwrites * sizeof ((*writes_p)[0]));
-
   /* Verify writes and apply any relocations in writes */
   for (i = 0; i < apply->numwrites; i++)
     {
