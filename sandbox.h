@@ -2,8 +2,7 @@
  * Sandbox allows a user-space process to live-patch itself.
  * Patches are placed in the "sandbox," which is a area in the
  * .text segment
- *
- * Copyright 2015-17 Rackspace, Inc.
+ * licensed under the GPL, version 2
  ***************************************************************/
 #define _GNU_SOURCE
 #include <limits.h>
