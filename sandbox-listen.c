@@ -1,7 +1,7 @@
 /*****************************************************************
- * Copyright 2015, 2017 Rackspace, Inc.
- *
- * listen on a unix domain socket for incoming patches
+* licensed under the GPL, v2
+*
+* listen on a unix domain socket for incoming patches
  ****************************************************************/
 #include "sandbox.h"
 #include "gitsha.h"
