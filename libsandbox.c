@@ -1,3 +1,4 @@
+/* licensed under the GPL, version 2 */
 #include <sys/mman.h>
 #include "atomic.h"
 #include "sandbox.h"
